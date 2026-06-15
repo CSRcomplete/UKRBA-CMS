@@ -17,8 +17,8 @@ services:
       timeout: 5s
       retries: 5
     # Uncomment to expose Postgres to host:
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
   # --- MinIO Object Storage ---
   minio:
@@ -38,9 +38,9 @@ services:
       timeout: 5s
       retries: 5
     # Uncomment to expose MinIO to host:
-    # ports:
-    #   - "9000:9000"
-    #   - "9001:9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
 
   # --- Inngest Dev Server ---
   inngest:

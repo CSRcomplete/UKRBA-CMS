@@ -94,6 +94,10 @@ model crm_Leads {
   campaign          String?
   assigned_to       String?            @db.Uuid
   assigned_to_user  Users?             @relation("LeadAssignedTo", fields: [assigned_to], references: [id])
+  postcode                     String?
+  assigned_partner_id          String?            @db.Uuid
+  assigned_area_director_id    String?            @db.Uuid
+  assigned_regional_director_id String?            @db.Uuid
   accountsIDs       String?            @db.Uuid
   assigned_accounts crm_Accounts?      @relation(fields: [accountsIDs], references: [id])
   documents         DocumentsToLeads[]
@@ -110,6 +114,9 @@ model crm_Leads {
   @@index([lead_type_id])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([assigned_partner_id])
+  @@index([assigned_area_director_id])
+  @@index([assigned_regional_director_id])
 }
 
 model crm_Contact_Enrichment {
@@ -977,6 +984,13 @@ model Users {
   invoicePayments              Invoice_Payments[]    @relation("InvoicePaymentCreatedBy")
   invoiceAttachments           Invoice_Attachments[] @relation("InvoiceAttachmentUploadedBy")
   invoiceActivity              Invoice_Activity[]    @relation("InvoiceActivityActor")
+
+  // Organizational Tree properties
+  region_id                    Int?
+  area_id                      Int?
+  parentId                     String?               @db.Uuid
+  parent                       Users?                @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children                     Users[]               @relation("UserHierarchy")
 
   @@index([email])
   @@index([userStatus])
@@ -1907,3 +1921,45 @@ model Invoice_Settings {
   companyWebsite      String?
   updatedAt           DateTime @updatedAt
 }
+
+model nextcrm_postcode_routing {
+  id                 String   @id @default(uuid()) @db.Uuid
+  postcode_area      String   @unique
+  region_country     String
+  assigned_region_id Int
+  createdAt          DateTime @default(now())
+}
+
+model sys_audit_logs {
+  id            Int      @id @default(autoincrement())
+  user_id       String?  @db.Uuid
+  entity_type   String
+  entity_id     String   @db.Uuid
+  field_mutated String
+  old_value     String?  @db.Text
+  new_value     String?  @db.Text
+  timestamp     DateTime @default(now())
+}
+
+model crm_Members {
+  id                            String    @id @default(uuid()) @db.Uuid
+  lead_id                       String    @unique @db.Uuid
+  business_name                 String
+  contact_name                  String
+  telephone                     String
+  email                         String
+  assigned_channel_partner_id   String?   @db.Uuid
+  assigned_area_director_id     String?   @db.Uuid
+  assigned_regional_director_id String?   @db.Uuid
+  lifecycle_status              String    @default("Membership")
+  
+  // Phase 2 Financial Placeholders
+  recurring_revenue_tier        Decimal?  @db.Decimal(10, 2)
+  partner_commission_rate       Decimal?  @db.Decimal(5, 2)
+  override_structure_id         Int?
+
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+  deletedAt                     DateTime?
+}
+
