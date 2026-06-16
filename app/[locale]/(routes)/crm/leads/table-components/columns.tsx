@@ -118,6 +118,20 @@ export const createColumns = (
     enableHiding: false,
   },
   {
+    accessorKey: "lead_type",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Category" />
+    ),
+    cell: ({ row }) => {
+      //@ts-ignore
+      const typeId = row.original.lead_type_id;
+      const type = leadTypes.find((t) => t.id === typeId);
+      return <div className="w-[120px]">{type?.name ?? "General Enquiry"}</div>;
+    },
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
     accessorKey: "status",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
