@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import sendEmail from "@/lib/sendmail";
 import { inngest } from "@/inngest/client";
 import { writeAuditLog, diffObjects } from "@/lib/audit-log";
+import { logOwnershipChange } from "@/lib/ownership";
 
 export const updateLead = async (data: {
   id: string;
@@ -22,6 +23,8 @@ export const updateLead = async (data: {
   campaign?: string | null;
   assigned_to?: string;
   accountIDs?: string;
+  change_reason?: string | null;
+  website?: string | null;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
@@ -35,6 +38,7 @@ export const updateLead = async (data: {
     jobTitle,
     email,
     phone,
+    website,
     description,
     lead_source_id,
     lead_status_id,
@@ -43,12 +47,43 @@ export const updateLead = async (data: {
     campaign,
     assigned_to,
     accountIDs,
+    change_reason,
   } = data;
 
   if (!id) return { error: "id is required" };
 
   try {
     const before = await prismadb.crm_Leads.findUnique({ where: { id, deletedAt: null } });
+
+    // Determine the assignee and directors
+    const targetAssigneeId = assigned_to || before?.assigned_to || userId;
+    let areaDirectorId: string | null = before?.assigned_area_director_id || null;
+    let regionalDirectorId: string | null = before?.assigned_regional_director_id || null;
+
+    if (assigned_to && assigned_to !== before?.assigned_to) {
+      // Owner changed, resolve directors for new owner
+      const newOwner = await prismadb.users.findUnique({
+        where: { id: assigned_to },
+      });
+      if (newOwner) {
+        if (newOwner.role === "user") {
+          areaDirectorId = newOwner.parentId;
+          if (areaDirectorId) {
+            const ad = await prismadb.users.findUnique({ where: { id: areaDirectorId } });
+            regionalDirectorId = ad?.parentId || null;
+          } else {
+            regionalDirectorId = null;
+          }
+        } else if (newOwner.role === "manager") {
+          areaDirectorId = newOwner.id;
+          regionalDirectorId = newOwner.parentId;
+        } else {
+          areaDirectorId = null;
+          regionalDirectorId = null;
+        }
+      }
+    }
+
     const lead = await prismadb.crm_Leads.update({
       where: { id },
       data: {
@@ -60,16 +95,32 @@ export const updateLead = async (data: {
         jobTitle,
         email,
         phone,
+        website,
         description,
         lead_source_id: lead_source_id || undefined,
         lead_status_id: lead_status_id || undefined,
         lead_type_id: lead_type_id || undefined,
         refered_by,
         campaign,
-        assigned_to: assigned_to || userId,
+        assigned_to: targetAssigneeId,
+        assigned_area_director_id: areaDirectorId,
+        assigned_regional_director_id: regionalDirectorId,
         accountsIDs: accountIDs,
       },
     });
+
+    if (before && before.assigned_to !== lead.assigned_to) {
+      await logOwnershipChange({
+        entityType: "lead",
+        entityId: lead.id,
+        previousOwnerId: before.assigned_to,
+        newOwnerId: lead.assigned_to,
+        areaDirectorId: lead.assigned_area_director_id,
+        regionalDirectorId: lead.assigned_regional_director_id,
+        changedById: userId,
+        changeReason: change_reason || "Manual reassignment",
+      });
+    }
 
     if (assigned_to && assigned_to !== userId) {
       const notifyRecipient = await prismadb.users.findFirst({

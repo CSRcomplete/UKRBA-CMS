@@ -49,28 +49,6 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
               </Link>
             </CardTitle>
           </div>
-          <div className="flex space-x-2">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button size="sm" aria-label={t("leads.addNew")} data-testid="add-lead-btn">+</Button>
-              </SheetTrigger>
-              <SheetContent className="w-full md:max-w-[771px] overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle>{t("leads.sheetTitle")}</SheetTitle>
-                  <SheetDescription>{t("leads.sheetDescription")}</SheetDescription>
-                </SheetHeader>
-                <div className="mt-6 space-y-4">
-                  <NewLeadForm
-                    accounts={accounts}
-                    leadSources={leadSources}
-                    leadStatuses={leadStatuses}
-                    leadTypes={leadTypes}
-                    onFinish={() => setOpen(false)}
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
         </div>
         <Separator />
       </CardHeader>

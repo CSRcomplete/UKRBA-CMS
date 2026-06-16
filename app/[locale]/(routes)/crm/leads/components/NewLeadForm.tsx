@@ -57,6 +57,7 @@ export function NewLeadForm({ accounts, leadSources, leadStatuses, leadTypes, on
     campaign: z.string().optional(),
     assigned_to: z.string().optional(),
     accountIDs: z.string().optional(),
+    website: z.string().optional(),
   });
 
   type NewLeadFormValues = z.infer<typeof formSchema>;
@@ -79,6 +80,7 @@ export function NewLeadForm({ accounts, leadSources, leadStatuses, leadTypes, on
       campaign: "",
       assigned_to: "",
       accountIDs: "",
+      website: "",
     },
   });
 
@@ -134,7 +136,7 @@ export function NewLeadForm({ accounts, leadSources, leadStatuses, leadTypes, on
                 )}
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="company"
@@ -160,6 +162,19 @@ export function NewLeadForm({ accounts, leadSources, leadStatuses, leadTypes, on
                     <FormLabel>{t("jobTitle")}</FormLabel>
                     <FormControl>
                       <Input disabled={form.formState.isSubmitting} placeholder="CTO" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input disabled={form.formState.isSubmitting} placeholder="https://example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,4 +1,5 @@
 import { prismadb } from "@/lib/prisma";
+import { logOwnershipChange } from "@/lib/ownership";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -105,13 +106,26 @@ export async function POST(req: Request) {
         company: business_name || "Self",
         email,
         phone: telephone || null,
+        website: website || null,
         postcode: postcode || null,
         assigned_to: currentOwnerId,
         assigned_partner_id: partnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        description: `Source: ${lead_source} | Type: ${lead_type} | Website: ${website || "None"}`
+        description: `Source: ${lead_source} | Type: ${lead_type}`
       }
+    });
+
+    // Log initial ownership history
+    await logOwnershipChange({
+      entityType: "lead",
+      entityId: newLead.id,
+      previousOwnerId: null,
+      newOwnerId: currentOwnerId,
+      areaDirectorId: areaDirectorId,
+      regionalDirectorId: regionalDirectorId,
+      changedById: null,
+      changeReason: `Wix Webhook Ingestion (${lead_type}) - Postcode: ${postcode || "None"}`,
     });
 
     // Write CDC Log manually

@@ -7,6 +7,8 @@ import DocumentsView from "../../components/DocumentsView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoryTab } from "./components/HistoryTab";
 import { ActivitiesSection } from "./components/ActivitiesSection";
+import { getOwnershipHistory } from "@/lib/ownership";
+import { OwnershipHistoryTimeline } from "@/components/crm/leads/OwnershipHistoryTimeline";
 
 interface LeadDetailPageProps {
   params: Promise<{
@@ -21,6 +23,9 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
 
   if (!lead) return <div>Lead not found</div>;
 
+  const rawOwnershipHistory = await getOwnershipHistory("lead", leadId);
+  const ownershipHistory = JSON.parse(JSON.stringify(rawOwnershipHistory));
+
   return (
     <Container
       title={`Lead: ${lead?.firstName} ${lead?.lastName}`}
@@ -29,6 +34,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="ownership">Ownership Trail</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
@@ -38,6 +44,9 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
             <FindSimilarButton entityType="lead" recordId={leadId} />
             {/*         <DocumentsView data={lead?.documents} /> */}
           </div>
+        </TabsContent>
+        <TabsContent value="ownership">
+          <OwnershipHistoryTimeline history={ownershipHistory} />
         </TabsContent>
         <TabsContent value="history">
           <HistoryTab leadId={leadId} />
