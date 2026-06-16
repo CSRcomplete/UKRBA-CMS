@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+    console.log("INCOMING WIX WEBHOOK BODY:", JSON.stringify(body, null, 2));
 
     // Normalise nested Wix Automations webhook payloads
     let contact_name = body.contact_name;
