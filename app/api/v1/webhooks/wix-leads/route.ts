@@ -7,13 +7,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "Invalid content-type" }, { status: 400 });
   }
 
-  // 1. Authorization Bearer Token Check
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  // 1. Authorization Token Check (supports Bearer header or ?token= query parameter)
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get("token");
+  
+  let token: string | null = null;
+  
+  if (queryToken) {
+    token = queryToken;
+  } else {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    }
   }
 
-  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return NextResponse.json({ message: "Unauthorized: Missing token" }, { status: 401 });
+  }
+
   const secureToken = process.env.WIX_WEBHOOK_TOKEN || "secure_token_123456";
 
   if (token.trim() !== secureToken.trim()) {
