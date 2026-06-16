@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     // Split name into firstName and lastName for NextCRM crm_Leads model compliance
     const names = (contact_name || "").trim().split(/\s+/);
     const firstName = names[0] || "";
-    const lastName = names.slice(1).join(" ") || "Unknown";
+    const lastName = names.slice(1).join(" ") || "";
 
     // 2. Exception & Postcode Assignment Logic
     let currentOwnerId: string | null = null;
