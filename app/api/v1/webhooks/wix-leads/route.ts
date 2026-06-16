@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { business_name, contact_name, telephone, email, website, postcode, lead_type, lead_source } = body;
 
-    if (!business_name || !contact_name || !telephone || !email || !postcode || !lead_type || !lead_source) {
-      return NextResponse.json({ message: "Missing mandatory fields" }, { status: 400 });
+    if (!contact_name || !email || !lead_type || !lead_source) {
+      return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
     }
 
     const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry'];
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       currentOwnerId = opsDirectorId;
     } else if (lead_type === 'Corporate Partnership') {
       currentOwnerId = null; // Stays unassigned, visible to CEO/Ops
-    } else {
+    } else if (postcode) {
       // Regular postcode allocation routing
       const cleanPostcode = postcode.replace(/\s+/g, "").toUpperCase();
       const prefixMatch = cleanPostcode.match(/^([A-Z]{1,2})/);
@@ -76,7 +76,6 @@ export async function POST(req: Request) {
         const areaDirector = await prismadb.users.findFirst({
           where: {
             region_id: assignedRegionId,
-            // Assuming area director role mapping or area_id configuration
           }
         });
 
@@ -93,6 +92,8 @@ export async function POST(req: Request) {
       } else {
         currentOwnerId = opsDirectorId; // Fallback
       }
+    } else {
+      currentOwnerId = opsDirectorId; // Fallback if no postcode provided
     }
 
     // Create the Lead record
@@ -101,15 +102,15 @@ export async function POST(req: Request) {
         v: 1,
         firstName,
         lastName,
-        company: business_name,
+        company: business_name || "Self",
         email,
-        phone: telephone,
-        postcode,
+        phone: telephone || null,
+        postcode: postcode || null,
         assigned_to: currentOwnerId,
         assigned_partner_id: partnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        description: `Source: ${lead_source} | Type: ${lead_type}`
+        description: `Source: ${lead_source} | Type: ${lead_type} | Website: ${website || "None"}`
       }
     });
 
