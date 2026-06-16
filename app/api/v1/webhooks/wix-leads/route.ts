@@ -61,7 +61,12 @@ export async function POST(req: Request) {
 
     // Determine lead type automatically based on Wix Plan ordered if not explicitly passed
     if (!lead_type && body.plan_title) {
-      lead_type = "SME Membership";
+      const planTitle = body.plan_title.toLowerCase();
+      if (planTitle.includes("white label") || planTitle.includes("partner")) {
+        lead_type = "White Label Partner";
+      } else {
+        lead_type = "SME Membership";
+      }
     }
 
     if (!contact_name || !email || !lead_type || !lead_source) {
