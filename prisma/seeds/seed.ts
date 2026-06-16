@@ -17,6 +17,7 @@ import leadTypesData from "../initial-data/crm_Lead_Types.json";
 
 import { seedCurrencies } from "./currencies";
 import { seedInvoices } from "./invoices";
+import { seedPostcodes } from "./postcodes";
 
 const connectionString = process.env.DATABASE_URL!;
 const pool = new Pool({ connectionString });
@@ -142,6 +143,9 @@ async function main() {
 
   // Invoice module defaults
   await seedInvoices(prisma);
+
+  // Postcode routing defaults
+  await seedPostcodes(prisma);
 
   console.log("-------- Seed DB completed --------");
 }

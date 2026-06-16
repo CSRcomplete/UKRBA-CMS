@@ -11,7 +11,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createActivity } from "@/actions/crm/activities/create-activity";
-import { createTask } from "@/actions/crm/tasks/create-task"; // Assuming task creation action exists
+import { createTask } from "@/actions/crm/tasks/create-task";
+import { useSession } from "@/lib/auth-client";
 
 interface ZohoMeetingLoggerProps {
   leadId: string;
@@ -19,6 +20,7 @@ interface ZohoMeetingLoggerProps {
 }
 
 export function ZohoMeetingLogger({ leadId, onSaved }: ZohoMeetingLoggerProps) {
+  const { data: session } = useSession();
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
@@ -85,8 +87,23 @@ export function ZohoMeetingLogger({ leadId, onSaved }: ZohoMeetingLoggerProps) {
     }
 
     try {
-      // In nextcrm, task creation uses action or endpoint. 
-      // Call createTask or similar API, or log as a manual follow up.
+      if (!session?.user?.id) {
+        toast.error("You must be logged in to create a task");
+        return;
+      }
+
+      const res = await createTask({
+        title: taskTitle,
+        content: taskDesc,
+        dueDateAt: new Date(taskDueDate),
+        user: session.user.id,
+      });
+
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+
       toast.success("Follow-up task created successfully!");
       setShowTaskModal(false);
       
