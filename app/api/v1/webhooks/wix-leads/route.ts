@@ -22,7 +22,47 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { business_name, contact_name, telephone, email, website, postcode, lead_type, lead_source } = body;
+
+    // Normalise nested Wix Automations webhook payloads
+    let contact_name = body.contact_name;
+    let email = body.email;
+    let telephone = body.telephone;
+    let business_name = body.business_name;
+    let postcode = body.postcode;
+    let website = body.website;
+    let lead_type = body.lead_type;
+    let lead_source = body.lead_source || "Wix Website";
+
+    if (body.contact) {
+      const contact = body.contact;
+      
+      // Resolve name
+      if (contact.name) {
+        if (typeof contact.name === 'object') {
+          const first = contact.name.first || "";
+          const last = contact.name.last || "";
+          contact_name = `${first} ${last}`.trim() || null;
+        } else if (typeof contact.name === 'string') {
+          contact_name = contact.name;
+        }
+      }
+      
+      email = email || contact.email;
+      telephone = telephone || contact.phone;
+      business_name = business_name || contact.company;
+      
+      // Resolve address / postcode
+      if (contact.address) {
+        postcode = postcode || contact.address.postalCode || contact.address.zipCode || contact.address.formattedAddress;
+      }
+      
+      website = website || contact.website;
+    }
+
+    // Determine lead type automatically based on Wix Plan ordered if not explicitly passed
+    if (!lead_type && body.plan_title) {
+      lead_type = "SME Membership";
+    }
 
     if (!contact_name || !email || !lead_type || !lead_source) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
@@ -34,7 +74,7 @@ export async function POST(req: Request) {
     }
 
     // Split name into firstName and lastName for NextCRM crm_Leads model compliance
-    const names = contact_name.trim().split(/\s+/);
+    const names = (contact_name || "").trim().split(/\s+/);
     const firstName = names[0] || "";
     const lastName = names.slice(1).join(" ") || "Unknown";
 
