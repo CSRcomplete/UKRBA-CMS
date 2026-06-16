@@ -61,6 +61,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
     campaign: z.string().optional().nullable(),
     assigned_to: z.string().optional().nullable(),
     accountsIDs: z.string().optional().nullable(),
+    change_reason: z.string().optional().nullable(),
   });
 
   type NewLeadFormValues = z.infer<typeof formSchema>;
@@ -74,6 +75,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
       lead_source_id: initialData.lead_source_id ?? "",
       lead_status_id: initialData.lead_status_id ?? "",
       lead_type_id: initialData.lead_type_id ?? "",
+      change_reason: "",
     },
   });
 
@@ -85,6 +87,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
       lead_type_id: data.lead_type_id ?? undefined,
       assigned_to: data.assigned_to ?? undefined,
       accountIDs: data.accountsIDs ?? undefined,
+      change_reason: data.change_reason || undefined,
     });
     if (result?.error) {
       form.setError("root.serverError", { message: result.error });
@@ -138,7 +141,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                 )}
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="company"
@@ -164,6 +167,19 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                     <FormLabel>{t("jobTitle")}</FormLabel>
                     <FormControl>
                       <Input disabled={form.formState.isSubmitting} placeholder="CTO" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input disabled={form.formState.isSubmitting} placeholder="https://example.com" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -359,6 +375,29 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                 </FormItem>
               )}
             />
+            {form.watch("assigned_to") !== initialData.assigned_to && (
+              <FormField
+                control={form.control}
+                name="change_reason"
+                render={({ field }) => (
+                  <FormItem className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <FormLabel className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                      Reason for Ownership Transfer *
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        disabled={form.formState.isSubmitting}
+                        placeholder="Please provide the operational reason for this ownership reassignment (e.g. Area Director changed region, postcode routing exception, etc.)"
+                        required
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
         <div className="grid gap-2 py-5">
