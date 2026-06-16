@@ -75,6 +75,27 @@ export async function POST(req: Request) {
       website = website || contact.website;
     }
 
+    // Clean and normalise telephone number formats
+    if (telephone) {
+      // Remove all whitespaces, dashes, parentheses
+      let cleanPhone = telephone.replace(/[\s\-\(\)]/g, "");
+      
+      // If phone got duplicated (e.g. +44123+44123), extract only the first match
+      const duplicates = cleanPhone.match(/(\+?[0-9]{7,15})/);
+      if (duplicates) {
+        cleanPhone = duplicates[1];
+      }
+
+      // Convert UK +44 prefix to local 0
+      if (cleanPhone.startsWith("+44")) {
+        cleanPhone = "0" + cleanPhone.substring(3);
+      } else if (cleanPhone.startsWith("44") && cleanPhone.length > 10) {
+        cleanPhone = "0" + cleanPhone.substring(2);
+      }
+      
+      telephone = cleanPhone;
+    }
+
     // Determine lead type automatically based on Wix Plan ordered if not explicitly passed
     if (!lead_type && body.plan_title) {
       const planTitle = body.plan_title.toLowerCase();
