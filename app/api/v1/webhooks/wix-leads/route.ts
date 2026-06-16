@@ -78,6 +78,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Invalid lead_type parameter" }, { status: 400 });
     }
 
+    // Resolve lead_type_id from crm_Lead_Types lookup table
+    const leadTypeRecord = await prismadb.crm_Lead_Types.findFirst({
+      where: { name: lead_type }
+    });
+    const lead_type_id = leadTypeRecord?.id || null;
+
+    // Resolve lead_source_id — upsert so "Wix Website" is auto-created if missing
+    const leadSourceRecord = await prismadb.crm_Lead_Sources.upsert({
+      where: { name: lead_source },
+      create: { name: lead_source },
+      update: {},
+    });
+    const lead_source_id = leadSourceRecord?.id || null;
+
     // Split name into firstName and lastName for NextCRM crm_Leads model compliance
     const names = (contact_name || "").trim().split(/\s+/);
     const firstName = names[0] || "";
@@ -153,11 +167,13 @@ export async function POST(req: Request) {
         phone: telephone || null,
         website: website || null,
         postcode: postcode || null,
+        lead_type_id,
+        lead_source_id,
         assigned_to: currentOwnerId,
         assigned_partner_id: partnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        description: `Source: ${lead_source} | Type: ${lead_type}`
+        description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`
       }
     });
 
@@ -179,13 +195,15 @@ export async function POST(req: Request) {
         entity_type: "crm_Leads",
         entity_id: newLead.id,
         field_mutated: "ALL",
-        new_value: JSON.stringify({ id: newLead.id, company: business_name, lead_type })
+        new_value: JSON.stringify({ id: newLead.id, company: business_name, lead_type, lead_type_id, lead_source_id })
       }
     });
 
     return NextResponse.json({
       message: "Lead ingested successfully",
       lead_id: newLead.id,
+      lead_type,
+      lead_source,
       assigned_owner_id: currentOwnerId
     }, { status: 201 });
 
