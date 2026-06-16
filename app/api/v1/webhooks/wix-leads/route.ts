@@ -33,13 +33,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    console.log("INCOMING WIX WEBHOOK BODY:", JSON.stringify(body, null, 2));
+    const rawBody = await req.json();
+    console.log("INCOMING WIX WEBHOOK BODY:", JSON.stringify(rawBody, null, 2));
+
+    // Support both raw body or wrapped Wix data body structure
+    const body = rawBody.data ? rawBody.data : rawBody;
 
     // Normalise nested Wix Automations webhook payloads
     let contact_name = body.contact_name;
     let email = body.email;
-    let telephone = body.telephone;
+    let telephone = body.telephone || body["telephone "]; // handle optional trailing spaces from Wix UI
     let business_name = body.business_name;
     let postcode = body.postcode;
     let website = body.website;
