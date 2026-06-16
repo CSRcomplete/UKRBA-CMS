@@ -1,3 +1,6 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+
 import { prismadb } from "../lib/prisma";
 
 async function run() {
