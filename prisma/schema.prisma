@@ -1933,6 +1933,7 @@ model nextcrm_postcode_routing {
   postcode_area      String   @unique
   region_country     String
   assigned_region_id Int
+  area_director_id   String?  @db.Uuid
   createdAt          DateTime @default(now())
 }
 

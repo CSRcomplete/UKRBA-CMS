@@ -365,6 +365,55 @@ export async function leadReadScopeWhere(user: AuthzUser) {
     return { deletedAt: null };
   }
   const uids = await getAccessibleUserIds(user);
+
+  if (user.role === "regional_director") {
+    return {
+      deletedAt: null,
+      lead_type: {
+        name: {
+          not: "White Label Partner",
+        },
+      },
+      OR: [
+        { assigned_regional_director_id: user.id },
+        { assigned_to: { in: uids } },
+        { createdBy: { in: uids } },
+      ],
+    };
+  }
+
+  if (user.role === "area_director") {
+    return {
+      deletedAt: null,
+      lead_type: {
+        name: {
+          not: "White Label Partner",
+        },
+      },
+      OR: [
+        { assigned_area_director_id: user.id },
+        { assigned_to: { in: uids } },
+        { createdBy: { in: uids } },
+      ],
+    };
+  }
+
+  if (user.role === "channel_partner") {
+    return {
+      deletedAt: null,
+      lead_type: {
+        name: {
+          not: "White Label Partner",
+        },
+      },
+      OR: [
+        { assigned_partner_id: user.id },
+        { assigned_to: user.id },
+        { createdBy: user.id },
+      ],
+    };
+  }
+
   return {
     deletedAt: null,
     OR: [

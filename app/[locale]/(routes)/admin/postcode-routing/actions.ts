@@ -5,7 +5,19 @@ import { requireRole } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 
 export async function getPostcodeRoutes() {
-  await requireRole(["admin"]);
+  const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
+  
+  if (actor.role === "regional_director" && actor.region_id !== null) {
+    return await prismadb.nextcrm_postcode_routing.findMany({
+      where: {
+        assigned_region_id: actor.region_id,
+      },
+      orderBy: {
+        postcode_area: "asc",
+      },
+    });
+  }
+
   return await prismadb.nextcrm_postcode_routing.findMany({
     orderBy: {
       postcode_area: "asc",
@@ -17,10 +29,11 @@ export async function createPostcodeRoute(data: {
   postcode_area: string;
   region_country: string;
   assigned_region_id: number;
+  area_director_id?: string | null;
 }) {
-  await requireRole(["admin"]);
+  const actor = await requireRole(["admin", "ceo", "operations_director"]);
 
-  const { postcode_area, region_country, assigned_region_id } = data;
+  const { postcode_area, region_country, assigned_region_id, area_director_id } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -41,6 +54,7 @@ export async function createPostcodeRoute(data: {
         postcode_area: cleanArea,
         region_country,
         assigned_region_id: Number(assigned_region_id),
+        area_director_id: area_director_id || null,
       },
     });
 
@@ -68,11 +82,12 @@ export async function updatePostcodeRoute(
     postcode_area: string;
     region_country: string;
     assigned_region_id: number;
+    area_director_id?: string | null;
   }
 ) {
-  await requireRole(["admin"]);
+  const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
 
-  const { postcode_area, region_country, assigned_region_id } = data;
+  const { postcode_area, region_country, assigned_region_id, area_director_id } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -86,6 +101,13 @@ export async function updatePostcodeRoute(
 
     if (!existingRoute) {
       return { error: "Postcode routing rule not found" };
+    }
+
+    // Regional Directors can only edit routes within their assigned region ID
+    if (actor.role === "regional_director") {
+      if (existingRoute.assigned_region_id !== actor.region_id || Number(assigned_region_id) !== actor.region_id) {
+        return { error: "Forbidden: You can only manage postcode routes in your own region." };
+      }
     }
 
     // Check unique constraint if postcode_area changed
@@ -104,6 +126,7 @@ export async function updatePostcodeRoute(
         postcode_area: cleanArea,
         region_country,
         assigned_region_id: Number(assigned_region_id),
+        area_director_id: area_director_id || null,
       },
     });
 
@@ -127,7 +150,7 @@ export async function updatePostcodeRoute(
 }
 
 export async function deletePostcodeRoute(id: string) {
-  await requireRole(["admin"]);
+  await requireRole(["admin", "ceo", "operations_director"]);
 
   try {
     const existingRoute = await prismadb.nextcrm_postcode_routing.findUnique({
