@@ -109,6 +109,33 @@ export const updateLead = async (data: {
       },
     });
 
+    // Handle lead conversion to member record
+    if (lead_status_id) {
+      const statusRecord = await prismadb.crm_Lead_Statuses.findUnique({
+        where: { id: lead_status_id },
+      });
+      if (statusRecord && statusRecord.name === "Lead converted or closed") {
+        const existingMember = await prismadb.crm_Members.findUnique({
+          where: { lead_id: lead.id },
+        });
+        if (!existingMember) {
+          await prismadb.crm_Members.create({
+            data: {
+              lead_id: lead.id,
+              business_name: lead.company || "N/A",
+              contact_name: [lead.firstName, lead.lastName].filter(Boolean).join(" "),
+              telephone: lead.phone || "N/A",
+              email: lead.email || "N/A",
+              assigned_channel_partner_id: lead.assigned_partner_id || lead.assigned_to || null,
+              assigned_area_director_id: lead.assigned_area_director_id || null,
+              assigned_regional_director_id: lead.assigned_regional_director_id || null,
+              lifecycle_status: "Membership",
+            },
+          });
+        }
+      }
+    }
+
     if (before && before.assigned_to !== lead.assigned_to) {
       await logOwnershipChange({
         entityType: "lead",
