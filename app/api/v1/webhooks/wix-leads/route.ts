@@ -237,6 +237,57 @@ export async function POST(req: Request) {
       currentOwnerId = opsDirectorId; // Fallback if no postcode provided
     }
 
+    // Check for a recently created duplicate lead (within last 15 minutes) with the same email
+    const existingLead = await prismadb.crm_Leads.findFirst({
+      where: {
+        email: email,
+        createdAt: {
+          gte: new Date(Date.now() - 15 * 60 * 1000)
+        }
+      }
+    });
+
+    if (existingLead) {
+      // Merge/update details (only overwrite if the incoming data is non-empty)
+      const updatedLead = await prismadb.crm_Leads.update({
+        where: { id: existingLead.id },
+        data: {
+          firstName: firstName || existingLead.firstName,
+          lastName: lastName || existingLead.lastName,
+          // If the existing company is "Self", allow overwriting with a real business name
+          company: (business_name && business_name !== "Self") ? business_name : (existingLead.company || "Self"),
+          phone: telephone || existingLead.phone,
+          website: website || existingLead.website,
+          postcode: postcode || existingLead.postcode,
+          lead_type_id: lead_type_id || existingLead.lead_type_id,
+          lead_source_id: lead_source_id || existingLead.lead_source_id,
+          assigned_to: currentOwnerId || existingLead.assigned_to,
+          assigned_partner_id: partnerId || existingLead.assigned_partner_id,
+          assigned_area_director_id: areaDirectorId || existingLead.assigned_area_director_id,
+          assigned_regional_director_id: regionalDirectorId || existingLead.assigned_regional_director_id,
+          description: existingLead.description + ` | Additional info from Wix update (${lead_type})`
+        }
+      });
+
+      // Write CDC Log manually for the update
+      await prismadb.sys_audit_logs.create({
+        data: {
+          entity_type: "crm_Leads",
+          entity_id: updatedLead.id,
+          field_mutated: "ALL_UPDATE",
+          new_value: JSON.stringify({ id: updatedLead.id, company: business_name, lead_type, lead_type_id, lead_source_id })
+        }
+      });
+
+      return NextResponse.json({
+        message: "Lead updated successfully (deduplicated)",
+        lead_id: updatedLead.id,
+        lead_type,
+        lead_source,
+        assigned_owner_id: updatedLead.assigned_to
+      }, { status: 200 });
+    }
+
     // Create the Lead record
     const newLead = await prismadb.crm_Leads.create({
       data: {
