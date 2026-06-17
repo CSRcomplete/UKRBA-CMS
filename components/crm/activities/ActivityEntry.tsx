@@ -140,6 +140,28 @@ export function ActivityEntry({ activity, onDeleted, onUpdated, entityType, enti
             <span className="font-medium">Outcome:</span> {activity.outcome}
           </p>
         )}
+        {activity.type === "meeting" && !!activity.metadata && (
+          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {(activity.metadata as Record<string, any>).meetingLink && (
+              <p>
+                <span className="font-medium">Meeting Link:</span>{" "}
+                <a
+                  href={(activity.metadata as Record<string, any>).meetingLink as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {(activity.metadata as Record<string, any>).meetingLink as string}
+                </a>
+              </p>
+            )}
+            {(activity.metadata as Record<string, any>).followUpRequired && (
+              <Badge className="mt-1 text-[10px] px-2 py-0 bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400">
+                Follow-Up Required
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       <ActivityForm
