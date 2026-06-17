@@ -373,7 +373,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         {
           lead_type: {
             name: {
-              not: "White Label Partner",
+              notIn: ["White Label Partner", "Corporate Partnership"],
             },
           },
           OR: [
@@ -384,7 +384,9 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         },
         {
           lead_type: {
-            name: "White Label Partner",
+            name: {
+              in: ["White Label Partner", "Corporate Partnership"],
+            },
           },
           OR: [
             { assigned_regional_director_id: user.id },
@@ -402,7 +404,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         {
           lead_type: {
             name: {
-              not: "White Label Partner",
+              notIn: ["White Label Partner", "Corporate Partnership"],
             },
           },
           OR: [
@@ -413,7 +415,9 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         },
         {
           lead_type: {
-            name: "White Label Partner",
+            name: {
+              in: ["White Label Partner", "Corporate Partnership"],
+            },
           },
           OR: [
             { assigned_area_director_id: user.id },
@@ -431,7 +435,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         {
           lead_type: {
             name: {
-              not: "White Label Partner",
+              notIn: ["White Label Partner", "Corporate Partnership"],
             },
           },
           OR: [
@@ -442,7 +446,9 @@ export async function leadReadScopeWhere(user: AuthzUser) {
         },
         {
           lead_type: {
-            name: "White Label Partner",
+            name: {
+              in: ["White Label Partner", "Corporate Partnership"],
+            },
           },
           OR: [
             { assigned_partner_id: user.id },
