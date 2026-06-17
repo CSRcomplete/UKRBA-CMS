@@ -23,6 +23,7 @@ import { useEffect } from "react";
 interface PostcodeRoute {
   id: string;
   postcode_area: string;
+  area_name?: string | null;
   region_country: string;
   assigned_region_id: number;
   area_director_id?: string | null;
@@ -36,6 +37,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   // Create state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [postcodeArea, setPostcodeArea] = useState("");
+  const [areaName, setAreaName] = useState("");
   const [regionCountry, setRegionCountry] = useState("England");
   const [assignedRegionId, setAssignedRegionId] = useState(1);
   const [areaDirectorId, setAreaDirectorId] = useState<string>("none");
@@ -43,6 +45,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   // Edit state
   const [editingRoute, setEditingRoute] = useState<PostcodeRoute | null>(null);
   const [editPostcodeArea, setEditPostcodeArea] = useState("");
+  const [editAreaName, setEditAreaName] = useState("");
   const [editRegionCountry, setEditRegionCountry] = useState("");
   const [editAssignedRegionId, setEditAssignedRegionId] = useState(1);
   const [editAreaDirectorId, setEditAreaDirectorId] = useState<string>("none");
@@ -63,6 +66,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   // Filter routes based on search query
   const filteredRoutes = routes.filter((r) =>
     r.postcode_area.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (r.area_name && r.area_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
     r.region_country.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -75,6 +79,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
 
     const res = await createPostcodeRoute({
       postcode_area: postcodeArea,
+      area_name: areaName || null,
       region_country: regionCountry,
       assigned_region_id: assignedRegionId,
       area_director_id: areaDirectorId === "none" ? null : areaDirectorId,
@@ -87,6 +92,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
       setRoutes((prev) => [...prev, res.route as PostcodeRoute].sort((a, b) => a.postcode_area.localeCompare(b.postcode_area)));
       setIsAddOpen(false);
       setPostcodeArea("");
+      setAreaName("");
       setRegionCountry("England");
       setAssignedRegionId(1);
       setAreaDirectorId("none");
@@ -102,6 +108,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
 
     const res = await updatePostcodeRoute(editingRoute.id, {
       postcode_area: editPostcodeArea,
+      area_name: editAreaName || null,
       region_country: editRegionCountry,
       assigned_region_id: editAssignedRegionId,
       area_director_id: editAreaDirectorId === "none" ? null : editAreaDirectorId,
@@ -136,6 +143,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   const startEdit = (route: PostcodeRoute) => {
     setEditingRoute(route);
     setEditPostcodeArea(route.postcode_area);
+    setEditAreaName(route.area_name || "");
     setEditRegionCountry(route.region_country);
     setEditAssignedRegionId(route.assigned_region_id);
     setEditAreaDirectorId(route.area_director_id || "none");
@@ -166,6 +174,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
           <TableHeader>
             <TableRow>
               <TableHead>Postcode Area</TableHead>
+              <TableHead>Area Name</TableHead>
               <TableHead>Region/Country</TableHead>
               <TableHead>Assigned Region ID</TableHead>
               <TableHead>Area Director</TableHead>
@@ -175,7 +184,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
           <TableBody>
             {filteredRoutes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   No postcode routing rules found.
                 </TableCell>
               </TableRow>
@@ -185,6 +194,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 return (
                   <TableRow key={route.id}>
                     <TableCell className="font-semibold">{route.postcode_area}</TableCell>
+                    <TableCell>{route.area_name || "N/A"}</TableCell>
                     <TableCell>{route.region_country}</TableCell>
                     <TableCell>{route.assigned_region_id}</TableCell>
                     <TableCell>{director ? (director.name || director.email) : "Unassigned"}</TableCell>
@@ -221,6 +231,15 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 value={postcodeArea}
                 onChange={(e) => setPostcodeArea(e.target.value.toUpperCase())}
                 required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="area_name">Area Name</Label>
+              <Input
+                id="area_name"
+                placeholder="e.g. Aberdeen or Bath"
+                value={areaName}
+                onChange={(e) => setAreaName(e.target.value)}
               />
             </div>
             <div className="space-y-1">
@@ -283,6 +302,15 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 value={editPostcodeArea}
                 onChange={(e) => setEditPostcodeArea(e.target.value.toUpperCase())}
                 required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="edit_area_name">Area Name</Label>
+              <Input
+                id="edit_area_name"
+                placeholder="e.g. Aberdeen or Bath"
+                value={editAreaName}
+                onChange={(e) => setEditAreaName(e.target.value)}
               />
             </div>
             <div className="space-y-1">

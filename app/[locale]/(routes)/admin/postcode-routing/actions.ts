@@ -27,13 +27,14 @@ export async function getPostcodeRoutes() {
 
 export async function createPostcodeRoute(data: {
   postcode_area: string;
+  area_name?: string | null;
   region_country: string;
   assigned_region_id: number;
   area_director_id?: string | null;
 }) {
   const actor = await requireRole(["admin", "ceo", "operations_director"]);
 
-  const { postcode_area, region_country, assigned_region_id, area_director_id } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_id } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -52,6 +53,7 @@ export async function createPostcodeRoute(data: {
     const newRoute = await prismadb.nextcrm_postcode_routing.create({
       data: {
         postcode_area: cleanArea,
+        area_name: area_name || null,
         region_country,
         assigned_region_id: Number(assigned_region_id),
         area_director_id: area_director_id || null,
@@ -80,6 +82,7 @@ export async function updatePostcodeRoute(
   id: string,
   data: {
     postcode_area: string;
+    area_name?: string | null;
     region_country: string;
     assigned_region_id: number;
     area_director_id?: string | null;
@@ -87,7 +90,7 @@ export async function updatePostcodeRoute(
 ) {
   const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
 
-  const { postcode_area, region_country, assigned_region_id, area_director_id } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_id } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -124,6 +127,7 @@ export async function updatePostcodeRoute(
       where: { id },
       data: {
         postcode_area: cleanArea,
+        area_name: area_name || null,
         region_country,
         assigned_region_id: Number(assigned_region_id),
         area_director_id: area_director_id || null,

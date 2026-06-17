@@ -1931,6 +1931,7 @@ model Invoice_Settings {
 model nextcrm_postcode_routing {
   id                 String   @id @default(uuid()) @db.Uuid
   postcode_area      String   @unique
+  area_name          String?
   region_country     String
   assigned_region_id Int
   area_director_id   String?  @db.Uuid
