@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     let email = body.email;
     let telephone = body.telephone || body["telephone "]; // handle optional trailing spaces from Wix UI
     let business_name = body.business_name;
-    let postcode = body.postcode;
+    let postcode = body.postcode || body.postcode_1;
     let website = body.website;
     let lead_type = body.lead_type;
     let lead_source = body.lead_source || "Wix Website";
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     }
 
     if (!postcode) {
-      postcode = body.contact?.address?.postalCode || body.contact?.address?.zipCode || body.contact?.address?.formattedAddress || body.buyer?.address?.postalCode || body.buyer?.address?.zipCode || body.address?.postalCode || body.address?.zipCode || body.zipCode || body.postalCode;
+      postcode = body.contact?.address?.postalCode || body.contact?.address?.zipCode || body.contact?.address?.formattedAddress || body.buyer?.address?.postalCode || body.buyer?.address?.zipCode || body.address?.postalCode || body.address?.zipCode || body.zipCode || body.postalCode || body.contact?.postcode_1 || body.buyer?.postcode_1 || body.address?.postcode_1;
     }
 
     if (!website) {
