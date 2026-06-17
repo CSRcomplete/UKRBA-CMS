@@ -22,11 +22,12 @@ jobs:
           script: |
             cd /var/www/UKRBA-CMS
             
-            # Pull latest changes
-            git pull origin dev
+            # Fetch and hard reset to match remote dev branch exactly
+            git fetch origin
+            git reset --hard origin/dev
             
-            # Install dependencies
-            npm install
+            # Install dependencies (ignoring peer dependency conflicts)
+            npm install --legacy-peer-deps
             
             # Sync database schema changes
             npx prisma db push
@@ -36,4 +37,4 @@ jobs:
             npm run build
             
             # Restart PM2 process
-            pm2 restart ukrba-cms || pm2 restart nextcrm-app || pm2 start npm --name "nextcrm-app" -- run start
+            pm2 restart nextcrm-app || pm2 restart ukrba-cms || pm2 start npm --name "nextcrm-app" -- run start
