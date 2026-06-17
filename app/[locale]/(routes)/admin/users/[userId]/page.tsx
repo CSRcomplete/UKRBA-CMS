@@ -6,13 +6,14 @@ import Container from "../../../components/ui/Container";
 import UserManageForm from "./components/UserManageForm";
 
 interface UserPageProps {
-  params: {
+  params: Promise<{
     userId: string;
     locale: string;
-  };
+  }>;
 }
 
-export default async function UserPage({ params }: UserPageProps) {
+export default async function UserPage(props: UserPageProps) {
+  const params = await props.params;
   const session = await getSession();
 
   if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "operations_director") {
