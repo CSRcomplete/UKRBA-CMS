@@ -1,6 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
+import path from "path";
 
-const prisma = new PrismaClient();
+// Load environment variables from .env file
+dotenv.config({ path: path.join(__dirname, "../.env") });
+
+import { prismadb } from "../lib/prisma";
 
 const postcodes = [
   { area: "AB", name: "Aberdeen" },
@@ -121,7 +125,7 @@ async function main() {
   console.log(`Starting to seed ${postcodes.length} UK postcode areas...`);
   
   for (const pc of postcodes) {
-    await prisma.nextcrm_postcode_routing.upsert({
+    await prismadb.nextcrm_postcode_routing.upsert({
       where: { postcode_area: pc.area },
       update: { area_name: pc.name },
       create: {
@@ -142,5 +146,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await prismadb.$disconnect();
   });
