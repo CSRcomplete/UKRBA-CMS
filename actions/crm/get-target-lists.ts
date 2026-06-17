@@ -15,8 +15,9 @@ export const getTargetLists = async () => {
     throw e;
   }
 
+  const scope = await targetListReadScopeWhere(user);
   const targetLists = await prismadb.crm_TargetLists.findMany({
-    where: { ...targetListReadScopeWhere(user) },
+    where: { ...scope },
     orderBy: { created_on: "desc" },
     include: {
       crate_by_user: { select: { name: true } },

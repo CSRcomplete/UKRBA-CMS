@@ -17,8 +17,9 @@ export const getOpportunitiesFull = cache(async () => {
     throw e;
   }
 
+  const scope = await opportunityReadScopeWhere(user);
   const data = await prismadb.crm_Opportunities.findMany({
-    where: { ...opportunityReadScopeWhere(user) },
+    where: { ...scope },
     include: {
       assigned_account: {
         select: {

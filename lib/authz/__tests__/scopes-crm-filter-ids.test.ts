@@ -95,8 +95,8 @@ describe("filterAuthorizedLeadIds", () => {
       id: { in: ["l1", "l2"] },
       deletedAt: null,
       OR: expect.arrayContaining([
-        { assigned_to: "u3" },
-        { createdBy: "u3" },
+        { assigned_to: { in: ["u3"] } },
+        { createdBy: { in: ["u3"] } },
         {
           assigned_accounts: {
             OR: expect.arrayContaining([
@@ -145,8 +145,8 @@ describe("filterAuthorizedOpportunityIds", () => {
       id: { in: ["o1", "o2"] },
       deletedAt: null,
       OR: expect.arrayContaining([
-        { assigned_to: "u3" },
-        { createdBy: "u3" },
+        { assigned_to: { in: ["u3"] } },
+        { createdBy: { in: ["u3"] } },
         {
           assigned_account: {
             OR: expect.arrayContaining([

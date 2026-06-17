@@ -1,6 +1,23 @@
-export type AppRole = "user" | "manager" | "admin";
+export type AppRole =
+  | "user"
+  | "manager"
+  | "admin"
+  | "ceo"
+  | "operations_director"
+  | "regional_director"
+  | "area_director"
+  | "channel_partner";
 
-export const APP_ROLES: readonly AppRole[] = ["user", "manager", "admin"] as const;
+export const APP_ROLES: readonly AppRole[] = [
+  "user",
+  "manager",
+  "admin",
+  "ceo",
+  "operations_director",
+  "regional_director",
+  "area_director",
+  "channel_partner",
+] as const;
 
 const APP_ROLE_SET = new Set<string>(APP_ROLES);
 
@@ -15,9 +32,15 @@ const LEGACY_MAP: Record<string, AppRole> = {
   viewer: "user",
   user: "user",
   manager: "manager",
+  ceo: "ceo",
+  operations_director: "operations_director",
+  regional_director: "regional_director",
+  area_director: "area_director",
+  channel_partner: "channel_partner",
 };
 
 export function mapLegacyRole(value: unknown): AppRole {
   if (typeof value !== "string") return "user";
   return LEGACY_MAP[value] ?? "user";
 }
+

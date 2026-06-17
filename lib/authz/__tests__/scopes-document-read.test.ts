@@ -32,18 +32,18 @@ const linkedAccountOR = (uid: string) => ({
 });
 
 describe("documentReadScopeWhere", () => {
-  it("admin → only deletedAt:null", () => {
-    expect(documentReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin → only deletedAt:null", async () => {
+    expect(await documentReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
   });
-  it("manager → only deletedAt:null", () => {
-    expect(documentReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+  it("manager → only deletedAt:null", async () => {
+    expect(await documentReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + OR with all 8 branches", () => {
-    const w = documentReadScopeWhere({ id: "u1", role: "user" }) as any;
+  it("user → deletedAt + OR with all 8 branches", async () => {
+    const w = (await documentReadScopeWhere({ id: "u1", role: "user" })) as any;
     expect(w.deletedAt).toBeNull();
     expect(w.OR).toEqual(
       expect.arrayContaining([

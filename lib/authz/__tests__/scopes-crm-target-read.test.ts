@@ -20,31 +20,31 @@ const findList = prismadb.crm_TargetLists.findFirst as jest.MockedFunction<
 beforeEach(() => jest.clearAllMocks());
 
 describe("targetReadScopeWhere", () => {
-  it("admin/manager → { deletedAt: null }", () => {
-    expect(targetReadScopeWhere({ id: "x", role: "admin" })).toEqual({ deletedAt: null });
-    expect(targetReadScopeWhere({ id: "x", role: "manager" })).toEqual({ deletedAt: null });
+  it("admin/manager → { deletedAt: null }", async () => {
+    expect(await targetReadScopeWhere({ id: "x", role: "admin" })).toEqual({ deletedAt: null });
+    expect(await targetReadScopeWhere({ id: "x", role: "manager" })).toEqual({ deletedAt: null });
   });
-  it("user → { deletedAt: null, created_by: user.id }", () => {
-    expect(targetReadScopeWhere({ id: "u1", role: "user" })).toEqual({
+  it("user → { deletedAt: null, created_by: user.id }", async () => {
+    expect(await targetReadScopeWhere({ id: "u1", role: "user" })).toEqual({
       deletedAt: null,
-      created_by: "u1",
+      created_by: { in: ["u1"] },
     });
   });
 });
 
 describe("targetListReadScopeWhere", () => {
-  it("admin/manager → { deletedAt: null }", () => {
-    expect(targetListReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → { deletedAt: null }", async () => {
+    expect(await targetListReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
-    expect(targetListReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await targetListReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → { deletedAt: null, created_by: user.id }", () => {
-    expect(targetListReadScopeWhere({ id: "u1", role: "user" })).toEqual({
+  it("user → { deletedAt: null, created_by: user.id }", async () => {
+    expect(await targetListReadScopeWhere({ id: "u1", role: "user" })).toEqual({
       deletedAt: null,
-      created_by: "u1",
+      created_by: { in: ["u1"] },
     });
   });
 });
@@ -62,7 +62,7 @@ describe("assertCanReadTargetList", () => {
     findList.mockResolvedValue({ id: "tl1" } as any);
     await assertCanReadTargetList({ id: "u1", role: "user" }, "tl1");
     expect(findList).toHaveBeenCalledWith({
-      where: { id: "tl1", deletedAt: null, created_by: "u1" },
+      where: { id: "tl1", deletedAt: null, created_by: { in: ["u1"] } },
       select: { id: true },
     });
   });

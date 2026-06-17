@@ -108,8 +108,8 @@ export function AppSidebar({
     getInvoicesMenuItem({ title: dict?.invoices || "Invoices" }),
   ];
 
-  // Administration: admin users only
-  if (session?.user?.role === "admin") {
+  // Administration: admin or ceo users only
+  if (session?.user?.role === "admin" || session?.user?.role === "ceo") {
     navItems.push(
       getAdministrationMenuItem({ title: dict?.settings || "Administration" }),
     );

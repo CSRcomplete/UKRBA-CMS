@@ -97,7 +97,7 @@ export function DataTableRowActions<TData>({
     }
   };
 
-  const onSetRole = async (role: "admin" | "manager" | "user") => {
+  const onSetRole = async (role: any) => {
     try {
       setLoading(true);
       const result = await setUserRole(data.id, role);
@@ -153,6 +153,21 @@ export function DataTableRowActions<TData>({
             <DropdownMenuSubContent>
               <DropdownMenuItem onClick={() => onSetRole("admin")}>
                 Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("ceo")}>
+                CEO
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("operations_director")}>
+                Operations Director
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("regional_director")}>
+                Regional Director
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("area_director")}>
+                Area Director
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("channel_partner")}>
+                Channel Partner
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSetRole("manager")}>
                 Manager

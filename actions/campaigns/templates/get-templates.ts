@@ -15,8 +15,9 @@ export const getTemplates = async () => {
     throw e;
   }
 
+  const scope = await campaignTemplateReadScopeWhere(user);
   return prismadb.crm_campaign_templates.findMany({
-    where: campaignTemplateReadScopeWhere(user),
+    where: scope,
     orderBy: { created_on: "desc" },
     include: { created_by_user: { select: { name: true } } },
   });

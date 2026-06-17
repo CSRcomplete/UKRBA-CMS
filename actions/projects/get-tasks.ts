@@ -14,10 +14,11 @@ export const getTasks = async () => {
     throw e;
   }
 
+  const scope = await boardReadScopeWhere(user);
   const data = await prismadb.tasks.findMany({
     where: {
       assigned_section: {
-        board_relation: boardReadScopeWhere(user),
+        board_relation: scope,
       },
     },
     include: {

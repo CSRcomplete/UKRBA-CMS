@@ -6,7 +6,7 @@ import { APP_ROLES, AppRole, requireRole, AuthorizationError } from "@/lib/authz
 export const setUserRole = async (userId: string, role: AppRole) => {
   let actor;
   try {
-    actor = await requireRole(["admin"]);
+    actor = await requireRole(["admin", "ceo"]);
   } catch (e) {
     if (e instanceof AuthorizationError) return { error: "Forbidden" };
     return { error: "Unauthorized" };
@@ -15,8 +15,8 @@ export const setUserRole = async (userId: string, role: AppRole) => {
   if (!userId) return { error: "userId is required" };
   if (!APP_ROLES.includes(role)) return { error: "Invalid role" };
 
-  if (userId === actor.id && role !== "admin") {
-    return { error: "Cannot remove your own admin role" };
+  if (userId === actor.id && role !== "admin" && role !== "ceo") {
+    return { error: "Cannot remove your own admin/ceo role" };
   }
 
   try {

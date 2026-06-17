@@ -925,6 +925,11 @@ enum AppRole {
   user
   manager
   admin
+  ceo
+  operations_director
+  regional_director
+  area_director
+  channel_partner
 }
 
 model Users {
