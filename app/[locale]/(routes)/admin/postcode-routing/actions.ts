@@ -12,6 +12,15 @@ export async function getPostcodeRoutes() {
       where: {
         assigned_region_id: actor.region_id,
       },
+      include: {
+        area_directors: {
+          include: {
+            area_director: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        }
+      },
       orderBy: {
         postcode_area: "asc",
       },
@@ -19,6 +28,15 @@ export async function getPostcodeRoutes() {
   }
 
   return await prismadb.nextcrm_postcode_routing.findMany({
+    include: {
+      area_directors: {
+        include: {
+          area_director: {
+            select: { id: true, name: true, email: true }
+          }
+        }
+      }
+    },
     orderBy: {
       postcode_area: "asc",
     },
@@ -30,11 +48,11 @@ export async function createPostcodeRoute(data: {
   area_name?: string | null;
   region_country: string;
   assigned_region_id: number;
-  area_director_id?: string | null;
+  area_director_ids?: string[];
 }) {
   const actor = await requireRole(["admin", "ceo", "operations_director"]);
 
-  const { postcode_area, area_name, region_country, assigned_region_id, area_director_id } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -56,9 +74,18 @@ export async function createPostcodeRoute(data: {
         area_name: area_name || null,
         region_country,
         assigned_region_id: Number(assigned_region_id),
-        area_director_id: area_director_id || null,
       },
     });
+
+    // Create many-to-many assignments
+    if (area_director_ids && area_director_ids.length > 0) {
+      await prismadb.postcodeRoutingToAreaDirectors.createMany({
+        data: area_director_ids.map((adId) => ({
+          postcode_routing_id: newRoute.id,
+          area_director_id: adId,
+        }))
+      });
+    }
 
     // Log to audit log
     await prismadb.sys_audit_logs.create({
@@ -85,12 +112,12 @@ export async function updatePostcodeRoute(
     area_name?: string | null;
     region_country: string;
     assigned_region_id: number;
-    area_director_id?: string | null;
+    area_director_ids?: string[];
   }
 ) {
   const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
 
-  const { postcode_area, area_name, region_country, assigned_region_id, area_director_id } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -130,9 +157,22 @@ export async function updatePostcodeRoute(
         area_name: area_name || null,
         region_country,
         assigned_region_id: Number(assigned_region_id),
-        area_director_id: area_director_id || null,
       },
     });
+
+    // Sync many-to-many assignments: Delete old, recreate new
+    await prismadb.postcodeRoutingToAreaDirectors.deleteMany({
+      where: { postcode_routing_id: id }
+    });
+
+    if (area_director_ids && area_director_ids.length > 0) {
+      await prismadb.postcodeRoutingToAreaDirectors.createMany({
+        data: area_director_ids.map((adId) => ({
+          postcode_routing_id: id,
+          area_director_id: adId,
+        }))
+      });
+    }
 
     // Log to audit log
     await prismadb.sys_audit_logs.create({

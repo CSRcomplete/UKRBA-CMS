@@ -213,22 +213,58 @@ export async function POST(req: Request) {
       if (routingRule) {
         const assignedRegionId = routingRule.assigned_region_id;
 
-        // Find active Area Director ID mapped to that region_id
-        const areaDirector = await prismadb.users.findFirst({
-          where: {
-            region_id: assignedRegionId,
-          }
+        // Fetch many-to-many assigned Area Directors for this postcode
+        const assignedDirectors = await prismadb.postcodeRoutingToAreaDirectors.findMany({
+          where: { postcode_routing_id: routingRule.id },
+          include: { area_director: true }
         });
 
-        if (areaDirector) {
-          currentOwnerId = areaDirector.id;
-          areaDirectorId = areaDirector.id;
-          // Traverse up to find regional director parent
-          if (areaDirector.parentId) {
-            regionalDirectorId = areaDirector.parentId;
+        if (assignedDirectors.length > 0) {
+          // Round-robin: find the Area Director with the least leads assigned in this postcode prefix
+          const directorCounts = await Promise.all(
+            assignedDirectors.map(async (ad) => {
+              const count = await prismadb.crm_Leads.count({
+                where: {
+                  assigned_area_director_id: ad.area_director_id,
+                  postcode: { startsWith: prefix, mode: "insensitive" }
+                }
+              });
+              return { director: ad.area_director, count };
+            })
+          );
+
+          // Sort by count ascending, pick the lowest
+          directorCounts.sort((a, b) => a.count - b.count);
+          const selected = directorCounts[0].director;
+
+          currentOwnerId = selected.id;
+          areaDirectorId = selected.id;
+          if (selected.parentId) {
+            regionalDirectorId = selected.parentId;
           }
         } else {
-          currentOwnerId = opsDirectorId; // Fallback
+          // Fallback to legacy single director assignment or region match
+          let fallbackDirector = null;
+          if (routingRule.area_director_id) {
+            fallbackDirector = await prismadb.users.findUnique({
+              where: { id: routingRule.area_director_id }
+            });
+          }
+          if (!fallbackDirector) {
+            fallbackDirector = await prismadb.users.findFirst({
+              where: { region_id: assignedRegionId }
+            });
+          }
+
+          if (fallbackDirector) {
+            currentOwnerId = fallbackDirector.id;
+            areaDirectorId = fallbackDirector.id;
+            if (fallbackDirector.parentId) {
+              regionalDirectorId = fallbackDirector.parentId;
+            }
+          } else {
+            currentOwnerId = opsDirectorId;
+          }
         }
       } else {
         currentOwnerId = opsDirectorId; // Fallback

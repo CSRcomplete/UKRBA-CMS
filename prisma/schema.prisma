@@ -998,6 +998,7 @@ model Users {
   parentId  String? @db.Uuid
   parent    Users?  @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Users[] @relation("UserHierarchy")
+  postcode_routing_assignments PostcodeRoutingToAreaDirectors[] @relation("AreaDirectorToPostcodeRouting")
 
   @@index([email])
   @@index([userStatus])
@@ -1929,13 +1930,26 @@ model Invoice_Settings {
 }
 
 model nextcrm_postcode_routing {
-  id                 String   @id @default(uuid()) @db.Uuid
-  postcode_area      String   @unique
+  id                 String                           @id @default(uuid()) @db.Uuid
+  postcode_area      String                           @unique
   area_name          String?
   region_country     String
   assigned_region_id Int
-  area_director_id   String?  @db.Uuid
-  createdAt          DateTime @default(now())
+  area_director_id   String?                          @db.Uuid
+  createdAt          DateTime                         @default(now())
+  area_directors     PostcodeRoutingToAreaDirectors[]
+}
+
+model PostcodeRoutingToAreaDirectors {
+  postcode_routing_id String @db.Uuid
+  area_director_id    String @db.Uuid
+
+  postcode_routing nextcrm_postcode_routing @relation(fields: [postcode_routing_id], references: [id], onDelete: Cascade)
+  area_director    Users                    @relation("AreaDirectorToPostcodeRouting", fields: [area_director_id], references: [id], onDelete: Cascade)
+
+  @@id([postcode_routing_id, area_director_id])
+  @@index([postcode_routing_id])
+  @@index([area_director_id])
 }
 
 model sys_audit_logs {

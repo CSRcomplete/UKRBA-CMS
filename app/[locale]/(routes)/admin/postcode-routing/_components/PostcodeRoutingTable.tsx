@@ -26,7 +26,13 @@ interface PostcodeRoute {
   area_name?: string | null;
   region_country: string;
   assigned_region_id: number;
-  area_director_id?: string | null;
+  area_directors?: {
+    area_director: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  }[];
 }
 
 export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: PostcodeRoute[] }) {
@@ -40,7 +46,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   const [areaName, setAreaName] = useState("");
   const [regionCountry, setRegionCountry] = useState("England");
   const [assignedRegionId, setAssignedRegionId] = useState(1);
-  const [areaDirectorId, setAreaDirectorId] = useState<string>("none");
+  const [areaDirectorIds, setAreaDirectorIds] = useState<string[]>([]);
 
   // Edit state
   const [editingRoute, setEditingRoute] = useState<PostcodeRoute | null>(null);
@@ -48,7 +54,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   const [editAreaName, setEditAreaName] = useState("");
   const [editRegionCountry, setEditRegionCountry] = useState("");
   const [editAssignedRegionId, setEditAssignedRegionId] = useState(1);
-  const [editAreaDirectorId, setEditAreaDirectorId] = useState<string>("none");
+  const [editAreaDirectorIds, setEditAreaDirectorIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchADs = async () => {
@@ -82,7 +88,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
       area_name: areaName || null,
       region_country: regionCountry,
       assigned_region_id: assignedRegionId,
-      area_director_id: areaDirectorId === "none" ? null : areaDirectorId,
+      area_director_ids: areaDirectorIds,
     });
 
     if (res.error) {
@@ -95,7 +101,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
       setAreaName("");
       setRegionCountry("England");
       setAssignedRegionId(1);
-      setAreaDirectorId("none");
+      setAreaDirectorIds([]);
     }
   };
 
@@ -111,7 +117,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
       area_name: editAreaName || null,
       region_country: editRegionCountry,
       assigned_region_id: editAssignedRegionId,
-      area_director_id: editAreaDirectorId === "none" ? null : editAreaDirectorId,
+      area_director_ids: editAreaDirectorIds,
     });
 
     if (res.error) {
@@ -146,7 +152,7 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
     setEditAreaName(route.area_name || "");
     setEditRegionCountry(route.region_country);
     setEditAssignedRegionId(route.assigned_region_id);
-    setEditAreaDirectorId(route.area_director_id || "none");
+    setEditAreaDirectorIds(route.area_directors?.map((ad) => ad.area_director.id) || []);
   };
 
   return (
@@ -190,14 +196,16 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
               </TableRow>
             ) : (
               filteredRoutes.map((route) => {
-                const director = areaDirectors.find((d) => d.id === route.area_director_id);
+                const directorsText = route.area_directors && route.area_directors.length > 0
+                  ? route.area_directors.map((ad) => ad.area_director.name || ad.area_director.email).join(", ")
+                  : "Unassigned";
                 return (
                   <TableRow key={route.id}>
                     <TableCell className="font-semibold">{route.postcode_area}</TableCell>
                     <TableCell>{route.area_name || "N/A"}</TableCell>
                     <TableCell>{route.region_country}</TableCell>
                     <TableCell>{route.assigned_region_id}</TableCell>
-                    <TableCell>{director ? (director.name || director.email) : "Unassigned"}</TableCell>
+                    <TableCell>{directorsText}</TableCell>
                     <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => startEdit(route)}>
@@ -262,21 +270,30 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 required
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="area_director">Assigned Area Director</Label>
-              <Select value={areaDirectorId} onValueChange={setAreaDirectorId}>
-                <SelectTrigger id="area_director">
-                  <SelectValue placeholder="Select Area Director" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (Unassigned)</SelectItem>
-                  {areaDirectors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
+            <div className="space-y-2">
+              <Label>Assigned Area Directors</Label>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {areaDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`ad-${d.id}`}
+                      checked={areaDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAreaDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setAreaDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`ad-${d.id}`} className="font-normal cursor-pointer">
                       {d.name || d.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
@@ -332,21 +349,30 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 required
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit_area_director">Assigned Area Director</Label>
-              <Select value={editAreaDirectorId} onValueChange={setEditAreaDirectorId}>
-                <SelectTrigger id="edit_area_director">
-                  <SelectValue placeholder="Select Area Director" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (Unassigned)</SelectItem>
-                  {areaDirectors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
+            <div className="space-y-2">
+              <Label>Assigned Area Directors</Label>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {areaDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-ad-${d.id}`}
+                      checked={editAreaDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditAreaDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setEditAreaDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`edit-ad-${d.id}`} className="font-normal cursor-pointer">
                       {d.name || d.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditingRoute(null)}>
