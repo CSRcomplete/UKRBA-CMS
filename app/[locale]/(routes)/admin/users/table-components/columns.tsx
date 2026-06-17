@@ -2,6 +2,7 @@
 
 import moment from "moment";
 
+import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { statuses } from "../table-data/data";
@@ -58,7 +59,17 @@ export const columns: ColumnDef<AdminUser>[] = [
       <DataTableColumnHeader column={column} title="Name" />
     ),
 
-    cell: ({ row }) => <div className="">{row.getValue("name")}</div>,
+    cell: ({ row }) => {
+      const name = (row.getValue("name") as string) || row.original.email || "No Name";
+      return (
+        <Link
+          href={`/admin/users/${row.original.id}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {name}
+        </Link>
+      );
+    },
     enableSorting: true,
     enableHiding: true,
   },
