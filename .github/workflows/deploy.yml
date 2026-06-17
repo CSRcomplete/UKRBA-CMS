@@ -35,6 +35,11 @@ jobs:
             
             # Build Next.js application
             npm run build
-            
-            # Restart PM2 process
-            pm2 restart nextcrm-app || pm2 restart ukrba-cms || pm2 start npm --name "nextcrm-app" -- run start
+
+            # Copy static files to standalone directory for Next.js standalone server
+            cp -r public .next/standalone/
+            mkdir -p .next/standalone/.next
+            cp -r .next/static .next/standalone/.next/
+
+            # Restart PM2 process using ecosystem config
+            pm2 start ecosystem.config.js
