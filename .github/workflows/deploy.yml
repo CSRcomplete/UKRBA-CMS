@@ -1,0 +1,39 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/UKRBA-CMS
+            
+            # Pull latest changes
+            git pull origin dev
+            
+            # Install dependencies
+            npm install
+            
+            # Sync database schema changes
+            npx prisma db push
+            npx prisma generate
+            
+            # Build Next.js application
+            npm run build
+            
+            # Restart PM2 process
+            pm2 restart ukrba-cms || pm2 restart nextcrm-app || pm2 start npm --name "nextcrm-app" -- run start
