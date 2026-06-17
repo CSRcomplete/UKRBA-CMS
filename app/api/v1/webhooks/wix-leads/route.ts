@@ -49,11 +49,53 @@ export async function POST(req: Request) {
     let lead_type = body.lead_type;
     let lead_source = body.lead_source || "Wix Website";
 
+    // Fallbacks for raw Wix event structure
+    if (!contact_name) {
+      if (body.contact?.name) {
+        const nameObj = body.contact.name;
+        if (typeof nameObj === 'object') {
+          const first = nameObj.first || "";
+          const last = nameObj.last || "";
+          contact_name = `${first} ${last}`.trim() || null;
+        } else if (typeof nameObj === 'string') {
+          contact_name = nameObj;
+        }
+      } else if (body.buyer?.name) {
+        contact_name = body.buyer.name;
+      } else if (body.buyer?.firstName || body.buyer?.lastName) {
+        contact_name = `${body.buyer.firstName || ""} ${body.buyer.lastName || ""}`.trim() || null;
+      } else if (body.contact?.firstName || body.contact?.lastName) {
+        contact_name = `${body.contact.firstName || ""} ${body.contact.lastName || ""}`.trim() || null;
+      } else if (body.firstName || body.lastName) {
+        contact_name = `${body.firstName || ""} ${body.lastName || ""}`.trim() || null;
+      }
+    }
+
+    if (!email) {
+      email = body.contact?.email || body.buyer?.email || body.emailAddress;
+    }
+
+    if (!telephone) {
+      telephone = body.contact?.phone || body.buyer?.phone || body.phone || body.phoneNumber || body.contact?.telephone || body.telephone;
+    }
+
+    if (!business_name) {
+      business_name = body.contact?.company || body.buyer?.company || body.company || body.businessName;
+    }
+
+    if (!postcode) {
+      postcode = body.contact?.address?.postalCode || body.contact?.address?.zipCode || body.contact?.address?.formattedAddress || body.buyer?.address?.postalCode || body.buyer?.address?.zipCode || body.address?.postalCode || body.address?.zipCode || body.zipCode || body.postalCode;
+    }
+
+    if (!website) {
+      website = body.contact?.website || body.buyer?.website || body.companyWebsite;
+    }
+
     if (body.contact) {
       const contact = body.contact;
       
       // Resolve name
-      if (contact.name) {
+      if (!contact_name && contact.name) {
         if (typeof contact.name === 'object') {
           const first = contact.name.first || "";
           const last = contact.name.last || "";
@@ -68,8 +110,8 @@ export async function POST(req: Request) {
       business_name = business_name || contact.company;
       
       // Resolve address / postcode
-      if (contact.address) {
-        postcode = postcode || contact.address.postalCode || contact.address.zipCode || contact.address.formattedAddress;
+      if (!postcode && contact.address) {
+        postcode = contact.address.postalCode || contact.address.zipCode || contact.address.formattedAddress;
       }
       
       website = website || contact.website;
@@ -97,14 +139,16 @@ export async function POST(req: Request) {
     }
 
     // Determine lead type automatically based on Wix Plan ordered if not explicitly passed
-    if (!lead_type && body.plan_title) {
-      const planTitle = body.plan_title.toLowerCase();
+    const rawPlanTitle = body.plan_title || body.planTitle || body.planName || body.order?.planName || body.order?.planTitle || body.plan?.name || body.plan?.title;
+    if (!lead_type && rawPlanTitle) {
+      const planTitle = rawPlanTitle.toLowerCase();
       if (planTitle.includes("white label") || planTitle.includes("partner")) {
         lead_type = "White Label Partner";
       } else {
         lead_type = "SME Membership";
       }
     }
+
 
     if (!contact_name || !email || !lead_type || !lead_source) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
