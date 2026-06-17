@@ -4,8 +4,6 @@ import path from "path";
 // Load environment variables from .env file
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-import { prismadb } from "../lib/prisma";
-
 const postcodes = [
   { area: "AB", name: "Aberdeen" },
   { area: "AL", name: "St Albans" },
@@ -122,6 +120,9 @@ const postcodes = [
 ];
 
 async function main() {
+  // Dynamically import prismadb to bypass ES Modules hoisting issues
+  const { prismadb } = await import("../lib/prisma");
+
   console.log(`Starting to seed ${postcodes.length} UK postcode areas...`);
   
   for (const pc of postcodes) {
@@ -138,13 +139,11 @@ async function main() {
   }
 
   console.log("Seeding postcode areas completed successfully.");
+  await prismadb.$disconnect();
 }
 
 main()
   .catch((e) => {
     console.error("Error seeding postcode areas:", e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prismadb.$disconnect();
   });
