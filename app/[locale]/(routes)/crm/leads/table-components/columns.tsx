@@ -168,6 +168,26 @@ export const createColumns = (
     },
   },
   {
+    id: "nextAction",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Next Action" />
+    ),
+    cell: ({ row }) => {
+      const nextAction = (row.original as any).nextAction;
+      if (!nextAction) return <span className="text-muted-foreground text-xs">—</span>;
+      return (
+        <div className="flex flex-col text-xs max-w-[150px]">
+          <span className="font-semibold truncate text-primary hover:underline" title={nextAction.title}>
+            {nextAction.title}
+          </span>
+          <span className="text-muted-foreground text-[10px]">
+            {moment(nextAction.dueDateAt).format("YY-MM-DD")}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => (
       <DataTableRowActions

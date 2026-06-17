@@ -43,5 +43,33 @@ export const getLeads = cache(async () => {
       createdAt: "desc",
     },
   });
-  return data;
+
+  // Fetch all active tasks to map next actions in-memory
+  const activeTasks = await prismadb.tasks.findMany({
+    where: {
+      taskStatus: "ACTIVE",
+    },
+    orderBy: {
+      dueDateAt: "asc",
+    },
+  });
+
+  const leadsWithActions = data.map((lead: any) => {
+    const nextTask = activeTasks.find((task: any) => {
+      if (task.tags && typeof task.tags === "object") {
+        return (task.tags as any).leadId === lead.id;
+      }
+      return false;
+    });
+
+    return {
+      ...lead,
+      nextAction: nextTask ? {
+        title: nextTask.title,
+        dueDateAt: nextTask.dueDateAt,
+      } : null,
+    };
+  });
+
+  return leadsWithActions;
 });

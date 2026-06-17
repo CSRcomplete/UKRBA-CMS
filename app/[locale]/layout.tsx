@@ -1,17 +1,13 @@
 import "./globals.css";
-
-import { Inter } from "next/font/google";
-
 import { ReactNode } from "react";
-
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, getMessages } from "next-intl/server";
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+// Font optimization disabled to prevent build errors in offline environments.
+const inter = { className: "font-sans" };
 
 type Props = {
   children: ReactNode;

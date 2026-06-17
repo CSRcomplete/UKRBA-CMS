@@ -9,6 +9,7 @@ import { HistoryTab } from "./components/HistoryTab";
 import { ActivitiesSection } from "./components/ActivitiesSection";
 import { getOwnershipHistory } from "@/lib/ownership";
 import { OwnershipHistoryTimeline } from "@/components/crm/leads/OwnershipHistoryTimeline";
+import { EntityTasks } from "@/components/crm/tasks/EntityTasks";
 
 interface LeadDetailPageProps {
   params: Promise<{
@@ -34,6 +35,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tasks">Next Actions</TabsTrigger>
           <TabsTrigger value="ownership">Ownership Trail</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -44,6 +46,9 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
             <FindSimilarButton entityType="lead" recordId={leadId} />
             {/*         <DocumentsView data={lead?.documents} /> */}
           </div>
+        </TabsContent>
+        <TabsContent value="tasks">
+          <EntityTasks entityId={leadId} entityType="lead" />
         </TabsContent>
         <TabsContent value="ownership">
           <OwnershipHistoryTimeline history={ownershipHistory} />
