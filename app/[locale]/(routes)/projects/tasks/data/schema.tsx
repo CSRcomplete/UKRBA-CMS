@@ -9,6 +9,7 @@ export const taskSchema = z.object({
   dueDateAt: z.date().nullable(),
   section: z.string().nullable().optional(),
   priority: z.string(),
+  tags: z.any().nullable().optional(),
 });
 
 export type Task = z.infer<typeof taskSchema>;

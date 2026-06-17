@@ -139,6 +139,23 @@ export const columns: ColumnDef<Task>[] = [
     },
   },
   {
+    accessorKey: "tags",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Completed Date" />
+    ),
+    cell: ({ row }) => {
+      const tags = row.original.tags as Record<string, any> | null;
+      const completedAt = tags?.completedAt;
+      return (
+        <div className="w-[100px] text-muted-foreground">
+          {completedAt ? moment(completedAt).format("YY-MM-DD") : "—"}
+        </div>
+      );
+    },
+    enableSorting: false,
+    enableHiding: true,
+  },
+  {
     id: "actions",
     cell: ({ row }) => <DataTableRowActions row={row} />,
   },
