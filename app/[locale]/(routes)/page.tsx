@@ -265,117 +265,120 @@ const DashboardPage = async () => {
         "Welcome to NextCRM cockpit, here you can see your company overview"
       }
     >
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <Suspense fallback={<LoadingBox />}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {dict("totalRevenue")}
-              </CardTitle>
-              <DollarSignIcon className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{"0"}</div>
-            </CardContent>
-          </Card>
-        </Suspense>
-        <Suspense fallback={<LoadingBox />}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {dict("expectedRevenue")}
-              </CardTitle>
-              <DollarSignIcon className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">
-                {formatCurrencyUtil(new Decimal(revenue), displayCurrency)}
-              </div>
-            </CardContent>
-          </Card>
-        </Suspense>
+      {/* Cards Grid - Only for CEO and Admin */}
+      {(userRole === "ceo" || userRole === "admin") && (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <Suspense fallback={<LoadingBox />}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {dict("totalRevenue")}
+                </CardTitle>
+                <DollarSignIcon className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-medium">{"0"}</div>
+              </CardContent>
+            </Card>
+          </Suspense>
+          <Suspense fallback={<LoadingBox />}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {dict("expectedRevenue")}
+                </CardTitle>
+                <DollarSignIcon className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-medium">
+                  {formatCurrencyUtil(new Decimal(revenue), displayCurrency)}
+                </div>
+              </CardContent>
+            </Card>
+          </Suspense>
 
-        <DashboardCard
-          href="/admin/users"
-          title={dict("activeUsers")}
-          IconComponent={UserIcon}
-          content={users}
-        />
-        <DashboardCard
-          href="/invoices"
-          title={dict("invoices")}
-          IconComponent={FileText}
-          content={invoices}
-        />
-        <DashboardCard
-          href="/campaigns"
-          title={dict("campaigns")}
-          IconComponent={Megaphone}
-          content={campaigns}
-        />
-        <DashboardCard
-          href="/crm/targets"
-          title={dict("targets")}
-          IconComponent={Target}
-          content={targets}
-        />
-        <DashboardCard
-          href="/crm/accounts"
-          title={dict("accounts")}
-          IconComponent={LandmarkIcon}
-          content={accounts}
-        />
-        <DashboardCard
-          href="/crm/opportunities"
-          title={dict("opportunities")}
-          IconComponent={HeartHandshakeIcon}
-          content={opportunities}
-        />
-        <DashboardCard
-          href="/crm/contacts"
-          title={dict("contacts")}
-          IconComponent={Contact}
-          content={contacts}
-        />
-        <DashboardCard
-          href="/crm/leads"
-          title={dict("leads")}
-          IconComponent={CoinsIcon}
-          content={leads}
-        />
-        <DashboardCard
-          href="/crm/contracts"
-          title={dict("contracts")}
-          IconComponent={FilePenLine}
-          content={contracts}
-        />
-        <DashboardCard
-          href="/projects"
-          title={dict("projects")}
-          IconComponent={CoinsIcon}
-          content={projects}
-        />
-        <DashboardCard
-          href="/projects/tasks"
-          title={dict("tasks")}
-          IconComponent={CoinsIcon}
-          content={tasks}
-        />
-        <DashboardCard
-          href={`/projects/tasks/${userId}`}
-          title={dict("myTasks")}
-          IconComponent={CoinsIcon}
-          content={usersTasks}
-        />
-        <DashboardCard
-          href="/documents"
-          title={dict("documents")}
-          IconComponent={CoinsIcon}
-          content={documents}
-        />
+          <DashboardCard
+            href="/admin/users"
+            title={dict("activeUsers")}
+            IconComponent={UserIcon}
+            content={users}
+          />
+          <DashboardCard
+            href="/invoices"
+            title={dict("invoices")}
+            IconComponent={FileText}
+            content={invoices}
+          />
+          <DashboardCard
+            href="/campaigns"
+            title={dict("campaigns")}
+            IconComponent={Megaphone}
+            content={campaigns}
+          />
+          <DashboardCard
+            href="/crm/targets"
+            title={dict("targets")}
+            IconComponent={Target}
+            content={targets}
+          />
+          <DashboardCard
+            href="/crm/accounts"
+            title={dict("accounts")}
+            IconComponent={LandmarkIcon}
+            content={accounts}
+          />
+          <DashboardCard
+            href="/crm/opportunities"
+            title={dict("opportunities")}
+            IconComponent={HeartHandshakeIcon}
+            content={opportunities}
+          />
+          <DashboardCard
+            href="/crm/contacts"
+            title={dict("contacts")}
+            IconComponent={Contact}
+            content={contacts}
+          />
+          <DashboardCard
+            href="/crm/leads"
+            title={dict("leads")}
+            IconComponent={CoinsIcon}
+            content={leads}
+          />
+          <DashboardCard
+            href="/crm/contracts"
+            title={dict("contracts")}
+            IconComponent={FilePenLine}
+            content={contracts}
+          />
+          <DashboardCard
+            href="/projects"
+            title={dict("projects")}
+            IconComponent={CoinsIcon}
+            content={projects}
+          />
+          <DashboardCard
+            href="/projects/tasks"
+            title={dict("tasks")}
+            IconComponent={CoinsIcon}
+            content={tasks}
+          />
+          <DashboardCard
+            href={`/projects/tasks/${userId}`}
+            title={dict("myTasks")}
+            IconComponent={CoinsIcon}
+            content={usersTasks}
+          />
+          <DashboardCard
+            href="/documents"
+            title={dict("documents")}
+            IconComponent={CoinsIcon}
+            content={documents}
+          />
 
-        <StorageQuota actual={storage} title={dict("storage")} />
-      </div>
+          <StorageQuota actual={storage} title={dict("storage")} />
+        </div>
+      )}
 
       {/* CEO & Admin Dashboard Table */}
       {(userRole === "ceo" || userRole === "admin") && (
