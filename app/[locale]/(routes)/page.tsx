@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Container from "./components/ui/Container";
 import { prismadb } from "@/lib/prisma";
 import { leadReadScopeWhere } from "@/lib/authz";
+import Link from "next/link";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -283,7 +284,11 @@ const DashboardPage = async () => {
                     ) : (
                       odLeadsList.map((lead) => (
                         <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                          <td className="py-3 font-medium">{lead.firstName} {lead.lastName}</td>
+                          <td className="py-3 font-medium">
+                            <Link href={`/crm/leads/${lead.id}`} className="font-medium text-primary hover:underline">
+                              {lead.firstName} {lead.lastName}
+                            </Link>
+                          </td>
                           <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                           <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                           <td className="py-3">
@@ -368,7 +373,11 @@ const DashboardPage = async () => {
                       ) : (
                         rdLeadsList.map((lead) => (
                           <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                            <td className="py-3 font-medium">{lead.firstName} {lead.lastName}</td>
+                            <td className="py-3 font-medium">
+                              <Link href={`/crm/leads/${lead.id}`} className="font-medium text-primary hover:underline">
+                                {lead.firstName} {lead.lastName}
+                              </Link>
+                            </td>
                             <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                             <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                             <td className="py-3">
@@ -448,7 +457,11 @@ const DashboardPage = async () => {
                       ) : (
                         adLeadsList.map((lead) => (
                           <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                            <td className="py-3 font-medium">{lead.firstName} {lead.lastName}</td>
+                            <td className="py-3 font-medium">
+                              <Link href={`/crm/leads/${lead.id}`} className="font-medium text-primary hover:underline">
+                                {lead.firstName} {lead.lastName}
+                              </Link>
+                            </td>
                             <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                             <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                             <td className="py-3">
@@ -493,7 +506,11 @@ const DashboardPage = async () => {
                     ) : (
                       cpLeadsList.map((lead) => (
                         <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                          <td className="py-3 font-medium">{lead.firstName} {lead.lastName}</td>
+                          <td className="py-3 font-medium">
+                            <Link href={`/crm/leads/${lead.id}`} className="font-medium text-primary hover:underline">
+                              {lead.firstName} {lead.lastName}
+                            </Link>
+                          </td>
                           <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                           <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                           <td className="py-3">
