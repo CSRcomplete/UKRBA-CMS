@@ -118,6 +118,15 @@ export const createColumns = (
     enableHiding: false,
   },
   {
+    accessorKey: "postcode",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Postcode" />
+    ),
+    cell: ({ row }) => <div className="w-[100px]">{row.getValue("postcode") || "-"}</div>,
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
     accessorKey: "lead_type",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Category" />
