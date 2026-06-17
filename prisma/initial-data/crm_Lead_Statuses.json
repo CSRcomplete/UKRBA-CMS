@@ -1,6 +1,15 @@
 [
-  { "name": "New" },
-  { "name": "Contacted" },
-  { "name": "Qualified" },
-  { "name": "Lost" }
+  { "name": "Lead enters CRM" },
+  { "name": "Lead categorised" },
+  { "name": "Postcode analysed" },
+  { "name": "Region identified" },
+  { "name": "Area identified" },
+  { "name": "Lead assigned" },
+  { "name": "Area Director reviews" },
+  { "name": "Lead allocated to Channel Partner" },
+  { "name": "Channel Partner makes contact" },
+  { "name": "Channel Partner records activity" },
+  { "name": "Appointment booked" },
+  { "name": "Follow-up completed" },
+  { "name": "Lead converted or closed" }
 ]
