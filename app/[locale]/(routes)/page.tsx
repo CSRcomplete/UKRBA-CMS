@@ -4,6 +4,7 @@ import Container from "./components/ui/Container";
 import { prismadb } from "@/lib/prisma";
 import { leadReadScopeWhere } from "@/lib/authz";
 import Link from "next/link";
+import moment from "moment";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -23,10 +24,16 @@ const DashboardPage = async () => {
 
   const userRole = currentUser?.role || "user";
 
-  // 1. CEO / Admin List
-  let ceoUsersList: any[] = [];
+  // 1. CEO / Admin Lists
+  let operationsDirectors: any[] = [];
+  let regionalDirectors: any[] = [];
+  let areaDirectors: any[] = [];
+  let channelPartners: any[] = [];
+  let recentLeads: any[] = [];
+  let recentTasks: any[] = [];
+
   if (userRole === "ceo" || userRole === "admin") {
-    ceoUsersList = await prismadb.users.findMany({
+    const allUsers = await prismadb.users.findMany({
       where: {
         role: {
           in: ["operations_director", "regional_director", "area_director", "channel_partner"],
@@ -48,6 +55,42 @@ const DashboardPage = async () => {
         },
       },
       orderBy: { name: "asc" },
+    });
+
+    operationsDirectors = allUsers.filter(u => u.role === "operations_director");
+    regionalDirectors = allUsers.filter(u => u.role === "regional_director");
+    areaDirectors = allUsers.filter(u => u.role === "area_director");
+    channelPartners = allUsers.filter(u => u.role === "channel_partner");
+
+    recentLeads = await prismadb.crm_Leads.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        company: true,
+        postcode: true,
+        lead_status: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    recentTasks = await prismadb.tasks.findMany({
+      select: {
+        id: true,
+        title: true,
+        dueDateAt: true,
+        priority: true,
+        taskStatus: true,
+        assigned_user: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     });
   }
 
@@ -214,43 +257,277 @@ const DashboardPage = async () => {
         </div>
       )}
 
-      {/* CEO & Admin Dashboard Table */}
+      {/* CEO & Admin Dashboard Sections */}
       {(userRole === "ceo" || userRole === "admin") && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Operations, Regional & Area Directors</h2>
-          <div className="rounded-md border bg-card text-card-foreground shadow-sm">
-            <div className="p-6">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-muted">
-                      <th className="pb-3 font-medium">Name</th>
-                      <th className="pb-3 font-medium">Email</th>
-                      <th className="pb-3 font-medium">Role</th>
-                      <th className="pb-3 font-medium">Region ID</th>
-                      <th className="pb-3 font-medium">Area ID</th>
-                      <th className="pb-3 font-medium">Reporting To (Supervisor)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-muted">
-                    {ceoUsersList.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-4 text-center text-muted-foreground">No staff members found.</td>
+        <div className="space-y-8">
+          {/* Operations Directors Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Operations Directors</span>
+              <span className="text-xs font-normal text-muted-foreground">{operationsDirectors.length} active</span>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Name</th>
+                        <th className="pb-3 font-medium">Email</th>
                       </tr>
-                    ) : (
-                      ceoUsersList.map((u) => (
-                        <tr key={u.id} className="hover:bg-muted/50 transition-colors">
-                          <td className="py-3 font-medium">{u.name || "N/A"}</td>
-                          <td className="py-3 text-muted-foreground">{u.email}</td>
-                          <td className="py-3 capitalize font-semibold text-primary">{u.role.replace(/_/g, " ")}</td>
-                          <td className="py-3 font-mono">{u.region_id ?? "N/A"}</td>
-                          <td className="py-3 font-mono">{u.area_id ?? "N/A"}</td>
-                          <td className="py-3 text-muted-foreground">{u.parent ? (u.parent.name || u.parent.email) : "None"}</td>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {operationsDirectors.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="py-4 text-center text-muted-foreground">No Operations Directors found.</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        operationsDirectors.map((u) => (
+                          <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline font-semibold">
+                                {u.name || "N/A"}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{u.email}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Regional Directors Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Regional Directors</span>
+              <span className="text-xs font-normal text-muted-foreground">{regionalDirectors.length} active</span>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Name</th>
+                        <th className="pb-3 font-medium">Email</th>
+                        <th className="pb-3 font-medium">Region ID</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {regionalDirectors.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-4 text-center text-muted-foreground">No Regional Directors found.</td>
+                        </tr>
+                      ) : (
+                        regionalDirectors.map((u) => (
+                          <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline font-semibold">
+                                {u.name || "N/A"}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{u.email}</td>
+                            <td className="py-3 font-mono text-xs">{u.region_id ?? "N/A"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Area Directors Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Area Directors</span>
+              <span className="text-xs font-normal text-muted-foreground">{areaDirectors.length} active</span>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Name</th>
+                        <th className="pb-3 font-medium">Email</th>
+                        <th className="pb-3 font-medium">Area ID</th>
+                        <th className="pb-3 font-medium">Reporting To</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {areaDirectors.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-4 text-center text-muted-foreground">No Area Directors found.</td>
+                        </tr>
+                      ) : (
+                        areaDirectors.map((u) => (
+                          <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline font-semibold">
+                                {u.name || "N/A"}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{u.email}</td>
+                            <td className="py-3 font-mono text-xs">{u.area_id ?? "N/A"}</td>
+                            <td className="py-3 text-muted-foreground">{u.parent ? (u.parent.name || u.parent.email) : "None"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Channel Partners Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Channel Partners</span>
+              <span className="text-xs font-normal text-muted-foreground">{channelPartners.length} active</span>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Name</th>
+                        <th className="pb-3 font-medium">Email</th>
+                        <th className="pb-3 font-medium">Reporting To (Area Director)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {channelPartners.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-4 text-center text-muted-foreground">No Channel Partners found.</td>
+                        </tr>
+                      ) : (
+                        channelPartners.map((u) => (
+                          <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline font-semibold">
+                                {u.name || "N/A"}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{u.email}</td>
+                            <td className="py-3 text-muted-foreground">{u.parent ? (u.parent.name || u.parent.email) : "None"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Leads Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Recent CRM Leads</span>
+              <Link href="/crm/leads" className="text-xs font-semibold text-primary hover:underline">View All Leads</Link>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Lead Name</th>
+                        <th className="pb-3 font-medium">Company</th>
+                        <th className="pb-3 font-medium">Postcode</th>
+                        <th className="pb-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {recentLeads.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-4 text-center text-muted-foreground">No active leads found.</td>
+                        </tr>
+                      ) : (
+                        recentLeads.map((lead) => (
+                          <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/crm/leads/${lead.id}`} className="text-primary hover:underline font-semibold">
+                                {lead.firstName} {lead.lastName}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
+                            <td className="py-3 font-mono text-xs">{lead.postcode || "N/A"}</td>
+                            <td className="py-3">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                                {lead.lead_status?.name || "New"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tasks Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Recent Tasks & Actions</span>
+              <Link href="/projects/tasks" className="text-xs font-semibold text-primary hover:underline">View All Tasks</Link>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Task Title</th>
+                        <th className="pb-3 font-medium">Assigned To</th>
+                        <th className="pb-3 font-medium">Priority</th>
+                        <th className="pb-3 font-medium">Status</th>
+                        <th className="pb-3 font-medium">Due Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {recentTasks.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-muted-foreground">No tasks found.</td>
+                        </tr>
+                      ) : (
+                        recentTasks.map((task) => (
+                          <tr key={task.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href="/projects/tasks" className="text-primary hover:underline font-semibold">
+                                {task.title}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{task.assigned_user?.name || "Unassigned"}</td>
+                            <td className="py-3 capitalize text-xs font-semibold">{task.priority}</td>
+                            <td className="py-3">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                task.taskStatus === "COMPLETE"
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                                  : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+                              }`}>
+                                {task.taskStatus}
+                              </span>
+                            </td>
+                            <td className="py-3 text-xs text-muted-foreground">
+                              {task.dueDateAt ? moment(task.dueDateAt).format("MMM DD, YYYY") : "No due date"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
