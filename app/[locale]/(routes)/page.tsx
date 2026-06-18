@@ -264,7 +264,10 @@ const DashboardPage = async () => {
           <div className="space-y-4">
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
               <span>Operations Directors</span>
-              <span className="text-xs font-normal text-muted-foreground">{operationsDirectors.length} active</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-normal text-muted-foreground">{operationsDirectors.length} active</span>
+                <Link href="/admin/users" className="text-xs font-semibold text-primary hover:underline">View All Operations Directors</Link>
+              </div>
             </h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">
               <div className="p-6">
@@ -304,7 +307,10 @@ const DashboardPage = async () => {
           <div className="space-y-4">
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
               <span>Regional Directors</span>
-              <span className="text-xs font-normal text-muted-foreground">{regionalDirectors.length} active</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-normal text-muted-foreground">{regionalDirectors.length} active</span>
+                <Link href="/admin/users" className="text-xs font-semibold text-primary hover:underline">View All Regional Directors</Link>
+              </div>
             </h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">
               <div className="p-6">
@@ -346,7 +352,10 @@ const DashboardPage = async () => {
           <div className="space-y-4">
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
               <span>Area Directors</span>
-              <span className="text-xs font-normal text-muted-foreground">{areaDirectors.length} active</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-normal text-muted-foreground">{areaDirectors.length} active</span>
+                <Link href="/admin/users" className="text-xs font-semibold text-primary hover:underline">View All Area Directors</Link>
+              </div>
             </h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">
               <div className="p-6">
@@ -390,7 +399,10 @@ const DashboardPage = async () => {
           <div className="space-y-4">
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
               <span>Channel Partners</span>
-              <span className="text-xs font-normal text-muted-foreground">{channelPartners.length} active</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-normal text-muted-foreground">{channelPartners.length} active</span>
+                <Link href="/admin/users" className="text-xs font-semibold text-primary hover:underline">View All Channel Partners</Link>
+              </div>
             </h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">
               <div className="p-6">
