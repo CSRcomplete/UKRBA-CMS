@@ -4,6 +4,17 @@ import { getSession } from "@/lib/auth-server";
 import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { leadReadScopeWhere } from "@/lib/authz";
+import resendHelper from "@/lib/resend";
+
+const ROLE_DESIGNATIONS: Record<string, string> = {
+  ceo: "CEO - UKRBA SME",
+  operations_director: "Operations Director",
+  regional_director: "Regional Director",
+  area_director: "Area Director",
+  channel_partner: "Channel Partner",
+  admin: "Admin",
+  user: "Staff",
+};
 
 // Define rank mapping for hierarchy comparison
 const ROLE_RANKS: Record<string, number> = {
@@ -211,6 +222,79 @@ export const scheduleMeeting = async (data: {
         entityId: inviteeId,
       },
     });
+
+    // Send email notification to invitee
+    try {
+      let inviteeEmail: string | null = null;
+      if (inviteeType === "user") {
+        const inviteeUser = await prismadb.users.findUnique({
+          where: { id: inviteeId },
+          select: { email: true },
+        });
+        inviteeEmail = inviteeUser?.email || null;
+      } else if (inviteeType === "lead") {
+        const inviteeLead = await prismadb.crm_Leads.findUnique({
+          where: { id: inviteeId },
+          select: { email: true },
+        });
+        inviteeEmail = inviteeLead?.email || null;
+      }
+
+      if (inviteeEmail) {
+        let resend;
+        try {
+          resend = await resendHelper();
+        } catch {
+          resend = null;
+        }
+
+        if (resend) {
+          const creatorName = session.user.name || session.user.email;
+          const roleKey = (session.user.role || "").toLowerCase();
+          const designation = ROLE_DESIGNATIONS[roleKey] || (session.user.role ? session.user.role.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "");
+          const hostString = designation ? `${creatorName} (${designation})` : creatorName;
+
+          const dateFormatted = new Date(date).toLocaleString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const meetingWith = hostString;
+          const linkText = meetingLink ? meetingLink : "No link provided";
+
+          const emailSubject = `Meeting with ${creatorName}`;
+
+          await resend.emails.send({
+            from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
+            to: inviteeEmail,
+            subject: emailSubject,
+            text: `Hello,\n\nA new meeting has been scheduled with you.\n\n1- Meeting with: ${meetingWith}\n2- Meeting time and date: ${dateFormatted}\n3- Meeting Link: ${linkText}\n\nDescription:\n${description || "No description provided."}\n\nBest regards,\nUKRBA Team`,
+            html: `
+              <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #1a365d; margin-top: 0;">New Meeting Scheduled</h2>
+                <p>Hello,</p>
+                <p>A new meeting has been scheduled with you.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <ol style="padding-left: 20px; margin: 20px 0;">
+                  <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${meetingWith}</li>
+                  <li style="margin-bottom: 10px;"><strong>Meeting time and date:</strong> ${dateFormatted}</li>
+                  <li style="margin-bottom: 10px;"><strong>Meeting Link:</strong> ${meetingLink ? `<a href="${meetingLink}" target="_blank" style="color: #3182ce; text-decoration: underline;">${meetingLink}</a>` : "No link provided"}</li>
+                </ol>
+                ${description ? `<p><strong>Description:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <p style="font-size: 0.875rem; color: #718096; margin-bottom: 0;">Best regards,<br />UKRBA Team</p>
+              </div>
+            `
+          });
+        }
+      }
+    } catch (emailError) {
+      console.error("[SCHEDULE_MEETING_EMAIL_ERROR]", emailError);
+    }
 
     revalidatePath("/[locale]/(routes)/crm/meetings", "page");
 
