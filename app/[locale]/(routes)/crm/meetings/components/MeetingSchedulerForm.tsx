@@ -132,7 +132,7 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
                 <SelectContent>
                   {currentOptions.map((opt) => (
                     <SelectItem key={opt.id} value={opt.id}>
-                      {opt.name} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
+                      {opt.name || opt.email} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
