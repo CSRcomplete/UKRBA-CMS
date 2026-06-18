@@ -24,6 +24,75 @@ const DashboardPage = async () => {
 
   const userRole = currentUser?.role || "user";
 
+  // Fetch personal tasks and meetings for the active user (My Workspace)
+  const myTasks = await prismadb.tasks.findMany({
+    where: {
+      user: userId,
+      taskStatus: "ACTIVE",
+    },
+    select: {
+      id: true,
+      title: true,
+      dueDateAt: true,
+      priority: true,
+      taskStatus: true,
+    },
+    orderBy: { dueDateAt: "asc" },
+    take: 10,
+  });
+
+  const rawMyMeetings = await prismadb.crm_Activities.findMany({
+    where: {
+      type: "meeting",
+      deletedAt: null,
+      OR: [
+        { createdBy: userId },
+        {
+          links: {
+            some: {
+              entityType: "user",
+              entityId: userId,
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      created_by_user: {
+        select: { name: true, email: true, role: true },
+      },
+      links: true,
+    },
+    orderBy: { date: "desc" },
+    take: 10,
+  });
+
+  const myMeetings = await Promise.all(
+    rawMyMeetings.map(async (meeting) => {
+      const inviteeLink = meeting.links.find(l => l.entityId !== meeting.createdBy);
+      let inviteeName = "N/A";
+      if (inviteeLink) {
+        if (inviteeLink.entityType === "user") {
+          const u = await prismadb.users.findUnique({
+            where: { id: inviteeLink.entityId },
+            select: { name: true, email: true },
+          });
+          inviteeName = u?.name || u?.email || "Unknown Staff";
+        } else if (inviteeLink.entityType === "lead") {
+          const l = await prismadb.crm_Leads.findUnique({
+            where: { id: inviteeLink.entityId },
+            select: { firstName: true, lastName: true },
+          });
+          inviteeName = l ? `${l.firstName} ${l.lastName}`.trim() : "Unknown Lead";
+        }
+      }
+      return {
+        ...meeting,
+        inviteeName,
+      };
+    })
+  );
+
   // 1. CEO / Admin Lists
   let operationsDirectors: any[] = [];
   let regionalDirectors: any[] = [];
@@ -634,8 +703,8 @@ const DashboardPage = async () => {
                               {moment(meeting.date).format("MMM DD, YYYY - hh:mm A")}
                             </td>
                             <td className="py-3 text-xs">
-                              {meeting.metadata?.meetingLink ? (
-                                <a href={meeting.metadata.meetingLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
+                              {(meeting.metadata as any)?.meetingLink ? (
+                                <a href={(meeting.metadata as any).meetingLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
                                   Join Meeting
                                 </a>
                               ) : (
@@ -925,6 +994,121 @@ const DashboardPage = async () => {
           </div>
         </div>
       )}
+
+      {/* Personal Agenda Section (Meetings & Tasks assigned to/created by the logged-in user) */}
+      <div className="mt-8 border-t pt-8 space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">My Workspace</h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* My Assigned Tasks Card */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center justify-between">
+              <span>My Assigned Tasks</span>
+              <Link href="/projects/tasks" className="text-xs font-semibold text-primary hover:underline">Go to Tasks</Link>
+            </h3>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-2 font-medium">Task Title</th>
+                        <th className="pb-2 font-medium">Priority</th>
+                        <th className="pb-2 font-medium">Status</th>
+                        <th className="pb-2 font-medium">Due Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {myTasks.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-4 text-center text-muted-foreground text-xs">No active tasks assigned to you.</td>
+                        </tr>
+                      ) : (
+                        myTasks.map((task) => (
+                          <tr key={task.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-2.5 font-medium">
+                              <Link href="/projects/tasks" className="text-primary hover:underline font-semibold text-xs">
+                                {task.title}
+                              </Link>
+                            </td>
+                            <td className="py-2.5 capitalize text-xs font-semibold">{task.priority}</td>
+                            <td className="py-2.5">
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                task.taskStatus === "COMPLETE"
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                                  : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+                              }`}>
+                                {task.taskStatus}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-xs text-muted-foreground">
+                              {task.dueDateAt ? moment(task.dueDateAt).format("MMM DD, YYYY") : "No due date"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* My Scheduled Meetings Card */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center justify-between">
+              <span>My Scheduled Meetings</span>
+              <Link href="/crm/meetings" className="text-xs font-semibold text-primary hover:underline">Go to Meetings</Link>
+            </h3>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-2 font-medium">Meeting Title</th>
+                        <th className="pb-2 font-medium">Invitee</th>
+                        <th className="pb-2 font-medium">Date & Time</th>
+                        <th className="pb-2 font-medium">Link</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {myMeetings.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-4 text-center text-muted-foreground text-xs">No scheduled meetings found.</td>
+                        </tr>
+                      ) : (
+                        myMeetings.map((meeting) => (
+                          <tr key={meeting.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-2.5 font-medium">
+                              <Link href="/crm/meetings" className="text-primary hover:underline font-semibold text-xs">
+                                {meeting.title}
+                              </Link>
+                            </td>
+                            <td className="py-2.5 text-muted-foreground text-xs">{meeting.inviteeName}</td>
+                            <td className="py-2.5 text-xs text-muted-foreground">
+                              {moment(meeting.date).format("MMM DD, YYYY - hh:mm A")}
+                            </td>
+                            <td className="py-2.5 text-xs">
+                              {(meeting.metadata as any)?.meetingLink ? (
+                                <a href={(meeting.metadata as any).meetingLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
+                                  Join
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground font-mono text-xs">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </Container>
   );
 };
