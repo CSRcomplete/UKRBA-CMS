@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { DirectMeetingScheduler } from "@/components/crm/meetings/DirectMeetingScheduler";
 
 interface MemberDetailPageProps {
   params: Promise<{
@@ -50,12 +51,22 @@ export default async function MemberDetailPage(props: MemberDetailPageProps) {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tasks">Next Actions</TabsTrigger>
+          <TabsTrigger value="meetings">Schedule Meeting</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <MemberDetailForm member={member} />
         </TabsContent>
         <TabsContent value="tasks">
           <EntityTasks entityId={memberId} entityType="member" />
+        </TabsContent>
+        <TabsContent value="meetings">
+          <div className="max-w-2xl">
+            <DirectMeetingScheduler
+              inviteeType="lead"
+              inviteeId={member.lead_id}
+              inviteeName={member.contact_name}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </Container>

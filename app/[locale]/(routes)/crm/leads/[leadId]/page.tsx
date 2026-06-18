@@ -10,6 +10,7 @@ import { ActivitiesSection } from "./components/ActivitiesSection";
 import { getOwnershipHistory } from "@/lib/ownership";
 import { OwnershipHistoryTimeline } from "@/components/crm/leads/OwnershipHistoryTimeline";
 import { EntityTasks } from "@/components/crm/tasks/EntityTasks";
+import { DirectMeetingScheduler } from "@/components/crm/meetings/DirectMeetingScheduler";
 
 interface LeadDetailPageProps {
   params: Promise<{
@@ -36,6 +37,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tasks">Next Actions</TabsTrigger>
+          <TabsTrigger value="meetings">Schedule Meeting</TabsTrigger>
           <TabsTrigger value="ownership">Ownership Trail</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -49,6 +51,15 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
         </TabsContent>
         <TabsContent value="tasks">
           <EntityTasks entityId={leadId} entityType="lead" />
+        </TabsContent>
+        <TabsContent value="meetings">
+          <div className="max-w-2xl">
+            <DirectMeetingScheduler
+              inviteeType="lead"
+              inviteeId={lead.id}
+              inviteeName={`${lead.firstName || ""} ${lead.lastName || ""}`.trim()}
+            />
+          </div>
         </TabsContent>
         <TabsContent value="ownership">
           <OwnershipHistoryTimeline history={ownershipHistory} />
