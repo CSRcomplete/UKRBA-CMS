@@ -55,55 +55,17 @@ export const auth = betterAuth({
     },
   },
 
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_ID!,
-      clientSecret: process.env.GOOGLE_SECRET!,
-    },
-  },
-
   emailAndPassword: {
-    enabled: false,
+    enabled: true,
   },
 
   plugins: [
-    emailOTP({
-      sendVerificationOTP: async ({ email, otp, type }) => {
-        try {
-          const resend = await resendHelper();
-          await resend.emails.send({
-            from: `${process.env.NEXT_PUBLIC_APP_NAME} <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: `Your verification code: ${otp}`,
-            text: `Your one-time verification code is: ${otp}\n\nThis code expires in 5 minutes.\n\nIf you did not request this, please ignore this email.`,
-          });
-        } catch (e) {
-          // In dev/test, email sending may fail — OTP is captured by testUtils plugin
-          if (process.env.NODE_ENV !== "production") {
-            console.log(`[Auth] OTP email send failed for ${email}, but captured by testUtils`);
-          } else {
-            throw e;
-          }
-        }
-      },
-    }),
-    // testUtils captures OTPs for E2E testing — only enabled in non-production
-    ...(process.env.NODE_ENV !== "production"
-      ? [testUtils({ captureOTP: true })]
-      : []),
     adminPlugin({
       ac,
       roles: { admin, manager, user },
       defaultRole: "user",
     }),
   ],
-
-  account: {
-    accountLinking: {
-      enabled: true,
-      trustedProviders: ["google"],
-    },
-  },
 
   callbacks: {
     async onUserCreated(user: { id: string }) {
