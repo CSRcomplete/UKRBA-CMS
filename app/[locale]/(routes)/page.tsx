@@ -31,6 +31,7 @@ const DashboardPage = async () => {
   let channelPartners: any[] = [];
   let recentLeads: any[] = [];
   let recentTasks: any[] = [];
+  let recentMeetings: any[] = [];
 
   if (userRole === "ceo" || userRole === "admin") {
     const allUsers = await prismadb.users.findMany({
@@ -92,6 +93,47 @@ const DashboardPage = async () => {
       orderBy: { createdAt: "desc" },
       take: 10,
     });
+
+    const rawMeetings = await prismadb.crm_Activities.findMany({
+      where: {
+        type: "meeting",
+        deletedAt: null,
+      },
+      include: {
+        created_by_user: {
+          select: { name: true, email: true, role: true },
+        },
+        links: true,
+      },
+      orderBy: { date: "desc" },
+      take: 10,
+    });
+
+    recentMeetings = await Promise.all(
+      rawMeetings.map(async (meeting) => {
+        const inviteeLink = meeting.links.find(l => l.entityId !== meeting.createdBy);
+        let inviteeName = "N/A";
+        if (inviteeLink) {
+          if (inviteeLink.entityType === "user") {
+            const u = await prismadb.users.findUnique({
+              where: { id: inviteeLink.entityId },
+              select: { name: true, email: true },
+            });
+            inviteeName = u?.name || u?.email || "Unknown Staff";
+          } else if (inviteeLink.entityType === "lead") {
+            const l = await prismadb.crm_Leads.findUnique({
+              where: { id: inviteeLink.entityId },
+              select: { firstName: true, lastName: true },
+            });
+            inviteeName = l ? `${l.firstName} ${l.lastName}`.trim() : "Unknown Lead";
+          }
+        }
+        return {
+          ...meeting,
+          inviteeName,
+        };
+      })
+    );
   }
 
   // 2. Staff Map for showing names of assigned directors
@@ -533,6 +575,72 @@ const DashboardPage = async () => {
                             </td>
                             <td className="py-3 text-xs text-muted-foreground">
                               {task.dueDateAt ? moment(task.dueDateAt).format("MMM DD, YYYY") : "No due date"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scheduled Meetings Section */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center justify-between">
+              <span>Recent Scheduled Meetings</span>
+              <Link href="/crm/meetings" className="text-xs font-semibold text-primary hover:underline">View All Meetings</Link>
+            </h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Meeting Title</th>
+                        <th className="pb-3 font-medium">Host</th>
+                        <th className="pb-3 font-medium">Invitee</th>
+                        <th className="pb-3 font-medium">Date & Time</th>
+                        <th className="pb-3 font-medium">Link</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {recentMeetings.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-muted-foreground">No scheduled meetings found.</td>
+                        </tr>
+                      ) : (
+                        recentMeetings.map((meeting) => (
+                          <tr key={meeting.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href="/crm/meetings" className="text-primary hover:underline font-semibold">
+                                {meeting.title}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">
+                              {meeting.created_by_user?.name || meeting.created_by_user?.email || "N/A"}
+                              {meeting.created_by_user?.role ? ` (${
+                                meeting.created_by_user.role === "ceo" ? "CEO - UKRBA SME" :
+                                meeting.created_by_user.role === "operations_director" ? "Operations Director" :
+                                meeting.created_by_user.role === "regional_director" ? "Regional Director" :
+                                meeting.created_by_user.role === "area_director" ? "Area Director" :
+                                meeting.created_by_user.role === "channel_partner" ? "Channel Partner" :
+                                meeting.created_by_user.role === "admin" ? "Admin" : "Staff"
+                              })` : ""}
+                            </td>
+                            <td className="py-3 text-muted-foreground">{meeting.inviteeName}</td>
+                            <td className="py-3 text-xs text-muted-foreground">
+                              {moment(meeting.date).format("MMM DD, YYYY - hh:mm A")}
+                            </td>
+                            <td className="py-3 text-xs">
+                              {meeting.metadata?.meetingLink ? (
+                                <a href={meeting.metadata.meetingLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
+                                  Join Meeting
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground">No link</span>
+                              )}
                             </td>
                           </tr>
                         ))
