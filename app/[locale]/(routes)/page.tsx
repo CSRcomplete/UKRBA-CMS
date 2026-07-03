@@ -5,6 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { leadReadScopeWhere } from "@/lib/authz";
 import Link from "next/link";
 import moment from "moment";
+import { getEscalationAlerts } from "@/lib/task-escalation";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -23,6 +24,8 @@ const DashboardPage = async () => {
   });
 
   const userRole = currentUser?.role || "user";
+
+  const escalationAlerts = await getEscalationAlerts(userId);
 
   // Fetch personal tasks and meetings for the active user (My Workspace)
   const myTasks = await prismadb.tasks.findMany({
@@ -359,6 +362,79 @@ const DashboardPage = async () => {
         "Welcome to NextCRM cockpit, here you can see your company overview"
       }
     >
+      {/* Escalation Alerts Section */}
+      {escalationAlerts.length > 0 && (
+        <div className="space-y-4 mb-8">
+          <h2 className="text-xl font-bold tracking-tight text-red-600 dark:text-red-400 flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+            <span>Escalation Alerts</span>
+            <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-200">
+              {escalationAlerts.length} action required
+            </span>
+          </h2>
+          <div className="rounded-md border border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10 text-card-foreground shadow-sm">
+            <div className="p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b border-red-200 dark:border-red-900 pb-3 font-medium text-red-700 dark:text-red-300">
+                      <th className="pb-3">Type</th>
+                      <th className="pb-3">Title</th>
+                      <th className="pb-3">Original Owner</th>
+                      <th className="pb-3">Created At</th>
+                      <th className="pb-3">Days Unchanged</th>
+                      <th className="pb-3">Escalation Tier</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-red-100 dark:divide-red-950">
+                    {escalationAlerts.map((alert) => (
+                      <tr key={`${alert.type}-${alert.id}`} className="hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors">
+                        <td className="py-3 font-medium capitalize">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            alert.type === "task" 
+                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400"
+                              : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400"
+                          }`}>
+                            {alert.type}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          {alert.type === "task" ? (
+                            <Link href={`/projects/tasks/viewtask/${alert.id}`} className="text-primary hover:underline font-semibold">
+                              {alert.title}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-foreground">{alert.title}</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <div className="text-sm font-semibold">{alert.originalOwnerName}</div>
+                          <div className="text-xs text-muted-foreground">{alert.originalOwnerEmail}</div>
+                        </td>
+                        <td className="py-3 text-muted-foreground">
+                          {moment(alert.createdAt).format("MMM DD, YYYY")}
+                        </td>
+                        <td className="py-3 font-mono text-xs font-bold text-red-600 dark:text-red-400">
+                          {alert.daysElapsed} days
+                        </td>
+                        <td className="py-3">
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">
+                            {alert.escalationLevel === 0 ? "Owner Alert" : `Escalation Level ${alert.escalationLevel}`}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Standard Welcome Message for roles without custom tables */}
       {!["ceo", "admin", "operations_director", "regional_director", "area_director", "channel_partner"].includes(userRole) && (
         <div className="rounded-md border bg-card p-6 shadow-sm">
