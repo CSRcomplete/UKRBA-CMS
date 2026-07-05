@@ -1,7 +1,7 @@
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, CreateBucketCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
 
@@ -49,6 +49,23 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // Auto-create bucket if it doesn't exist
+    try {
+      await minioClient.send(new HeadBucketCommand({ Bucket: MINIO_BUCKET }));
+    } catch (err: any) {
+      const isNotFound = 
+        err.name === "NotFound" || 
+        err.name === "NoSuchBucket" || 
+        err.$metadata?.httpStatusCode === 404;
+        
+      if (isNotFound) {
+        console.log(`Bucket ${MINIO_BUCKET} not found. Automatically creating...`);
+        await minioClient.send(new CreateBucketCommand({ Bucket: MINIO_BUCKET }));
+      } else {
+        throw err;
+      }
+    }
 
     const command = new PutObjectCommand({
       Bucket: MINIO_BUCKET,
