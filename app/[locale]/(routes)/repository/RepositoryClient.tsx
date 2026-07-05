@@ -358,7 +358,8 @@ export default function RepositoryClient({
                                 size="sm" 
                                 className="flex items-center gap-1 text-purple-600 hover:text-purple-700 dark:text-purple-400"
                                 onClick={() => {
-                                  setActiveVideoUrl(doc.document_file_url);
+                                  const docKey = doc.key || (doc.document_file_url?.includes("/nextcrm/") ? doc.document_file_url.split("/nextcrm/").pop() : null);
+                                  setActiveVideoUrl(docKey ? `/api/upload/file?key=${encodeURIComponent(docKey)}` : doc.document_file_url);
                                   setActiveVideoTitle(doc.document_name);
                                 }}
                               >
@@ -366,7 +367,15 @@ export default function RepositoryClient({
                                 <span>Watch</span>
                               </Button>
                             ) : (
-                              <a href={doc.document_file_url} target="_blank" rel="noreferrer">
+                              <a 
+                                href={(() => {
+                                  const docKey = doc.key || (doc.document_file_url?.includes("/nextcrm/") ? doc.document_file_url.split("/nextcrm/").pop() : null);
+                                  return docKey ? `/api/upload/file?key=${encodeURIComponent(docKey)}` : doc.document_file_url;
+                                })()} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                download
+                              >
                                 <Button variant="outline" size="sm" className="flex items-center gap-1">
                                   <Download className="h-3.5 w-3.5" />
                                   <span>Download</span>

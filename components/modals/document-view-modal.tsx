@@ -17,6 +17,7 @@ const DocumentViewModal = ({
   loading,
   document,
 }: AlertModalProps) => {
+  const docKey = document.key || (document.document_file_url?.includes("/nextcrm/") ? document.document_file_url.split("/nextcrm/").pop() : null);
 
   const imageTypes = [
     "application/png",
@@ -37,7 +38,7 @@ const DocumentViewModal = ({
   console.log(document.document_file_mimeType, "mimeType");
 
   if (imageTypes.includes(document.document_file_mimeType)) {
-    const imageUrl = document.document_file_url || "";
+    const imageUrl = docKey ? `/api/upload/file?key=${encodeURIComponent(docKey)}` : (document.document_file_url || "");
     return (
       <ModalDocumentView isOpen={isOpen} onClose={onClose}>
         <div className="flex flex-col h-full ">
@@ -69,7 +70,7 @@ const DocumentViewModal = ({
               height: "100%",
             }}
             type="application/pdf"
-            src={document.document_file_url}
+            src={docKey ? `/api/upload/file?key=${encodeURIComponent(docKey)}` : document.document_file_url}
           />
           <div className="pt-6 space-x-2 flex items-center justify-end w-full ">
             <Button disabled={loading} variant={"outline"} onClick={onClose}>
@@ -84,8 +85,8 @@ const DocumentViewModal = ({
       <ModalDocumentView isOpen={isOpen} onClose={onClose}>
         <div className="flex flex-col h-full ">
           This format can not be previewed. Please download the file to view it.
-          <Button>
-            <Link href={document.document_file_url}> Download</Link>
+          <Button asChild>
+            <Link href={docKey ? `/api/upload/file?key=${encodeURIComponent(docKey)}` : document.document_file_url} download> Download</Link>
           </Button>
           <div className="pt-6 space-x-2 flex items-center justify-end w-full ">
             <Button disabled={loading} variant={"outline"} onClick={onClose}>
