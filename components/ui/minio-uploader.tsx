@@ -32,30 +32,22 @@ export function MinioUploader({
       setProgress("Requesting upload URL...");
 
       try {
-        // Step 1: Get presigned URL from our server
-        const res = await fetch("/api/upload/presigned-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-            folder,
-          }),
-        });
-
-        if (!res.ok) throw new Error("Failed to get upload URL");
-        const { presignedUrl, fileUrl, key } = await res.json();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", folder);
 
         setProgress("Uploading...");
 
-        // Step 2: PUT file directly to MinIO
-        const uploadRes = await fetch(presignedUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
 
-        if (!uploadRes.ok) throw new Error("Upload to storage failed");
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Upload failed");
+        }
+        const { fileUrl, key } = await res.json();
 
         setProgress(null);
         onUploadComplete(fileUrl, key);

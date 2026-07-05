@@ -22,18 +22,35 @@ const RepositoryPage = async () => {
     redirect("/auth/signin");
   }
 
-  // 2. Fetch documents for repository where user is uploader OR assignee
-  // and visibility maps to one of the levels
+  const isSuperUser = ["admin", "ceo", "operations_director"].includes(currentUser.role);
+  const isRD = currentUser.role === "regional_director";
+  const isAD = currentUser.role === "area_director";
+  const isCP = currentUser.role === "channel_partner";
+
+  const allowedLevels: string[] = [];
+  if (isSuperUser || isRD) {
+    allowedLevels.push("regional_director");
+  }
+  if (isSuperUser || isRD || isAD) {
+    allowedLevels.push("area_director");
+  }
+  if (isSuperUser || isRD || isAD || isCP) {
+    allowedLevels.push("channel_partner");
+  }
+
+  // 2. Fetch documents for repository where visibility maps to allowed levels
+  // and the document is either created by the user, assigned to the user, or not assigned (visible to all at that level).
   const documents = await prismadb.documents.findMany({
     where: {
       parent_document_id: null,
       deletedAt: null,
       visibility: {
-        in: ["regional_director", "area_director", "channel_partner"],
+        in: allowedLevels,
       },
       OR: [
         { createdBy: userId },
         { assigned_user: userId },
+        { assigned_user: null },
       ],
     },
     include: {

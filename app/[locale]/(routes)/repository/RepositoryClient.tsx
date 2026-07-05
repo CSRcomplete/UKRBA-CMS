@@ -58,7 +58,7 @@ export default function RepositoryClient({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState<"regional_director" | "area_director" | "channel_partner">("channel_partner");
-  const [assignedUser, setAssignedUser] = useState("");
+  const [assignedUser, setAssignedUser] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -96,8 +96,8 @@ export default function RepositoryClient({
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !name || !assignedUser) {
-      setUploadError("Please select a file, provide a name, and choose an assignee.");
+    if (!file || !name) {
+      setUploadError("Please select a file and provide a name.");
       return;
     }
 
@@ -105,35 +105,23 @@ export default function RepositoryClient({
     setUploadError("");
 
     try {
-      // 1. Request presigned URL
+      // 1. Upload via backend proxy API
       const folder = file.type.startsWith("video/") ? "uploads" : "documents";
-      const res = await fetch("/api/upload/presigned-url", {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", folder);
+
+      const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          folder,
-        }),
+        body: formData,
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Failed to generate upload URL");
+        throw new Error(errData.error || "Upload failed");
       }
       
-      const { presignedUrl, fileUrl, key } = await res.json();
-
-      // 2. Put file to presigned URL
-      const uploadRes = await fetch(presignedUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error(`Upload failed: ${uploadRes.status}`);
-      }
+      const { fileUrl, key } = await res.json();
 
       // 3. Create document in database
       await createRepositoryDocument({
@@ -144,14 +132,14 @@ export default function RepositoryClient({
         mimeType: file.type,
         description,
         level,
-        assignedUser,
+        assignedUser: assignedUser === "all" ? null : assignedUser,
       });
 
       // Clear states and reload
       setFile(null);
       setName("");
       setDescription("");
-      setAssignedUser("");
+      setAssignedUser("all");
       setIsUploadOpen(false);
       router.refresh();
     } catch (err: any) {
@@ -255,10 +243,11 @@ export default function RepositoryClient({
                     value={assignedUser} 
                     onValueChange={setAssignedUser}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="assignee">
                       <SelectValue placeholder="Select User" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">Everyone at this level</SelectItem>
                       {users.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
                           {u.name || u.email}

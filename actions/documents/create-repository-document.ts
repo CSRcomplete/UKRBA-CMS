@@ -14,7 +14,7 @@ interface CreateRepositoryDocumentInput {
   mimeType: string;
   description?: string;
   level: "regional_director" | "area_director" | "channel_partner";
-  assignedUser: string;
+  assignedUser?: string | null;
 }
 
 export async function createRepositoryDocument(input: CreateRepositoryDocumentInput) {
@@ -37,7 +37,7 @@ export async function createRepositoryDocument(input: CreateRepositoryDocumentIn
       document_file_mimeType: input.mimeType,
       createdBy: user.id,
       created_by_user: user.id,
-      assigned_user: input.assignedUser,
+      assigned_user: input.assignedUser || null,
       visibility: input.level, // Store level in visibility field
     },
   });

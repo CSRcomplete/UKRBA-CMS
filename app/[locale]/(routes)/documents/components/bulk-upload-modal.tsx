@@ -81,27 +81,22 @@ export function BulkUploadModal({ accountId }: BulkUploadModalProps) {
 
     try {
       const folder = item.file.type.startsWith("image/") ? "images" : "documents";
-      const res = await fetch("/api/upload/presigned-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: item.file.name,
-          contentType: item.file.type,
-          folder,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to get presigned URL");
-      const { presignedUrl, fileUrl, key } = await res.json();
+      const formData = new FormData();
+      formData.append("file", item.file);
+      formData.append("folder", folder);
 
       updateFile(index, { progress: 30 });
 
-      const uploadRes = await fetch(presignedUrl, {
-        method: "PUT",
-        body: item.file,
-        headers: { "Content-Type": item.file.type },
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
       });
-      if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Upload failed");
+      }
+      const { fileUrl, key } = await res.json();
 
       updateFile(index, { progress: 70 });
 
