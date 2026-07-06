@@ -47,6 +47,39 @@ export async function POST(req: Request) {
     let postcode = body.postcode || body.postcode_1;
     let website = body.website;
     let lead_type = body.lead_type;
+
+    // Resolve lead_type from interested_service if not explicitly provided
+    if (!lead_type && body.interested_service) {
+      const rawService = String(body.interested_service).trim();
+      const validLeadTypes = [
+        'SME Membership',
+        'White Label Partner',
+        'Corporate Partnership',
+        'Assessment Enquiry',
+        'General Enquiry'
+      ];
+      
+      const matched = validLeadTypes.find(
+        (t) => t.toLowerCase() === rawService.toLowerCase()
+      );
+      if (matched) {
+        lead_type = matched;
+      } else {
+        const lowerRaw = rawService.toLowerCase();
+        if (lowerRaw.includes("sme")) {
+          lead_type = "SME Membership";
+        } else if (lowerRaw.includes("white label") || lowerRaw.includes("whitelabel")) {
+          lead_type = "White Label Partner";
+        } else if (lowerRaw.includes("corporate")) {
+          lead_type = "Corporate Partnership";
+        } else if (lowerRaw.includes("assessment")) {
+          lead_type = "Assessment Enquiry";
+        } else {
+          lead_type = "General Enquiry";
+        }
+      }
+    }
+
     let lead_source = body.lead_source || "Wix Website";
 
     // Fallbacks for raw Wix event structure
