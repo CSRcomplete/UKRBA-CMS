@@ -29,6 +29,12 @@ import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { PanelTopClose, PanelTopOpen } from "lucide-react";
 import { createColumns } from "./columns";
+import { Button } from "@/components/ui/button";
+import AlertModal from "@/components/modals/alert-modal";
+import { useSession } from "@/lib/auth-client";
+import { bulkDeleteLeads } from "@/actions/crm/leads/bulk-delete-leads";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 type ConfigItem = { id: string; name: string };
 
@@ -47,7 +53,14 @@ export function LeadDataTable<TData, TValue>({
   leadTypes = [],
 }: DataTableProps<TData, TValue>) {
   const columns = createColumns(leadSources, leadStatuses, leadTypes) as ColumnDef<TData, TValue>[];
+  const router = useRouter();
   const [rowSelection, setRowSelection] = React.useState({});
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  const { data: session } = useSession();
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
+
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -79,8 +92,38 @@ export function LeadDataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  // @ts-ignore
+  const selectedIds = selectedRows.map((r) => r.original.id);
+  const selectedCount = selectedIds.length;
+
+  const handleDelete = async () => {
+    try {
+      setLoading(true);
+      const res = await bulkDeleteLeads(selectedIds);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        table.toggleAllRowsSelected(false);
+        toast.success(`${selectedCount} lead(s) deleted`);
+        router.refresh();
+      }
+    } catch {
+      toast.error("Failed to delete leads");
+    } finally {
+      setLoading(false);
+      setDeleteOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <AlertModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        loading={loading}
+      />
       <div className="flex justify-between items-start gap-3">
         <div></div>
         <div className="flex justify-end space-x-2">
@@ -105,6 +148,19 @@ export function LeadDataTable<TData, TValue>({
       ) : (
         <>
           <DataTableToolbar table={table} />
+          {isAdminOrCeo && selectedCount > 0 && (
+            <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2 text-sm">
+              <span className="font-medium">{selectedCount} selected</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteOpen(true)}
+                disabled={loading}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          )}
           <div className="rounded-md border overflow-x-auto">
             <Table data-testid="leads-table">
               <TableHeader>
