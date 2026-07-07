@@ -18,6 +18,7 @@ import { DocumentSystemType } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { DocumentRow } from "../data/schema";
+import { useSession } from "@/lib/auth-client";
 
 interface BatchActionsBarProps {
   table: Table<DocumentRow>;
@@ -28,6 +29,9 @@ export function BatchActionsBar({ table, accounts }: BatchActionsBarProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const { data: session } = useSession();
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map((r) => r.original.id);
@@ -106,13 +110,15 @@ export function BatchActionsBar({ table, accounts }: BatchActionsBarProps) {
           </SelectContent>
         </Select>
 
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setDeleteOpen(true)}
-        >
-          Delete
-        </Button>
+        {isAdminOrCeo && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+          >
+            Delete
+          </Button>
+        )}
       </div>
     </>
   );

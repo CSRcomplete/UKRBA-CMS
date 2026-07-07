@@ -8,6 +8,10 @@ export const deleteLead = async (leadId: string) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
+  if (session.user.role !== "admin" && session.user.role !== "ceo") {
+    return { error: "Forbidden" };
+  }
+
   if (!leadId) return { error: "leadId is required" };
 
   try {

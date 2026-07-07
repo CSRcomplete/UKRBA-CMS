@@ -32,6 +32,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { deleteLead } from "@/actions/crm/leads/delete-lead";
+import { useSession } from "@/lib/auth-client";
 
 type ConfigItem = { id: string; name: string };
 
@@ -50,6 +51,9 @@ export function DataTableRowActions<TData>({
 }: DataTableRowActionsProps<TData>) {
   const router = useRouter();
   const lead = leadSchema.parse(row.original);
+
+  const { data: session } = useSession();
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,11 +122,15 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem onClick={() => setUpdateOpen(true)}>
             Update
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setOpen(true)}>
-            Delete
-            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-          </DropdownMenuItem>
+          {isAdminOrCeo && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setOpen(true)}>
+                Delete
+                <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

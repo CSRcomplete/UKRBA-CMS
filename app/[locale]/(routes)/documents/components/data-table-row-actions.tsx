@@ -20,6 +20,7 @@ import AlertModal from "@/components/modals/alert-modal";
 import { useState } from "react";
 import { toast } from "sonner";
 import { deleteDocument } from "@/actions/documents/delete-document";
+import { useSession } from "@/lib/auth-client";
 
 interface DataTableRowActionsProps {
   row: Row<DocumentRow>;
@@ -31,6 +32,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [openDetail, setOpenDetail] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const { data: session } = useSession();
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
 
   const document = row.original;
 
@@ -88,11 +92,15 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuItem onClick={() => setOpenView(true)}>
             View File
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setOpenDelete(true)}>
-            Delete
-            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-          </DropdownMenuItem>
+          {isAdminOrCeo && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setOpenDelete(true)}>
+                Delete
+                <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>
