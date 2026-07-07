@@ -182,6 +182,10 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!lead_type) {
+      lead_type = "General Enquiry";
+    }
+
 
     if (!contact_name || !email || !lead_type || !lead_source) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
