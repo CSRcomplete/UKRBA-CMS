@@ -233,10 +233,26 @@ export async function POST(req: Request) {
     });
     const opsDirectorId = opsDirector?.id || null;
 
+    const referrerRdId = body.referred_by_rd || body.regional_director_id;
+    let referredRdUser = null;
+    if (referrerRdId) {
+      referredRdUser = await prismadb.users.findFirst({
+        where: {
+          OR: [
+            { id: referrerRdId },
+            { email: referrerRdId }
+          ]
+        }
+      });
+    }
+
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
     } else if (lead_type === 'Corporate Partnership') {
       currentOwnerId = null; // Stays unassigned, visible to CEO/Ops
+    } else if (referredRdUser) {
+      currentOwnerId = referredRdUser.id;
+      regionalDirectorId = referredRdUser.id;
     } else if (postcode) {
       // Regular postcode allocation routing
       const cleanPostcode = postcode.replace(/\s+/g, "").toUpperCase();
