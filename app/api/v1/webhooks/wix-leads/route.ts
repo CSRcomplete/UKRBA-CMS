@@ -240,7 +240,8 @@ export async function POST(req: Request) {
         where: {
           OR: [
             { id: referrerRdId },
-            { email: referrerRdId }
+            { email: referrerRdId },
+            { email: { startsWith: `${referrerRdId}@`, mode: "insensitive" } }
           ]
         }
       });
