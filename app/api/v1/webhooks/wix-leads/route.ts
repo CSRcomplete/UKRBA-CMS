@@ -240,7 +240,7 @@ export async function POST(req: Request) {
 
     const referrerRdId = body.referred_by_rd || body.regional_director_id;
     let referredRdUser = null;
-    if (referrerRdId) {
+    if (referrerRdId && referrerRdId !== "direct") {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(referrerRdId);
       referredRdUser = await prismadb.users.findFirst({
         where: {
@@ -257,6 +257,10 @@ export async function POST(req: Request) {
       currentOwnerId = opsDirectorId;
     } else if (lead_type === 'Corporate Partnership') {
       currentOwnerId = null; // Stays unassigned, visible to CEO/Ops
+    } else if (referrerRdId === "direct") {
+      currentOwnerId = null; // Bypasses postcode routing, remains unassigned
+      regionalDirectorId = null;
+      areaDirectorId = null;
     } else if (referredRdUser) {
       currentOwnerId = referredRdUser.id;
       regionalDirectorId = referredRdUser.id;
@@ -361,6 +365,7 @@ export async function POST(req: Request) {
           assigned_partner_id: partnerId || existingLead.assigned_partner_id,
           assigned_area_director_id: areaDirectorId || existingLead.assigned_area_director_id,
           assigned_regional_director_id: regionalDirectorId || existingLead.assigned_regional_director_id,
+          refered_by: referrerRdId || existingLead.refered_by,
           description: existingLead.description + ` | Additional info from Wix update (${lead_type})`
         }
       });
@@ -401,6 +406,7 @@ export async function POST(req: Request) {
         assigned_partner_id: partnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
+        refered_by: referrerRdId || null,
         description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`
       }
     });
