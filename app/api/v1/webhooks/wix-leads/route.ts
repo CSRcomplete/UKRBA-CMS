@@ -241,10 +241,11 @@ export async function POST(req: Request) {
     const referrerRdId = body.referred_by_rd || body.regional_director_id;
     let referredRdUser = null;
     if (referrerRdId) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(referrerRdId);
       referredRdUser = await prismadb.users.findFirst({
         where: {
           OR: [
-            { id: referrerRdId },
+            ...(isUuid ? [{ id: referrerRdId }] : []),
             { email: referrerRdId },
             { email: { startsWith: `${referrerRdId}@`, mode: "insensitive" } }
           ]
