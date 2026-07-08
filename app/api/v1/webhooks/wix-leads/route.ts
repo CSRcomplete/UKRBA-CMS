@@ -191,15 +191,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
     }
 
-    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry'];
+    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', '5GBP purchase'];
     if (!validLeadTypes.includes(lead_type)) {
       return NextResponse.json({ message: "Invalid lead_type parameter" }, { status: 400 });
     }
 
     // Resolve lead_type_id from crm_Lead_Types lookup table
-    const leadTypeRecord = await prismadb.crm_Lead_Types.findFirst({
+    let leadTypeRecord = await prismadb.crm_Lead_Types.findFirst({
       where: { name: lead_type }
     });
+    if (!leadTypeRecord) {
+      leadTypeRecord = await prismadb.crm_Lead_Types.create({
+        data: { name: lead_type }
+      });
+    }
     const lead_type_id = leadTypeRecord?.id || null;
 
     // Resolve lead_source_id — upsert so "Wix Website" is auto-created if missing
