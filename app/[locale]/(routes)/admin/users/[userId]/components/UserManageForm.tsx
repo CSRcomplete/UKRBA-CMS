@@ -204,8 +204,8 @@ export default function UserManageForm({
         </Card>
       </div>
 
-      {/* Area Director Specific Section */}
-      {role === "area_director" && (
+      {/* Postcode Area Assignment Section */}
+      {(role === "regional_director" || role === "area_director" || role === "channel_partner") && (
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -213,7 +213,7 @@ export default function UserManageForm({
               Assigned Postcode Areas
             </CardTitle>
             <CardDescription>
-              Specify which postcode areas this Area Director covers. Incoming leads in these areas will be routed to them.
+              Specify which postcode areas this staff member covers. Incoming leads in these areas will be routed to them.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
