@@ -253,12 +253,34 @@ export async function POST(req: Request) {
       });
     }
 
+    // Clear postcode for 5GBP purchase leads to avoid postcode saving and routing
+    if (lead_type === "5GBP purchase") {
+      postcode = null;
+    }
+
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
     } else if (lead_type === 'Corporate Partnership') {
       currentOwnerId = null; // Stays unassigned, visible to CEO/Ops
     } else if (referrerRdId === "direct") {
       currentOwnerId = null; // Bypasses postcode routing, remains unassigned
+      regionalDirectorId = null;
+      areaDirectorId = null;
+    } else if (referrerRdId === "ukrbadisc") {
+      let campaignUser = await prismadb.users.findFirst({
+        where: { name: "Email Campaign" }
+      });
+      if (!campaignUser) {
+        campaignUser = await prismadb.users.create({
+          data: {
+            name: "Email Campaign",
+            email: "campaign@ukrba.org",
+            role: "user",
+            userStatus: "ACTIVE",
+          }
+        });
+      }
+      currentOwnerId = campaignUser.id;
       regionalDirectorId = null;
       areaDirectorId = null;
     } else if (referredRdUser) {
