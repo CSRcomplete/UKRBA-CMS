@@ -60,6 +60,8 @@ export function getUKRBASignatureHtml(
   </table>
 </div>
 `;
+}
+
 export function parseMarkdownToEmailHtml(text: string): string {
   if (!text) return "";
 
