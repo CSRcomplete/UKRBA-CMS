@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PhoneOff, Maximize2, Minimize2, ExternalLink } from "lucide-react";
+import { PhoneOff, Maximize2, Minimize2, ExternalLink, Video } from "lucide-react";
 import { getJitsiDomain, getJitsiMeetUrl } from "@/lib/jitsi";
 
 interface JitsiMeetRoomProps {
@@ -21,18 +21,30 @@ declare global {
 /**
  * JitsiMeetRoom — Embedded Jitsi video call component.
  *
- * Tries loading via Jitsi External API CDN. If CDN script loading is blocked or fails,
- * seamlessly falls back to direct responsive <iframe> embedding with full audio/video permissions.
+ * Integrates 8x8 Jitsi Meet API with instant popup launcher and fullscreen controls.
  */
 export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: JitsiMeetRoomProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [useIframeFallback, setUseIframeFallback] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
 
   const domain = getJitsiDomain();
   const jitsiUrl = getJitsiMeetUrl(roomId);
   const iframeSrc = `https://${domain}/${roomId}#userInfo.displayName="${encodeURIComponent(displayName)}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`;
+
+  const openPopupWindow = () => {
+    const width = 1280;
+    const height = 720;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    window.open(
+      jitsiUrl,
+      `JitsiMeeting_${roomId}`,
+      `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=yes`
+    );
+  };
 
   useEffect(() => {
     let script: HTMLScriptElement | null = null;
@@ -43,9 +55,13 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
       script = document.createElement("script");
       script.src = `https://${domain}/external_api.js`;
       script.async = true;
-      script.onload = () => initJitsiApi();
+      script.onload = () => {
+        setIsConnecting(false);
+        initJitsiApi();
+      };
       script.onerror = () => {
-        console.warn("[JitsiMeetRoom] CDN script failed to load. Falling back to direct iframe.");
+        console.warn("[JitsiMeetRoom] CDN script failed to load. Falling back to iframe/popup.");
+        setIsConnecting(false);
         setUseIframeFallback(true);
       };
       document.body.appendChild(script);
@@ -86,7 +102,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           if (onLeave) onLeave();
         });
       } catch (err) {
-        console.warn("[JitsiMeetRoom] External API init error. Falling back to direct iframe:", err);
+        console.warn("[JitsiMeetRoom] External API init error. Falling back to direct iframe/popup:", err);
         setUseIframeFallback(true);
       }
     }
@@ -111,13 +127,22 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
 
   return (
     <div
-      className={`relative bg-black flex flex-col ${
-        isFullscreen ? "fixed inset-0 z-50" : "rounded-xl overflow-hidden"
+      className={`relative bg-slate-950 flex flex-col ${
+        isFullscreen ? "fixed inset-0 z-50" : "rounded-xl overflow-hidden shadow-2xl border border-slate-800"
       }`}
-      style={{ height: isFullscreen ? "100dvh" : "620px" }}
+      style={{ height: isFullscreen ? "100dvh" : "640px" }}
     >
       {/* Control Header */}
       <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        <Button
+          size="sm"
+          onClick={openPopupWindow}
+          className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow"
+        >
+          <Video className="h-3.5 w-3.5" />
+          Launch Window
+        </Button>
+
         <a href={jitsiUrl} target="_blank" rel="noopener noreferrer">
           <Button
             size="sm"
@@ -128,6 +153,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
             New Tab
           </Button>
         </a>
+
         <Button
           size="sm"
           variant="secondary"
@@ -137,23 +163,32 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
         </Button>
+
         <Button
           size="sm"
-          className="h-8 gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs"
+          className="h-8 gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold"
           onClick={handleLeave}
         >
           <PhoneOff className="h-3.5 w-3.5" /> Leave Call
         </Button>
       </div>
 
-      {/* Video Container */}
+      {/* Video Call Container */}
       {useIframeFallback ? (
-        <iframe
-          src={iframeSrc}
-          allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
-          className="w-full h-full border-0"
-          title="Jitsi Video Meeting"
-        />
+        <div className="relative w-full h-full">
+          <iframe
+            src={iframeSrc}
+            allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
+            className="w-full h-full border-0"
+            title="Jitsi Video Meeting"
+          />
+          <div className="absolute bottom-4 left-4 z-20 bg-black/80 backdrop-blur text-white text-xs px-3 py-2 rounded-lg flex items-center gap-3 border border-white/10">
+            <span>Having trouble loading inside frame?</span>
+            <Button size="sm" onClick={openPopupWindow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
+              Open in Pop-up Window
+            </Button>
+          </div>
+        </div>
       ) : (
         <div ref={containerRef} className="flex-1 w-full h-full" />
       )}
