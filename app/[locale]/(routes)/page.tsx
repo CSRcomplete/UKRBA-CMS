@@ -5,6 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { leadReadScopeWhere } from "@/lib/authz";
 import Link from "next/link";
 import moment from "moment";
+import { getEscalationAlerts } from "@/lib/task-escalation";
 import {
   Mail,
   FolderOpen,
@@ -559,7 +560,7 @@ const DashboardPage = async () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-red-100 dark:divide-red-950">
-                    {escalationAlerts.map((alert) => (
+                    {escalationAlerts.map((alert: any) => (
                       <tr key={`${alert.type}-${alert.id}`} className="hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors">
                         <td className="py-3 font-medium capitalize">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
