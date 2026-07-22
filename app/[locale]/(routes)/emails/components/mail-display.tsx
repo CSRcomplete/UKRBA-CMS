@@ -19,6 +19,7 @@ import {
   Bold,
   Italic,
   List,
+  X,
 } from "lucide-react";
 
 import {
@@ -110,6 +111,9 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
     }
   };
 
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
+  const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
+
   const handleInlineReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !activeAccountId || !replyTargetEmail || !latestEmail) return;
@@ -121,6 +125,26 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       const rawSub = latestEmail.subject ?? mail?.subject ?? "No Subject";
       const replySubject = rawSub.toLowerCase().startsWith("re:") ? rawSub : `Re: ${rawSub}`;
 
+      const attachmentPayload = await Promise.all(
+        replyAttachments.map(async (file) => {
+          return new Promise<{ filename: string; content: string; contentType: string; size: number }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = reader.result as string;
+              const base64 = res.split(",")[1] || "";
+              resolve({
+                filename: file.name,
+                content: base64,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+              });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
       const newMsg = await sendEmail({
         accountId: activeAccountId,
         to: [replyTargetEmail],
@@ -128,9 +152,11 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
         body: replyText,
         inReplyTo: latestEmail.rfcMessageId,
         references: latestEmail.rfcMessageId,
+        attachments: attachmentPayload,
       });
 
       setReplyText(getUKRBASignature(currentUser));
+      setReplyAttachments([]);
       if (newMsg) {
         setThread((prev) => [...prev, newMsg]);
       }
@@ -423,6 +449,45 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                 placeholder={`Reply to ${replyTargetEmail || "sender"}...`}
                 minHeight="120px"
               />
+              {/* Attachments for Inline Reply */}
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={replyFileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      const files = Array.from(e.target.files);
+                      setReplyAttachments((prev) => [...prev, ...files]);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => replyFileInputRef.current?.click()}
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Attach Files ({replyAttachments.length})
+                </Button>
+
+                {replyAttachments.map((file, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-[11px]">
+                    <span className="truncate max-w-[120px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setReplyAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
               {sendError && (
                 <p className="text-xs text-destructive">{sendError}</p>
               )}

@@ -134,6 +134,27 @@ export function ComposeModal({
     setSending(true);
     setError(null);
     try {
+      // Convert attached files to base64
+      const attachmentPayload = await Promise.all(
+        attachments.map(async (file) => {
+          return new Promise<{ filename: string; content: string; contentType: string; size: number }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = reader.result as string;
+              const base64 = res.split(",")[1] || "";
+              resolve({
+                filename: file.name,
+                content: base64,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+              });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
       await sendEmail({
         accountId,
         to: to.split(",").map((e) => e.trim()).filter(Boolean),
@@ -142,6 +163,7 @@ export function ComposeModal({
         body,
         inReplyTo: mode === "reply" ? replyTo?.rfcMessageId : undefined,
         references: mode === "reply" ? replyTo?.rfcMessageId : undefined,
+        attachments: attachmentPayload,
       });
       setOpen(false);
       router.refresh();

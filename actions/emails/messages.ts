@@ -251,6 +251,13 @@ export async function deleteEmail(id: string) {
   await prismadb.email.update({ where: { id }, data: { isDeleted: true } });
 }
 
+export type AttachmentInput = {
+  filename: string;
+  content: string; // base64 string
+  contentType?: string;
+  size?: number;
+};
+
 type SendInput = {
   accountId: string;
   to: string[];
@@ -260,6 +267,7 @@ type SendInput = {
   body: string;
   inReplyTo?: string;   // parent's Message-ID
   references?: string;  // parent's References + parent's Message-ID (space-separated)
+  attachments?: AttachmentInput[];
 };
 
 import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml } from "@/lib/email-signature";
@@ -298,6 +306,13 @@ export async function sendEmail(input: SendInput) {
     auth: { user: account.username, pass: password },
   });
 
+  // Prepare Nodemailer attachments
+  const mailAttachments = input.attachments?.map((att) => ({
+    filename: att.filename,
+    content: Buffer.from(att.content, "base64"),
+    contentType: att.contentType,
+  }));
+
   const info = await transporter.sendMail({
     from: account.username,
     to: input.to.join(", "),
@@ -308,6 +323,7 @@ export async function sendEmail(input: SendInput) {
     html: bodyHtml,
     inReplyTo: input.inReplyTo,
     references: input.references,
+    attachments: mailAttachments,
   });
 
   // Write sent message to DB immediately so it appears in Sent view & thread with HTML logo signature
@@ -328,6 +344,19 @@ export async function sendEmail(input: SendInput) {
       isRead: true,
     },
   });
+
+  // Store attachment records in DB if present
+  if (input.attachments && input.attachments.length > 0) {
+    await prismadb.emailAttachment.createMany({
+      data: input.attachments.map((att) => ({
+        emailId: created.id,
+        filename: att.filename,
+        mimeType: att.contentType || "application/octet-stream",
+        size: att.size || Buffer.from(att.content, "base64").byteLength,
+        storageUrl: `data:${att.contentType || "application/octet-stream"};base64,${att.content}`,
+      })),
+    });
+  }
 
   return created;
 }
