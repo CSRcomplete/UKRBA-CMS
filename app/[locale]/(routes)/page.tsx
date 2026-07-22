@@ -14,6 +14,7 @@ import {
   Users,
   Video,
   Megaphone,
+  Briefcase,
   ArrowRight,
 } from "lucide-react";
 
@@ -531,6 +532,26 @@ const DashboardPage = async () => {
             </div>
           </Link>
         </div>
+
+        {/* 9. Recruitment Centre — Admin/CEO only */}
+        {(userRole === "admin" || userRole === "ceo") && (
+          <div className="mt-6">
+            <h2 className="text-base font-semibold text-muted-foreground mb-3">Administration Only</h2>
+            <Link
+              href="/recruitment"
+              className="group relative overflow-hidden rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-500/10 via-background to-indigo-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/60 flex items-center gap-5 max-w-md"
+            >
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Briefcase className="h-7 w-7" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">9. Recruitment Centre</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Full candidate pipeline — CVs, interviews, offers &amp; signed contracts.</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />
+            </Link>
+          </div>
+        )}
       </div>
       {/* Escalation Alerts Section */}
       {escalationAlerts.length > 0 && (

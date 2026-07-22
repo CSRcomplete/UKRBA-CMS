@@ -706,6 +706,67 @@ model crm_Announcements {
   @@index([deletedAt])
 }
 
+model crm_Candidates {
+  id                String    @id @default(uuid()) @db.Uuid
+  // Personal info
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
+  address           String?
+  // Role applied for
+  position          String
+  positionType      String    @default("Full-time") // Full-time / Part-time / Contract / Volunteer
+  // Pipeline stage
+  status            String    @default("Applied")
+  // CV attachment
+  cvUrl             String?   @db.Text
+  cvFileName        String?
+  cvSize            Int?
+  // Interview
+  interviewDate     DateTime?
+  interviewNotes    String?   @db.Text
+  interviewedBy     String?
+  // Contract
+  contractStatus    String    @default("None")  // None / Sent / Signed
+  contractSentAt    DateTime?
+  contractSignedAt  DateTime?
+  // Source
+  source            String    @default("Manual")
+  // Meta
+  notes             String?   @db.Text
+  createdById       String    @db.Uuid
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  createdBy         Users                    @relation("candidate_created_by", fields: [createdById], references: [id], onDelete: Cascade)
+  activities        crm_CandidateActivities[]
+
+  @@index([status])
+  @@index([position])
+  @@index([email])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model crm_CandidateActivities {
+  id          String   @id @default(uuid()) @db.Uuid
+  candidateId String   @db.Uuid
+  userId      String   @db.Uuid
+  type        String   @default("note")   // note / call / email / interview / contract / other
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+
+  candidate   crm_Candidates @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user        Users          @relation("candidate_activity_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
 model Boards {
   id                String    @id @default(uuid()) @db.Uuid
   v                 Int       @map("__v")
@@ -1040,6 +1101,8 @@ model Users {
   ownership_changes_logged     crm_Ownership_History[]  @relation("ownership_changes_by")
   appointments                 crm_Appointments[]       @relation("user_appointments")
   announcements                crm_Announcements[]      @relation("announcement_author")
+  candidates_created           crm_Candidates[]         @relation("candidate_created_by")
+  candidate_activities         crm_CandidateActivities[] @relation("candidate_activity_user")
 
   // Organizational Tree properties
   region_id Int?

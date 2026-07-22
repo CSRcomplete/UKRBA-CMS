@@ -24,6 +24,7 @@ import getAdministrationMenuItem from "./menu-items/Administration";
 import getCampaignsMenuItem from "./menu-items/Campaigns";
 import getNewsMenuItem from "./menu-items/News";
 import getDiaryMenuItem from "./menu-items/Diary";
+import getRecruitmentMenuItem from "./menu-items/Recruitment";
 
 /**
  * AppSidebar Component - Task Groups 1.2, 2.2-2.7, 3.1, 5.3, 5.4
@@ -114,9 +115,10 @@ export function AppSidebar({
     getNewsMenuItem({ title: "News & Announcements" }),
   ];
 
-  // Administration: admin or ceo users only
+  // Administration & Recruitment: admin or ceo users only
   if (session?.user?.role === "admin" || session?.user?.role === "ceo") {
     navItems.push(
+      getRecruitmentMenuItem({ title: "Recruitment Centre" }),
       getAdministrationMenuItem({ title: dict?.settings || "Administration" }),
     );
   }
