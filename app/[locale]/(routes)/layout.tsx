@@ -91,7 +91,8 @@ export default async function AppLayout({
   };
 
   const cookieStore = await cookies();
-  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
+  const sidebarState = cookieStore.get("sidebar_state")?.value;
+  const sidebarOpen = sidebarState === "true";
 
   const enabledCurrencies = await getEnabledCurrencies();
   const defaultCurrency = await getDefaultCurrency();
