@@ -8,11 +8,11 @@
 
 /**
  * Get the active Jitsi domain server.
- * Defaults to '8x8.vc' (official 8x8 Jitsi Meet server).
+ * Defaults to 'meet.element.io' (Matrix/Element open public Jitsi server - completely open, zero moderator login required).
  * Can be overridden via NEXT_PUBLIC_JITSI_DOMAIN environment variable.
  */
 export function getJitsiDomain(): string {
-  return process.env.NEXT_PUBLIC_JITSI_DOMAIN || "8x8.vc";
+  return process.env.NEXT_PUBLIC_JITSI_DOMAIN || "meet.element.io";
 }
 
 /**
