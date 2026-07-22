@@ -12,6 +12,8 @@ import { sendEmail } from "@/actions/emails/messages";
 import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 
+import { getUKRBASignature } from "@/lib/email-signature";
+
 type Mode = "new" | "reply" | "forward";
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
   mode?: Mode;
   replyTo?: Mail;
   trigger?: React.ReactNode;
+  currentUser?: { name?: string | null; role?: string | null };
 };
 
 export function ComposeModal({
@@ -26,6 +29,7 @@ export function ComposeModal({
   mode = "new",
   replyTo,
   trigger,
+  currentUser,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -51,10 +55,12 @@ export function ComposeModal({
       } else {
         setSubject("");
       }
+
+      const sig = getUKRBASignature(currentUser);
       setBody(
         mode === "reply" || mode === "forward"
-          ? `\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
-          : ""
+          ? `${sig}\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
+          : sig
       );
     }
   };

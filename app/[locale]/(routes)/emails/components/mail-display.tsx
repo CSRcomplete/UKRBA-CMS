@@ -46,12 +46,15 @@ import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
 
+import { getUKRBASignature } from "@/lib/email-signature";
+
 interface MailDisplayProps {
   mail: Mail | null;
   activeAccountId: string | null;
+  currentUser?: { name?: string | null; role?: string | null };
 }
 
-export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
+export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayProps) {
   const today = new Date();
   const router = useRouter();
   const inlineReplyRef = useRef<HTMLTextAreaElement>(null);
@@ -65,10 +68,12 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
   useEffect(() => {
     if (!mail?.id) {
       setThread([]);
+      setReplyText("");
       return;
     }
     let cancelled = false;
     setLoadingThread(true);
+    setReplyText(getUKRBASignature(currentUser));
     getEmailThread(mail.id)
       .then((data) => {
         if (!cancelled) {
@@ -85,7 +90,7 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
     return () => {
       cancelled = true;
     };
-  }, [mail?.id]);
+  }, [mail?.id, currentUser]);
 
   const latestEmail = thread.length > 0 ? thread[thread.length - 1] : null;
   const replyTargetEmail =
@@ -120,7 +125,7 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
         references: latestEmail.rfcMessageId,
       });
 
-      setReplyText("");
+      setReplyText(getUKRBASignature(currentUser));
       if (newMsg) {
         setThread((prev) => [...prev, newMsg]);
       }

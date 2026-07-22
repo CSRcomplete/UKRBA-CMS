@@ -183,6 +183,8 @@ type SendInput = {
   references?: string;  // parent's References + parent's Message-ID (space-separated)
 };
 
+import { getUKRBASignature } from "@/lib/email-signature";
+
 export async function sendEmail(input: SendInput) {
   const userId = await requireSession();
 
@@ -190,6 +192,16 @@ export async function sendEmail(input: SendInput) {
     where: { id: input.accountId, userId },
   });
   if (!account) throw new Error("Account not found");
+
+  // Ensure UKRBA signature is attached
+  let finalBody = input.body;
+  if (!finalBody.includes("UKRBA") && !finalBody.includes("UK Resource & Business Association")) {
+    const user = await prismadb.users.findUnique({
+      where: { id: userId },
+      select: { name: true, role: true },
+    });
+    finalBody += getUKRBASignature({ name: user?.name, role: user?.role });
+  }
 
   const password = decrypt(account.passwordEncrypted);
 
@@ -206,7 +218,7 @@ export async function sendEmail(input: SendInput) {
     cc: input.cc?.join(", "),
     bcc: input.bcc?.join(", "),
     subject: input.subject,
-    text: input.body,
+    text: finalBody,
     inReplyTo: input.inReplyTo,
     references: input.references,
   });
@@ -223,7 +235,7 @@ export async function sendEmail(input: SendInput) {
       toRecipients: input.to.map((e) => ({ email: e })),
       ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
       bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
-      bodyText: input.body,
+      bodyText: finalBody,
       sentAt: new Date(),
       isRead: true,
     },

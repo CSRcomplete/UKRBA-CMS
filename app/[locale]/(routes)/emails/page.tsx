@@ -96,6 +96,7 @@ const EmailRoute = async ({
           defaultLayout={validatedLayout}
           defaultCollapsed={defaultCollapsed}
           navCollapsedSize={8}
+          currentUser={{ name: session?.user?.name, role: (session?.user as any)?.role }}
         />
       </Suspense>
     </Container>

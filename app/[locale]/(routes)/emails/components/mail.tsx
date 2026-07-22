@@ -33,6 +33,7 @@ interface MailProps {
   defaultLayout: number[] | undefined;
   defaultCollapsed?: boolean;
   navCollapsedSize: number;
+  currentUser?: { name?: string | null; role?: string | null };
 }
 
 export function MailComponent({
@@ -45,6 +46,7 @@ export function MailComponent({
   defaultLayout = [20, 35, 45],
   defaultCollapsed = false,
   navCollapsedSize,
+  currentUser,
 }: MailProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
   const [mail] = useMail();
@@ -119,7 +121,7 @@ export function MailComponent({
           <Separator />
           {activeAccountId && !isCollapsed && (
             <div className="p-2">
-              <ComposeModal accountId={activeAccountId} />
+              <ComposeModal accountId={activeAccountId} currentUser={currentUser} />
             </div>
           )}
           <div className={cn(isCollapsed ? "block" : "hidden")}>
@@ -209,6 +211,7 @@ export function MailComponent({
           <MailDisplay
             mail={mails.find((item) => item.id === mail.selected) || null}
             activeAccountId={activeAccountId}
+            currentUser={currentUser}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
