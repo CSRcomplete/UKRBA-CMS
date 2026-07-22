@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
-import { Inbox, PenBox, Search, Send } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { Inbox, PenBox, Search, Send, RefreshCw } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 import { AccountSwitcher } from "@/app/[locale]/(routes)/emails/components/account-switcher";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
@@ -13,8 +13,10 @@ import { useMail } from "@/app/[locale]/(routes)/emails/use-mail";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { triggerSync } from "@/actions/emails/sync";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -47,6 +49,21 @@ export function MailComponent({
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
   const [mail] = useMail();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  async function handleSync() {
+    if (!activeAccountId) return;
+    setIsSyncing(true);
+    try {
+      await triggerSync(activeAccountId);
+      router.refresh();
+    } catch {
+      // Ignore
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   function folderHref(folder: string) {
     const p = new URLSearchParams(searchParams.toString());
@@ -140,9 +157,21 @@ export function MailComponent({
         <ResizablePanel defaultSize={`${defaultLayout[1]}%`} minSize="30%">
           <Tabs defaultValue="all">
             <div className="flex items-center px-4 py-2">
-              <h1 className="text-xl font-bold">
-                {activeFolder === "SENT" ? "Sent" : "Inbox"}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold">
+                  {activeFolder === "SENT" ? "Sent" : "Inbox"}
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={isSyncing || !activeAccountId}
+                  onClick={handleSync}
+                  title="Sync Emails Now"
+                >
+                  <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
+                </Button>
+              </div>
               <TabsList className="ml-auto">
                 <TabsTrigger
                   value="all"
