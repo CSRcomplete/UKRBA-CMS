@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PhoneOff, Maximize2, Minimize2, ExternalLink, Video } from "lucide-react";
 import { getJitsiDomain, getJitsiMeetUrl } from "@/lib/jitsi";
@@ -12,29 +12,26 @@ interface JitsiMeetRoomProps {
   onLeave?: () => void;
 }
 
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI: any;
-  }
-}
-
 /**
- * JitsiMeetRoom — Embedded Jitsi video call component.
+ * JitsiMeetRoom — Clean, single-session embedded Jitsi video call component.
  *
- * Integrates 8x8 Jitsi Meet API with instant popup launcher and fullscreen controls.
+ * Uses direct iframe embedding with URL parameters to prevent duplicate WebRTC connections
+ * and prevent multiple participant instances from joining the room.
  */
 export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: JitsiMeetRoomProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef = useRef<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [useIframeFallback, setUseIframeFallback] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
+  const [isWindowOpened, setIsWindowOpened] = useState(false);
 
   const domain = getJitsiDomain();
   const jitsiUrl = getJitsiMeetUrl(roomId);
-  const iframeSrc = `https://${domain}/${roomId}#userInfo.displayName="${encodeURIComponent(displayName)}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`;
+
+  // Clean URL parameters for single participant session
+  const iframeSrc = `https://${domain}/${roomId}#userInfo.displayName="${encodeURIComponent(
+    displayName
+  )}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.disableDeepLinking=true`;
 
   const openPopupWindow = () => {
+    setIsWindowOpened(true);
     const width = 1280;
     const height = 720;
     const left = (window.screen.width - width) / 2;
@@ -46,82 +43,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
     );
   };
 
-  useEffect(() => {
-    let script: HTMLScriptElement | null = null;
-
-    if (window.JitsiMeetExternalAPI) {
-      initJitsiApi();
-    } else {
-      script = document.createElement("script");
-      script.src = `https://${domain}/external_api.js`;
-      script.async = true;
-      script.onload = () => {
-        setIsConnecting(false);
-        initJitsiApi();
-      };
-      script.onerror = () => {
-        console.warn("[JitsiMeetRoom] CDN script failed to load. Falling back to iframe/popup.");
-        setIsConnecting(false);
-        setUseIframeFallback(true);
-      };
-      document.body.appendChild(script);
-    }
-
-    function initJitsiApi() {
-      if (!containerRef.current || apiRef.current) return;
-      try {
-        apiRef.current = new window.JitsiMeetExternalAPI(domain, {
-          roomName: roomId,
-          parentNode: containerRef.current,
-          width: "100%",
-          height: "100%",
-          configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: false,
-            disableDeepLinking: true,
-            prejoinPageEnabled: false,
-          },
-          interfaceConfigOverwrite: {
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_BRAND_WATERMARK: false,
-            SHOW_POWERED_BY: false,
-            DEFAULT_LOCAL_DISPLAY_NAME: displayName,
-          },
-          userInfo: {
-            displayName,
-            email: userEmail || "",
-          },
-        });
-
-        apiRef.current.addEventListener("readyToClose", () => {
-          if (onLeave) onLeave();
-        });
-
-        apiRef.current.addEventListener("videoConferenceLeft", () => {
-          if (onLeave) onLeave();
-        });
-      } catch (err) {
-        console.warn("[JitsiMeetRoom] External API init error. Falling back to direct iframe/popup:", err);
-        setUseIframeFallback(true);
-      }
-    }
-
-    return () => {
-      if (script && document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-      if (apiRef.current) {
-        try { apiRef.current.dispose(); } catch { /* ignore */ }
-        apiRef.current = null;
-      }
-    };
-  }, [domain, roomId, displayName, userEmail, onLeave]);
-
   const handleLeave = () => {
-    if (apiRef.current) {
-      try { apiRef.current.executeCommand("hangup"); } catch { /* ignore */ }
-    }
     if (onLeave) onLeave();
   };
 
@@ -132,8 +54,8 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
       }`}
       style={{ height: isFullscreen ? "100dvh" : "640px" }}
     >
-      {/* Control Header */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+      {/* Top Controls Bar */}
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
         <Button
           size="sm"
           onClick={openPopupWindow}
@@ -143,7 +65,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           Launch Window
         </Button>
 
-        <a href={jitsiUrl} target="_blank" rel="noopener noreferrer">
+        <a href={jitsiUrl} target="_blank" rel="noopener noreferrer" onClick={() => setIsWindowOpened(true)}>
           <Button
             size="sm"
             variant="secondary"
@@ -173,24 +95,33 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
         </Button>
       </div>
 
-      {/* Video Call Container */}
-      {useIframeFallback ? (
-        <div className="relative w-full h-full">
-          <iframe
-            src={iframeSrc}
-            allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
-            className="w-full h-full border-0"
-            title="Jitsi Video Meeting"
-          />
-          <div className="absolute bottom-4 left-4 z-20 bg-black/80 backdrop-blur text-white text-xs px-3 py-2 rounded-lg flex items-center gap-3 border border-white/10">
-            <span>Having trouble loading inside frame?</span>
-            <Button size="sm" onClick={openPopupWindow} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
-              Open in Pop-up Window
+      {/* Video Frame */}
+      {isWindowOpened ? (
+        <div className="flex flex-col items-center justify-center h-full text-white space-y-4 p-8 text-center bg-slate-900">
+          <Video className="h-12 w-12 text-blue-500 animate-pulse" />
+          <div>
+            <h3 className="text-lg font-bold">Meeting Open in External Window</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Embedded frame paused to avoid duplicate connections.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="text-xs text-black bg-white" onClick={() => setIsWindowOpened(false)}>
+              Resume Embedded Frame
+            </Button>
+            <Button size="sm" variant="destructive" className="text-xs" onClick={handleLeave}>
+              End &amp; Leave Call
             </Button>
           </div>
         </div>
       ) : (
-        <div ref={containerRef} className="flex-1 w-full h-full" />
+        <iframe
+          key={roomId}
+          src={iframeSrc}
+          allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
+          className="w-full h-full border-0"
+          title="Jitsi Video Meeting"
+        />
       )}
     </div>
   );
