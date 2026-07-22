@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, nextSaturday } from "date-fns";
-import { format, addHours } from "date-fns";
+import { addDays, nextSaturday, format, addHours } from "date-fns";
 
 import {
   Archive,
@@ -14,6 +13,7 @@ import {
   Reply,
   ReplyAll,
   Trash2,
+  Send,
 } from "lucide-react";
 
 import {
@@ -36,13 +36,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
-import { getEmail, deleteEmail } from "@/actions/emails/messages";
+import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
 
 interface MailDisplayProps {
@@ -53,27 +54,83 @@ interface MailDisplayProps {
 export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
   const today = new Date();
   const router = useRouter();
+  const inlineReplyRef = useRef<HTMLTextAreaElement>(null);
 
-  const [fullEmail, setFullEmail] = useState<Awaited<ReturnType<typeof getEmail>> | null>(null);
+  const [thread, setThread] = useState<any[]>([]);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mail?.id) {
-      setFullEmail(null);
+      setThread([]);
       return;
     }
     let cancelled = false;
-    getEmail(mail.id)
-      .then((data) => { if (!cancelled) setFullEmail(data); })
-      .catch(() => { if (!cancelled) setFullEmail(null); });
-    return () => { cancelled = true; };
+    setLoadingThread(true);
+    getEmailThread(mail.id)
+      .then((data) => {
+        if (!cancelled) {
+          setThread(data ?? []);
+          setLoadingThread(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setThread([]);
+          setLoadingThread(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mail?.id]);
 
-  const senderName = fullEmail?.fromName ?? fullEmail?.fromEmail ?? "?";
-  const senderInitials = senderName
-    .split(" ")
-    .map((c) => c[0])
-    .join("")
-    .toUpperCase();
+  const latestEmail = thread.length > 0 ? thread[thread.length - 1] : null;
+  const replyTargetEmail =
+    latestEmail?.folder === "SENT"
+      ? (Array.isArray(latestEmail.toRecipients) ? latestEmail.toRecipients[0]?.email : "")
+      : (latestEmail?.fromEmail ?? mail?.fromEmail ?? "");
+
+  const handleFocusReply = () => {
+    if (inlineReplyRef.current) {
+      inlineReplyRef.current.scrollIntoView({ behavior: "smooth" });
+      inlineReplyRef.current.focus();
+    }
+  };
+
+  const handleInlineReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim() || !activeAccountId || !replyTargetEmail || !latestEmail) return;
+
+    setIsSendingReply(true);
+    setSendError(null);
+
+    try {
+      const rawSub = latestEmail.subject ?? mail?.subject ?? "No Subject";
+      const replySubject = rawSub.toLowerCase().startsWith("re:") ? rawSub : `Re: ${rawSub}`;
+
+      const newMsg = await sendEmail({
+        accountId: activeAccountId,
+        to: [replyTargetEmail],
+        subject: replySubject,
+        body: replyText,
+        inReplyTo: latestEmail.rfcMessageId,
+        references: latestEmail.rfcMessageId,
+      });
+
+      setReplyText("");
+      if (newMsg) {
+        setThread((prev) => [...prev, newMsg]);
+      }
+      router.refresh();
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Failed to send reply");
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
 
   async function handleDelete() {
     if (!mail?.id) return;
@@ -185,23 +242,16 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
         <div className="ml-auto flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <ComposeModal
-                accountId={activeAccountId ?? ""}
-                mode="reply"
-                replyTo={fullEmail ? (fullEmail as unknown as Mail) : undefined}
-                trigger={
-                  <Button variant="ghost" size="icon" disabled={!mail}>
-                    <Reply className="h-4 w-4" />
-                    <span className="sr-only">Reply</span>
-                  </Button>
-                }
-              />
+              <Button variant="ghost" size="icon" disabled={!mail} onClick={handleFocusReply}>
+                <Reply className="h-4 w-4" />
+                <span className="sr-only">Reply</span>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>Reply</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!mail}>
+              <Button variant="ghost" size="icon" disabled={!mail} onClick={handleFocusReply}>
                 <ReplyAll className="h-4 w-4" />
                 <span className="sr-only">Reply all</span>
               </Button>
@@ -213,7 +263,7 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
               <ComposeModal
                 accountId={activeAccountId ?? ""}
                 mode="forward"
-                replyTo={fullEmail ? (fullEmail as unknown as Mail) : undefined}
+                replyTo={latestEmail ? (latestEmail as unknown as Mail) : undefined}
                 trigger={
                   <Button variant="ghost" size="icon" disabled={!mail}>
                     <Forward className="h-4 w-4" />
@@ -242,84 +292,111 @@ export function MailDisplay({ mail, activeAccountId }: MailDisplayProps) {
         </DropdownMenu>
       </div>
       <Separator />
+
       {mail ? (
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-start p-4">
-            <div className="flex items-start gap-4 text-sm">
-              <Avatar>
-                <AvatarImage alt={senderName} />
-                <AvatarFallback>{senderInitials}</AvatarFallback>
-              </Avatar>
-              <div className="grid gap-1">
-                <div className="font-semibold">
-                  {fullEmail?.fromName ?? fullEmail?.fromEmail ?? "(unknown)"}
-                </div>
-                <div className="line-clamp-1 text-xs">
-                  {fullEmail?.subject ?? "(no subject)"}
-                </div>
-                <div className="line-clamp-1 text-xs">
-                  <span className="font-medium">From:</span>{" "}
-                  {fullEmail?.fromEmail ?? ""}
-                </div>
-                {Array.isArray(fullEmail?.toRecipients) && fullEmail.toRecipients.length > 0 && (
-                  <div className="line-clamp-1 text-xs">
-                    <span className="font-medium">To:</span>{" "}
-                    {(fullEmail.toRecipients as { name?: string; email: string }[])
-                      .map((r) => r.name ?? r.email).join(", ")}
-                  </div>
-                )}
-                {Array.isArray(fullEmail?.ccRecipients) && fullEmail.ccRecipients.length > 0 && (
-                  <div className="line-clamp-1 text-xs">
-                    <span className="font-medium">CC:</span>{" "}
-                    {(fullEmail.ccRecipients as { name?: string; email: string }[])
-                      .map((r) => r.name ?? r.email).join(", ")}
-                  </div>
-                )}
-              </div>
-            </div>
-            {fullEmail?.sentAt && (
-              <div className="ml-auto text-xs text-muted-foreground">
-                {format(new Date(fullEmail.sentAt), "PPpp")}
-              </div>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Conversation Thread History */}
+          <div className="flex-1 overflow-y-auto space-y-6 p-4">
+            {loadingThread && thread.length === 0 && (
+              <div className="p-4 text-xs text-muted-foreground text-center">Loading conversation thread...</div>
             )}
+            {thread.map((msg, index) => {
+              const sName = msg.fromName ?? msg.fromEmail ?? "?";
+              const sInitials = sName
+                .split(" ")
+                .map((c: string) => c[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2);
+
+              return (
+                <div key={msg.id || index} className="rounded-lg border bg-card p-4 space-y-3 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage alt={sName} />
+                        <AvatarFallback>{sInitials}</AvatarFallback>
+                      </Avatar>
+                      <div className="grid gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{sName}</span>
+                          <Badge variant={msg.folder === "SENT" ? "secondary" : "outline"} className="text-[10px] py-0 h-4">
+                            {msg.folder === "SENT" ? "Sent by You" : "Received"}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">From:</span> {msg.fromEmail ?? ""}
+                        </div>
+                        {Array.isArray(msg.toRecipients) && msg.toRecipients.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">To:</span>{" "}
+                            {(msg.toRecipients as { name?: string; email: string }[])
+                              .map((r) => r.name || r.email).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {msg.sentAt && (
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(msg.sentAt), "PPpp")}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="text-sm leading-relaxed">
+                    {msg.bodyHtml ? (
+                      <iframe
+                        srcDoc={msg.bodyHtml}
+                        sandbox="allow-popups allow-popups-to-escape-sandbox"
+                        referrerPolicy="no-referrer"
+                        className="w-full border-0 min-h-[150px]"
+                        style={{ height: "auto" }}
+                        title="Email body"
+                      />
+                    ) : (
+                      <pre className="whitespace-pre-wrap font-sans text-sm">
+                        {msg.bodyText ?? "(No content)"}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
           <Separator />
-          <div className="flex-1 overflow-auto">
-            {fullEmail?.bodyHtml ? (
-              <iframe
-                srcDoc={fullEmail.bodyHtml}
-                sandbox="allow-popups allow-popups-to-escape-sandbox"
-                referrerPolicy="no-referrer"
-                className="w-full border-0"
-                style={{ height: "600px", maxHeight: "600px" }}
-                title="Email body"
+
+          {/* Interactive Bottom Reply Box */}
+          <div className="p-4 bg-background">
+            <form onSubmit={handleInlineReply} className="grid gap-3">
+              <Textarea
+                ref={inlineReplyRef}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="min-h-[100px] p-3 text-sm resize-y"
+                placeholder={`Reply to ${replyTargetEmail || "sender"}...`}
               />
-            ) : (
-              <pre className="whitespace-pre-wrap p-4 text-sm font-sans">
-                {fullEmail?.bodyText ?? (fullEmail ? "(No content)" : "Loading...")}
-              </pre>
-            )}
-          </div>
-          <Separator className="mt-auto" />
-          <div className="p-4">
-            <form>
-              <div className="grid gap-4">
-                <Textarea
-                  className="p-4"
-                  placeholder={`Reply to ${fullEmail?.fromName ?? fullEmail?.fromEmail ?? "..."}...`}
-                />
-                <div className="flex items-center">
-                  <Label
-                    htmlFor="mute"
-                    className="flex items-center gap-2 text-xs font-normal"
-                  >
-                    <Switch id="mute" aria-label="Mute thread" /> Mute this
-                    thread
-                  </Label>
-                  <Button size="sm" className="ml-auto">
-                    Send
-                  </Button>
-                </div>
+              {sendError && (
+                <p className="text-xs text-destructive">{sendError}</p>
+              )}
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="mute"
+                  className="flex items-center gap-2 text-xs font-normal text-muted-foreground"
+                >
+                  <Switch id="mute" aria-label="Mute thread" /> Mute this thread
+                </Label>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSendingReply || !replyText.trim() || !activeAccountId}
+                  className="gap-1.5 px-4"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {isSendingReply ? "Sending..." : "Send Reply"}
+                </Button>
               </div>
             </form>
           </div>

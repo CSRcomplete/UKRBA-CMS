@@ -32,23 +32,32 @@ export function ComposeModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaultTo =
-    mode === "reply" ? replyTo?.fromEmail ?? "" : "";
-  const defaultSubject =
-    mode === "reply"
-      ? `Re: ${replyTo?.subject ?? ""}`
-      : mode === "forward"
-        ? `Fwd: ${replyTo?.subject ?? ""}`
-        : "";
-  const defaultBody =
-    mode === "reply" || mode === "forward"
-      ? `\n\n--- Original ---\n${replyTo?.bodyText ?? ""}`
-      : "";
-
-  const [to, setTo] = useState(defaultTo);
+  const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
-  const [subject, setSubject] = useState(defaultSubject);
-  const [body, setBody] = useState(defaultBody);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v);
+    if (v) {
+      setError(null);
+      setTo(mode === "reply" ? replyTo?.fromEmail ?? "" : "");
+      setCc("");
+      const cleanSub = replyTo?.subject ?? "";
+      if (mode === "reply") {
+        setSubject(cleanSub.toLowerCase().startsWith("re:") ? cleanSub : `Re: ${cleanSub}`);
+      } else if (mode === "forward") {
+        setSubject(cleanSub.toLowerCase().startsWith("fwd:") ? cleanSub : `Fwd: ${cleanSub}`);
+      } else {
+        setSubject("");
+      }
+      setBody(
+        mode === "reply" || mode === "forward"
+          ? `\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
+          : ""
+      );
+    }
+  };
 
   async function handleSend() {
     setSending(true);
@@ -74,7 +83,7 @@ export function ComposeModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? <Button size="sm">Compose</Button>}
       </DialogTrigger>

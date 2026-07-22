@@ -136,6 +136,35 @@ export async function getEmail(id: string) {
   return email;
 }
 
+export async function getEmailThread(id: string) {
+  const userId = await requireSession();
+  const targetEmail = await getEmail(id);
+  if (!targetEmail) return [];
+
+  // Normalize subject by stripping Re: and Fwd: prefixes
+  const cleanSubject = targetEmail.subject
+    ? targetEmail.subject.replace(/^(re|fwd|fw|re:\s*|fwd:\s*)+/gi, "").trim()
+    : "";
+
+  if (!cleanSubject) return [targetEmail];
+
+  const threadEmails = await prismadb.email.findMany({
+    where: {
+      userId,
+      emailAccountId: targetEmail.emailAccountId,
+      isDeleted: false,
+      subject: { contains: cleanSubject, mode: "insensitive" },
+    },
+    orderBy: { sentAt: "asc" },
+    include: {
+      contacts: { include: { contact: { select: { id: true, first_name: true, last_name: true } } } },
+      accounts: { include: { account: { select: { id: true, name: true } } } },
+    },
+  });
+
+  return threadEmails.length > 0 ? threadEmails : [targetEmail];
+}
+
 export async function deleteEmail(id: string) {
   const userId = await requireSession();
   const email = await prismadb.email.findFirst({ where: { id, userId, isDeleted: false } });
@@ -182,8 +211,8 @@ export async function sendEmail(input: SendInput) {
     references: input.references,
   });
 
-  // Write sent message to DB immediately so it appears in Sent view
-  await prismadb.email.create({
+  // Write sent message to DB immediately so it appears in Sent view & thread
+  const created = await prismadb.email.create({
     data: {
       emailAccountId: input.accountId,
       userId,
@@ -199,4 +228,6 @@ export async function sendEmail(input: SendInput) {
       isRead: true,
     },
   });
+
+  return created;
 }
