@@ -74,8 +74,8 @@ export function ComposeModal({
       const sig = getUKRBASignature(currentUser);
       setBody(
         mode === "reply" || mode === "forward"
-          ? `${sig}\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
-          : sig
+          ? `\n\n\n${sig}\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
+          : `\n\n\n${sig}`
       );
     }
   };

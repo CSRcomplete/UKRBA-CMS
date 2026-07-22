@@ -32,7 +32,7 @@ export function getUKRBASignature(user?: { name?: string | null; role?: string |
   const name = user?.name?.trim() || "UKRBA Team Member";
   const jobTitle = formatJobTitle(user?.role);
 
-  return `\n\n--\n${name}\n${jobTitle} | UKRBA\n\nUK Resource & Business Association\nWebsite: https://ukrba.org`;
+  return `\n\n\n--\n${name}\n${jobTitle} | UKRBA\n\nUK Resource & Business Association\nWebsite: https://ukrba.org`;
 }
 
 export function getUKRBASignatureHtml(
@@ -43,7 +43,7 @@ export function getUKRBASignatureHtml(
   const jobTitle = formatJobTitle(user?.role);
 
   return `
-<br/><br/>
+<br/><br/><br/>
 <div class="ukrba-signature" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333; line-height: 1.5; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
   <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
     <tr>
