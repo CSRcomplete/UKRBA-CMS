@@ -14,6 +14,11 @@ import {
   ReplyAll,
   Trash2,
   Send,
+  Paperclip,
+  Download,
+  Bold,
+  Italic,
+  List,
 } from "lucide-react";
 
 import {
@@ -362,8 +367,29 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                       />
                     ) : (
                       <pre className="whitespace-pre-wrap font-sans text-sm">
-                        {msg.bodyText ?? "(No content)"}
-                      </pre>
+                    {/* Render Attachments if present */}
+                    {Array.isArray((msg as any).attachments) && (msg as any).attachments.length > 0 && (
+                      <div className="mt-3 pt-3 border-t space-y-1.5">
+                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                          <Paperclip className="h-3.5 w-3.5" /> Attachments ({(msg as any).attachments.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {(msg as any).attachments.map((att: any, attIdx: number) => (
+                            <a
+                              key={attIdx}
+                              href={att.storageUrl || "#"}
+                              download={att.filename}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2.5 py-1 text-xs hover:bg-muted font-medium transition-colors"
+                            >
+                              <Download className="h-3.5 w-3.5 text-primary" />
+                              <span>{att.filename}</span>
+                              <span className="text-[10px] text-muted-foreground">({Math.round((att.size || 0) / 1024)} KB)</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -377,7 +403,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
           <div className="p-4 bg-background">
             <form onSubmit={handleInlineReply} className="grid gap-3">
               <div className="flex items-center justify-between text-xs text-muted-foreground px-0.5">
-                <span>Reply Message</span>
+                <span className="font-medium">Reply Message</span>
                 <span className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
@@ -385,6 +411,41 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                   Official UK SME Logo Signature attached
                 </span>
               </div>
+
+              {/* Formatting Toolbar */}
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setReplyText((prev) => `**${prev}**`)}
+                  title="Bold"
+                >
+                  <Bold className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setReplyText((prev) => `*${prev}*`)}
+                  title="Italic"
+                >
+                  <Italic className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setReplyText((prev) => `\n- ${prev}`)}
+                  title="Bullet List"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
               <Textarea
                 ref={inlineReplyRef}
                 value={replyText}

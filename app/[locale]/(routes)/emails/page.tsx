@@ -73,7 +73,14 @@ const EmailRoute = async ({
   }
 
   const activeAccountId = params.accountId ?? connectedAccounts[0]?.id;
-  const activeFolder = params.folder === "SENT" ? EmailFolder.SENT : EmailFolder.INBOX;
+  const activeFolder =
+    params.folder === "SENT"
+      ? EmailFolder.SENT
+      : params.folder === "DRAFTS"
+        ? EmailFolder.DRAFTS
+        : params.folder === "TRASH"
+          ? EmailFolder.TRASH
+          : EmailFolder.INBOX;
 
   const activePage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const emailsResult = activeAccountId

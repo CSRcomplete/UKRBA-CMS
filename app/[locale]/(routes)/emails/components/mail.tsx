@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
-import { Inbox, PenBox, Search, Send, RefreshCw } from "lucide-react";
+import { Inbox, PenBox, Search, Send, RefreshCw, FileText, Trash2 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { EmailFolder } from "@prisma/client";
 
 import { AccountSwitcher } from "@/app/[locale]/(routes)/emails/components/account-switcher";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
@@ -147,10 +148,22 @@ export function MailComponent({
                 href: folderHref("INBOX"),
               },
               {
-                title: "Sent",
+                title: "Sent Items",
                 icon: Send,
                 variant: activeFolder === "SENT" ? "default" : "ghost",
                 href: folderHref("SENT"),
+              },
+              {
+                title: "Drafts",
+                icon: FileText,
+                variant: activeFolder === "DRAFTS" ? "default" : "ghost",
+                href: folderHref("DRAFTS"),
+              },
+              {
+                title: "Deleted Items",
+                icon: Trash2,
+                variant: activeFolder === "TRASH" ? "default" : "ghost",
+                href: folderHref("TRASH"),
               },
             ]}
           />
@@ -161,7 +174,13 @@ export function MailComponent({
             <div className="flex items-center px-4 py-2">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold">
-                  {activeFolder === "SENT" ? "Sent" : "Inbox"}
+                  {activeFolder === "SENT"
+                    ? "Sent Items"
+                    : activeFolder === "DRAFTS"
+                      ? "Drafts"
+                      : activeFolder === "TRASH"
+                        ? "Deleted Items"
+                        : "Inbox"}
                 </h1>
                 <Button
                   variant="ghost"

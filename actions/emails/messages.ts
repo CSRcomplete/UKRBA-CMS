@@ -9,6 +9,85 @@ import { EmailFolder } from "@prisma/client";
 const PAGE_SIZE = 50;
 const MAX_COUNT = 10_000;
 
+export type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+};
+
+export async function getEmailTemplates(): Promise<EmailTemplate[]> {
+  await requireSession();
+  
+  try {
+    const dbTemplates = await prismadb.crm_campaign_templates.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, subject_default: true, content_html: true },
+      take: 10,
+    });
+    
+    if (dbTemplates.length > 0) {
+      return dbTemplates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        subject: t.subject_default || t.name,
+        body: t.content_html,
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return [
+    {
+      id: "ukrba-intro",
+      name: "UKRBA Partnership Introduction",
+      subject: "Introduction to UK SME Responsible Business Association",
+      body: "Dear [Name],\n\nThank you for connecting with the UK SME Responsible Business Association (UKRBA). We specialize in supporting SMEs across the UK with compliance, responsible business frameworks, and growth.\n\nPlease let us know a convenient time for a brief introductory discussion.\n\nWarm regards,",
+    },
+    {
+      id: "ukrba-followup",
+      name: "Membership Inquiry Follow-up",
+      subject: "Following up on your UKRBA Membership Inquiry",
+      body: "Dear [Name],\n\nI am following up on your recent inquiry regarding UKRBA membership benefits for your business.\n\nWe would love to share details on how our association can support your organization's goals this year.\n\nKind regards,",
+    },
+    {
+      id: "ukrba-reminder",
+      name: "Invoice & Account Reminder",
+      subject: "UKRBA Account Renewal & Invoice Reminder",
+      body: "Dear [Name],\n\nThis is a friendly reminder regarding your pending UKRBA renewal invoice.\n\nIf you have any questions or require assistance with payment details, please reply directly to this email.\n\nThank you for your continued partnership,",
+    },
+  ];
+}
+
+export async function saveDraft(input: {
+  accountId: string;
+  to?: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject?: string;
+  body?: string;
+}) {
+  const userId = await requireSession();
+
+  return prismadb.email.create({
+    data: {
+      emailAccountId: input.accountId,
+      userId,
+      rfcMessageId: `draft-${crypto.randomUUID()}@nextcrm`,
+      folder: EmailFolder.DRAFTS,
+      subject: input.subject || "(Draft)",
+      fromEmail: "",
+      toRecipients: input.to?.map((e) => ({ email: e })) ?? [],
+      ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
+      bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
+      bodyText: input.body || "",
+      sentAt: new Date(),
+      isRead: true,
+    },
+  });
+}
+
 async function requireSession() {
   const session = await getSession();
   if (!session?.user?.id) throw new Error("Unauthorized");
