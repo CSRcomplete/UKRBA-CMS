@@ -14,18 +14,19 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { scheduleMeeting } from "@/actions/crm/meetings";
+import { scheduleMeeting, generateJitsiRoomId, getJitsiMeetUrl } from "@/actions/crm/meetings";
 import moment from "moment";
-import { Calendar, User, Video, Clock, AlignLeft, ShieldAlert } from "lucide-react";
+import { Calendar, User, Video, Clock, AlignLeft, ShieldAlert, Link2 } from "lucide-react";
 
 interface MeetingSchedulerFormProps {
   eligibleTargets: {
     users: any[];
     leads: any[];
   };
+  onScheduled?: (jitsiRoomId: string) => void;
 }
 
-export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormProps) {
+export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSchedulerFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -33,9 +34,12 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(moment().add(1, "days").format("YYYY-MM-DDTHH:mm"));
   const [duration, setDuration] = useState("30");
-  const [meetingLink, setMeetingLink] = useState("");
   const [inviteeType, setInviteeType] = useState<"user" | "lead">("lead");
   const [inviteeId, setInviteeId] = useState("");
+
+  // Live preview of Jitsi room URL
+  const previewRoomId = title.trim() ? generateJitsiRoomId(title.replace(/\s+/g, "-").slice(0, 30) + "-preview") : null;
+  const previewJitsiUrl = previewRoomId ? getJitsiMeetUrl(previewRoomId) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +59,6 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
         description,
         date: new Date(date),
         duration: duration ? parseInt(duration, 10) : undefined,
-        meetingLink: meetingLink || undefined,
         inviteeType,
         inviteeId,
       });
@@ -63,12 +66,15 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Meeting scheduled successfully!");
+        toast.success("Meeting scheduled! Jitsi room created automatically.");
         setTitle("");
         setDescription("");
-        setMeetingLink("");
         setInviteeId("");
-        router.refresh();
+        if (onScheduled && result.jitsiRoomId) {
+          onScheduled(result.jitsiRoomId);
+        } else {
+          router.refresh();
+        }
       }
     } catch (error) {
       console.error(error);
@@ -88,7 +94,7 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
           Schedule New Meeting
         </CardTitle>
         <CardDescription>
-          Create a meeting with staff subordinates or leads you manage.
+          A Jitsi Meet video room will be automatically created and shared with your invitee.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,12 +102,23 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Meeting Title *</label>
             <Input
-              placeholder="e.g., Q3 Strategy Review, Introduction Call"
+              placeholder="e.g. Q3 Strategy Review, Introduction Call"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
+
+          {/* Jitsi URL Preview */}
+          {title.trim() && (
+            <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+              <Video className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold mb-0.5">Jitsi Room will be auto-created:</p>
+                <p className="font-mono opacity-80 truncate">meet.jit.si/ukrba-{title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30)}-XXXXXX</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -110,7 +127,7 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
                 value={inviteeType}
                 onValueChange={(v: "user" | "lead") => {
                   setInviteeType(v);
-                  setInviteeId(""); // reset selected value
+                  setInviteeId("");
                 }}
               >
                 <SelectTrigger>
@@ -170,19 +187,10 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
                   <SelectItem value="45">45 minutes</SelectItem>
                   <SelectItem value="60">60 minutes</SelectItem>
                   <SelectItem value="90">90 minutes</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground">Zoho/Zoom Meeting Link</label>
-            <Input
-              type="url"
-              placeholder="e.g. https://meeting.zoho.com/meeting/..."
-              value={meetingLink}
-              onChange={(e) => setMeetingLink(e.target.value)}
-            />
           </div>
 
           <div className="space-y-1">
@@ -195,8 +203,13 @@ export function MeetingSchedulerForm({ eligibleTargets }: MeetingSchedulerFormPr
             />
           </div>
 
-          <Button type="submit" className="w-full mt-2" disabled={loading || (inviteeType === "user" && currentOptions.length === 0)}>
-            {loading ? "Scheduling..." : "Schedule Meeting"}
+          <Button
+            type="submit"
+            className="w-full mt-2 gap-1.5"
+            disabled={loading || (inviteeType === "user" && currentOptions.length === 0)}
+          >
+            <Video className="h-4 w-4" />
+            {loading ? "Scheduling..." : "Schedule Meeting & Create Room"}
           </Button>
         </form>
       </CardContent>

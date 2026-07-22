@@ -16,7 +16,6 @@ const ROLE_DESIGNATIONS: Record<string, string> = {
   user: "Staff",
 };
 
-// Define rank mapping for hierarchy comparison
 const ROLE_RANKS: Record<string, number> = {
   ceo: 5,
   admin: 5,
@@ -32,14 +31,32 @@ function getUserRank(role: string | null | undefined): number {
   return ROLE_RANKS[role.toLowerCase()] || 0;
 }
 
+/**
+ * Generate a Jitsi-safe room name from a meeting title + short random suffix.
+ * Format: ukrba-<slugified-title>-<6-char-hex>
+ * e.g. "ukrba-q3-strategy-review-a3f9b2"
+ */
+export function generateJitsiRoomId(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 40);
+  const suffix = Math.random().toString(16).slice(2, 8);
+  return `ukrba-${slug}-${suffix}`;
+}
+
+export function getJitsiMeetUrl(roomId: string): string {
+  return `https://meet.jit.si/${roomId}`;
+}
+
 export const getMeetings = async () => {
   const session = await getSession();
   if (!session) return [];
 
   const userId = session.user.id;
 
-  // Fetch all activities of type meeting where the user is connected
-  // (either created by the user or linked to the user via activity links)
   const activities = await prismadb.crm_Activities.findMany({
     where: {
       type: "meeting",
@@ -62,10 +79,9 @@ export const getMeetings = async () => {
       },
       links: true,
     },
-    orderBy: { date: "desc" },
+    orderBy: { date: "asc" },
   });
 
-  // Fetch user names and lead names to resolve links in-memory
   const userLinks = activities.flatMap((a) =>
     a.links.filter((l) => l.entityType === "user").map((l) => l.entityId)
   );
@@ -86,6 +102,10 @@ export const getMeetings = async () => {
   const leadMap = new Map(leads.map((l) => [l.id, `${l.firstName} ${l.lastName} (${l.company || "N/A"})`]));
 
   return activities.map((activity) => {
+    const meta = activity.metadata as Record<string, any> | null;
+    const jitsiRoomId: string | undefined = meta?.jitsiRoomId;
+    const jitsiUrl = jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : (meta?.meetingLink ?? null);
+
     const invitees = activity.links
       .map((link) => {
         if (link.entityType === "user") {
@@ -100,6 +120,8 @@ export const getMeetings = async () => {
     return {
       ...activity,
       invitees,
+      jitsiRoomId,
+      jitsiUrl,
     };
   });
 };
@@ -111,7 +133,6 @@ export const getTargetsForMeetingBooking = async () => {
   const currentUserRole = session.user.role || "user";
   const currentUserRank = getUserRank(currentUserRole);
 
-  // 1. Fetch eligible staff (users whose rank is strictly LESS than current user's rank)
   const allUsers = await prismadb.users.findMany({
     where: { userStatus: "ACTIVE" },
     select: {
@@ -124,13 +145,11 @@ export const getTargetsForMeetingBooking = async () => {
   });
 
   const eligibleUsers = allUsers.filter((u) => {
-    // Cannot book meeting with self
     if (u.id === session.user.id) return false;
     const rank = getUserRank(u.role);
     return rank < currentUserRank;
   });
 
-  // 2. Fetch eligible leads (scoped to current user's visibility)
   const leadScope = await leadReadScopeWhere(session.user as any);
   const leads = await prismadb.crm_Leads.findMany({
     where: leadScope,
@@ -158,14 +177,13 @@ export const scheduleMeeting = async (data: {
   description: string;
   date: Date;
   duration?: number;
-  meetingLink?: string;
   inviteeType: "user" | "lead";
   inviteeId: string;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  const { title, description, date, duration, meetingLink, inviteeType, inviteeId } = data;
+  const { title, description, date, duration, inviteeType, inviteeId } = data;
 
   if (!title || !date || !inviteeId) {
     return { error: "Missing required fields" };
@@ -188,8 +206,11 @@ export const scheduleMeeting = async (data: {
     }
   }
 
+  // Auto-generate Jitsi room
+  const jitsiRoomId = generateJitsiRoomId(title);
+  const jitsiUrl = getJitsiMeetUrl(jitsiRoomId);
+
   try {
-    // Create the meeting activity
     const activity = await prismadb.crm_Activities.create({
       data: {
         type: "meeting",
@@ -200,12 +221,11 @@ export const scheduleMeeting = async (data: {
         status: "scheduled",
         createdBy: session.user.id,
         updatedBy: session.user.id,
-        metadata: meetingLink ? { meetingLink } : undefined,
+        metadata: { jitsiRoomId, meetingLink: jitsiUrl },
       },
     });
 
-    // Create the links
-    // Link 1: To the creator (host)
+    // Link to creator (host)
     await prismadb.crm_ActivityLinks.create({
       data: {
         activityId: activity.id,
@@ -214,7 +234,7 @@ export const scheduleMeeting = async (data: {
       },
     });
 
-    // Link 2: To the invitee
+    // Link to invitee
     await prismadb.crm_ActivityLinks.create({
       data: {
         activityId: activity.id,
@@ -223,7 +243,7 @@ export const scheduleMeeting = async (data: {
       },
     });
 
-    // Send email notification to invitee
+    // Email notification
     try {
       let inviteeEmail: string | null = null;
       if (inviteeType === "user") {
@@ -242,53 +262,42 @@ export const scheduleMeeting = async (data: {
 
       if (inviteeEmail) {
         let resend;
-        try {
-          resend = await resendHelper();
-        } catch {
-          resend = null;
-        }
+        try { resend = await resendHelper(); } catch { resend = null; }
 
         if (resend) {
           const creatorName = session.user.name || session.user.email;
           const roleKey = (session.user.role || "").toLowerCase();
-          const designation = ROLE_DESIGNATIONS[roleKey] || (session.user.role ? session.user.role.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "");
+          const designation = ROLE_DESIGNATIONS[roleKey] || session.user.role?.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") || "";
           const hostString = designation ? `${creatorName} (${designation})` : creatorName;
-
           const dateFormatted = new Date(date).toLocaleString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
+            weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
           });
-
-          const meetingWith = hostString;
-          const linkText = meetingLink ? meetingLink : "No link provided";
-
-          const emailSubject = `Meeting with ${creatorName}`;
 
           await resend.emails.send({
             from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
             to: inviteeEmail,
-            subject: emailSubject,
-            text: `Hello,\n\nA new meeting has been scheduled with you.\n\n1- Meeting with: ${meetingWith}\n2- Meeting time and date: ${dateFormatted}\n3- Meeting Link: ${linkText}\n\nDescription:\n${description || "No description provided."}\n\nBest regards,\nUKRBA Team`,
+            subject: `Meeting with ${creatorName}`,
+            text: `Hello,\n\nA new video meeting has been scheduled with you.\n\nMeeting with: ${hostString}\nDate & Time: ${dateFormatted}\nDuration: ${duration || 30} minutes\nJitsi Meeting Room: ${jitsiUrl}\n\nAgenda:\n${description || "No agenda provided."}\n\nClick the link above to join the video call directly from your browser — no software installation required.\n\nBest regards,\nUKRBA Team`,
             html: `
               <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #1a365d; margin-top: 0;">New Meeting Scheduled</h2>
+                <h2 style="color: #1a365d; margin-top: 0;">🎥 New Video Meeting Scheduled</h2>
                 <p>Hello,</p>
-                <p>A new meeting has been scheduled with you.</p>
+                <p>A new video meeting has been scheduled with you via UKRBA CMS.</p>
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
                 <ol style="padding-left: 20px; margin: 20px 0;">
-                  <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${meetingWith}</li>
-                  <li style="margin-bottom: 10px;"><strong>Meeting time and date:</strong> ${dateFormatted}</li>
-                  <li style="margin-bottom: 10px;"><strong>Meeting Link:</strong> ${meetingLink ? `<a href="${meetingLink}" target="_blank" style="color: #3182ce; text-decoration: underline;">${meetingLink}</a>` : "No link provided"}</li>
+                  <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${hostString}</li>
+                  <li style="margin-bottom: 10px;"><strong>Date & Time:</strong> ${dateFormatted}</li>
+                  <li style="margin-bottom: 10px;"><strong>Duration:</strong> ${duration || 30} minutes</li>
+                  <li style="margin-bottom: 10px;"><strong>Video Room:</strong> <a href="${jitsiUrl}" target="_blank" style="color: #3182ce; text-decoration: underline; font-weight: bold;">Click here to join</a></li>
                 </ol>
-                ${description ? `<p><strong>Description:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
+                ${description ? `<p><strong>Agenda:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <p style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2b6cb0;">
+                  💡 <strong>No software needed.</strong> Click the meeting link to join directly in your browser using Jitsi Meet — free and secure.
+                </p>
                 <p style="font-size: 0.875rem; color: #718096; margin-bottom: 0;">Best regards,<br />UKRBA Team</p>
               </div>
-            `
+            `,
           });
         }
       }
@@ -297,10 +306,42 @@ export const scheduleMeeting = async (data: {
     }
 
     revalidatePath("/[locale]/(routes)/crm/meetings", "page");
-
-    return { success: true };
+    return { success: true, jitsiRoomId, jitsiUrl };
   } catch (error) {
     console.error("[SCHEDULE_MEETING_ERROR]", error);
     return { error: "Failed to schedule meeting" };
+  }
+};
+
+/**
+ * Create an instant ad-hoc Jitsi meeting (no scheduling, just a room)
+ */
+export const createInstantMeeting = async (title?: string) => {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  const roomTitle = title || `Instant Meeting ${new Date().toLocaleTimeString()}`;
+  const jitsiRoomId = generateJitsiRoomId(roomTitle);
+  const jitsiUrl = getJitsiMeetUrl(jitsiRoomId);
+
+  try {
+    await prismadb.crm_Activities.create({
+      data: {
+        type: "meeting",
+        title: roomTitle,
+        description: "Ad-hoc instant video meeting",
+        date: new Date(),
+        status: "scheduled",
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+        metadata: { jitsiRoomId, meetingLink: jitsiUrl, instant: true },
+      },
+    });
+
+    revalidatePath("/[locale]/(routes)/crm/meetings", "page");
+    return { success: true, jitsiRoomId, jitsiUrl };
+  } catch (error) {
+    console.error("[INSTANT_MEETING_ERROR]", error);
+    return { error: "Failed to create instant meeting" };
   }
 };
