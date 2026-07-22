@@ -52,7 +52,7 @@ import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
-import { getUKRBASignature } from "@/lib/email-signature";
+import { getUKRBASignature, getUKRBASignatureEditorHtml } from "@/lib/email-signature";
 
 interface MailDisplayProps {
   mail: Mail | null;
@@ -79,7 +79,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
     }
     let cancelled = false;
     setLoadingThread(true);
-    setReplyText("\n\n\n" + getUKRBASignature(currentUser));
+    setReplyText(getUKRBASignatureEditorHtml(currentUser));
     getEmailThread(mail.id)
       .then((data) => {
         if (!cancelled) {
@@ -155,7 +155,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
         attachments: attachmentPayload,
       });
 
-      setReplyText("\n\n\n" + getUKRBASignature(currentUser));
+      setReplyText(getUKRBASignatureEditorHtml(currentUser));
       setReplyAttachments([]);
       if (newMsg) {
         setThread((prev) => [...prev, newMsg]);

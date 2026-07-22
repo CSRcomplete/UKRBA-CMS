@@ -35,6 +35,13 @@ export function getUKRBASignature(user?: { name?: string | null; role?: string |
   return `\n\n\n--\n${name}\n${jobTitle} | UKRBA\n\nUK Resource & Business Association\nWebsite: https://ukrba.org`;
 }
 
+export function getUKRBASignatureEditorHtml(user?: { name?: string | null; role?: string | null }): string {
+  const name = user?.name?.trim() || "UKRBA Team Member";
+  const jobTitle = formatJobTitle(user?.role);
+
+  return `<div><br></div><div><br></div><div><br></div><div>-- ${name} ${jobTitle} | UKRBA UK Resource & Business Association Website: https://ukrba.org</div>`;
+}
+
 export function getUKRBASignatureHtml(
   user?: { name?: string | null; role?: string | null },
   logoUrl: string = UKRBA_LOGO_URL

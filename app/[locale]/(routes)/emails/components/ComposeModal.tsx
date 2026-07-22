@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { Paperclip, Save, FileText, X } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
-import { getUKRBASignature, getUKRBASignatureHtml } from "@/lib/email-signature";
+import { getUKRBASignature, getUKRBASignatureHtml, getUKRBASignatureEditorHtml } from "@/lib/email-signature";
 
 type Mode = "new" | "reply" | "forward";
 
@@ -71,11 +71,11 @@ export function ComposeModal({
         setSubject("");
       }
 
-      const sig = getUKRBASignature(currentUser);
+      const sigHtml = getUKRBASignatureEditorHtml(currentUser);
       setBody(
         mode === "reply" || mode === "forward"
-          ? `\n\n\n${sig}\n\n--- Original Message ---\n${replyTo?.bodyText ?? ""}`
-          : `\n\n\n${sig}`
+          ? `${sigHtml}<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
+          : sigHtml
       );
     }
   };
