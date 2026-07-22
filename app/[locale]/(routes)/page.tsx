@@ -5,7 +5,16 @@ import { prismadb } from "@/lib/prisma";
 import { leadReadScopeWhere } from "@/lib/authz";
 import Link from "next/link";
 import moment from "moment";
-import { getEscalationAlerts } from "@/lib/task-escalation";
+import {
+  Mail,
+  FolderOpen,
+  Calendar,
+  CheckSquare,
+  Users,
+  Video,
+  Megaphone,
+  ArrowRight,
+} from "lucide-react";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -362,6 +371,166 @@ const DashboardPage = async () => {
         "Welcome to NextCRM cockpit, here you can see your company overview"
       }
     >
+      {/* Quick Launch Navigation Tiles (Large Easy-to-Navigate Modules) */}
+      <div className="mb-10 space-y-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Main Modules & Navigation
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Select any module below to quickly navigate to your workspace.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* 1. Emails */}
+          <Link
+            href="/emails"
+            className="group relative overflow-hidden rounded-xl border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-500/10 via-background to-blue-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-blue-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Mail className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-blue-600 transition-colors">
+                1. Emails
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Inbox, Sent items, Drafts, Standard Templates & Signature editor.
+              </p>
+            </div>
+          </Link>
+
+          {/* 2. Resources */}
+          <Link
+            href="/documents"
+            className="group relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900/40 bg-gradient-to-br from-amber-500/10 via-background to-amber-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-amber-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500 text-white shadow-md transition-transform group-hover:scale-110">
+                <FolderOpen className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-amber-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-amber-600 transition-colors">
+                2. Resources
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Company documents, shared repository files & staff materials.
+              </p>
+            </div>
+          </Link>
+
+          {/* 3. Diary */}
+          <Link
+            href="/crm/calendar"
+            className="group relative overflow-hidden rounded-xl border border-purple-200 dark:border-purple-900/40 bg-gradient-to-br from-purple-500/10 via-background to-purple-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-purple-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-purple-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-purple-600 transition-colors">
+                3. Diary
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Daily, Weekly & Monthly staff business calendar & meeting invites.
+              </p>
+            </div>
+          </Link>
+
+          {/* 4. Tasks */}
+          <Link
+            href="/projects/tasks"
+            className="group relative overflow-hidden rounded-xl border border-cyan-200 dark:border-cyan-900/40 bg-gradient-to-br from-cyan-500/10 via-background to-cyan-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-cyan-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <CheckSquare className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-cyan-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-cyan-600 transition-colors">
+                4. Tasks
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Assigned action items, to-do lists & project milestones.
+              </p>
+            </div>
+          </Link>
+
+          {/* 5. CRM (Leads etc) */}
+          <Link
+            href="/crm"
+            className="group relative overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-500/10 via-background to-emerald-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-emerald-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Users className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-emerald-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-600 transition-colors">
+                5. CRM (Leads & Accounts)
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Lead management, members, contacts, pipeline & opportunities.
+              </p>
+            </div>
+          </Link>
+
+          {/* 6. Video Meetings */}
+          <Link
+            href="/crm/meetings"
+            className="group relative overflow-hidden rounded-xl border border-rose-200 dark:border-rose-900/40 bg-gradient-to-br from-rose-500/10 via-background to-rose-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-rose-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Video className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-rose-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-rose-600 transition-colors">
+                6. Video Meetings
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Schedule video calls, join virtual rooms & meeting logs.
+              </p>
+            </div>
+          </Link>
+
+          {/* 7. News & Announcements */}
+          <Link
+            href="/reports"
+            className="group relative overflow-hidden rounded-xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-violet-500/60 sm:col-span-2 lg:col-span-2"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Megaphone className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-violet-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-violet-600 transition-colors">
+                7. News & Announcements
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Official UKRBA notices, staff updates, announcements & reports.
+              </p>
+            </div>
+          </Link>
+        </div>
+      </div>
       {/* Escalation Alerts Section */}
       {escalationAlerts.length > 0 && (
         <div className="space-y-4 mb-8">
