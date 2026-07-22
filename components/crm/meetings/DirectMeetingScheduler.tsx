@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { scheduleMeeting } from "@/actions/crm/meetings";
 import moment from "moment";
-import { Calendar } from "lucide-react";
+import { Calendar, Video } from "lucide-react";
 
 interface DirectMeetingSchedulerProps {
   inviteeType: "user" | "lead";
@@ -32,7 +32,6 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(moment().add(1, "days").format("YYYY-MM-DDTHH:mm"));
   const [duration, setDuration] = useState("30");
-  const [meetingLink, setMeetingLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +47,6 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
         description,
         date: new Date(date),
         duration: duration ? parseInt(duration, 10) : undefined,
-        meetingLink: meetingLink || undefined,
         inviteeType,
         inviteeId,
       });
@@ -56,10 +54,9 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Meeting scheduled successfully!");
+        toast.success("Meeting scheduled! Jitsi room created automatically.");
         setTitle("");
         setDescription("");
-        setMeetingLink("");
         router.refresh();
       }
     } catch (error) {
@@ -78,7 +75,7 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
           Schedule Meeting with {inviteeName}
         </CardTitle>
         <CardDescription>
-          Schedule a direct meeting. An email notification will be sent to the invitee with meeting details.
+          A Jitsi Meet video room will be auto-created and the invitee will receive an email with the join link.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -92,6 +89,17 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
               required
             />
           </div>
+
+          {/* Live Jitsi room preview */}
+          {title.trim() && (
+            <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+              <Video className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold mb-0.5">Jitsi room will be auto-created:</p>
+                <p className="font-mono opacity-80">meet.jit.si/ukrba-{title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30)}-XXXXXX</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -122,16 +130,6 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground">Zoho/Zoom Meeting Link</label>
-            <Input
-              type="url"
-              placeholder="e.g. https://meeting.zoho.com/meeting/..."
-              value={meetingLink}
-              onChange={(e) => setMeetingLink(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Meeting Agenda / Notes</label>
             <Textarea
               placeholder="Provide meeting context or agenda items..."
@@ -141,8 +139,9 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
             />
           </div>
 
-          <Button type="submit" className="w-full mt-2" disabled={loading}>
-            {loading ? "Scheduling..." : "Schedule Meeting"}
+          <Button type="submit" className="w-full mt-2 gap-1.5" disabled={loading}>
+            <Video className="h-4 w-4" />
+            {loading ? "Scheduling..." : "Schedule Meeting & Create Room"}
           </Button>
         </form>
       </CardContent>
