@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { scheduleMeeting, generateJitsiRoomId, getJitsiMeetUrl } from "@/actions/crm/meetings";
+import { scheduleMeeting } from "@/actions/crm/meetings";
+import { generateJitsiRoomId, getJitsiMeetUrl } from "@/lib/jitsi";
 import moment from "moment";
 import { Calendar, User, Video, Clock, AlignLeft, ShieldAlert, Link2 } from "lucide-react";
 

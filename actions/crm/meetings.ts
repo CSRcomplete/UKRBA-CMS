@@ -5,6 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { leadReadScopeWhere } from "@/lib/authz";
 import resendHelper from "@/lib/resend";
+import { generateJitsiRoomId, getJitsiMeetUrl } from "@/lib/jitsi";
 
 const ROLE_DESIGNATIONS: Record<string, string> = {
   ceo: "CEO - UKRBA SME",
@@ -31,25 +32,9 @@ function getUserRank(role: string | null | undefined): number {
   return ROLE_RANKS[role.toLowerCase()] || 0;
 }
 
-/**
- * Generate a Jitsi-safe room name from a meeting title + short random suffix.
- * Format: ukrba-<slugified-title>-<6-char-hex>
- * e.g. "ukrba-q3-strategy-review-a3f9b2"
- */
-export function generateJitsiRoomId(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .slice(0, 40);
-  const suffix = Math.random().toString(16).slice(2, 8);
-  return `ukrba-${slug}-${suffix}`;
-}
+// generateJitsiRoomId and getJitsiMeetUrl live in @/lib/jitsi
+// (imported above — kept separate to comply with Next.js "use server" export rules)
 
-export function getJitsiMeetUrl(roomId: string): string {
-  return `https://meet.jit.si/${roomId}`;
-}
 
 export const getMeetings = async () => {
   const session = await getSession();
