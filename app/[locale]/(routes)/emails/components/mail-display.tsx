@@ -448,6 +448,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                 onChange={setReplyText}
                 placeholder={`Reply to ${replyTargetEmail || "sender"}...`}
                 minHeight="120px"
+                onAttachFile={() => replyFileInputRef.current?.click()}
               />
               {/* Attachments for Inline Reply */}
               <div className="flex flex-wrap items-center gap-2">

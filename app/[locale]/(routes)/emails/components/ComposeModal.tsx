@@ -231,6 +231,7 @@ export function ComposeModal({
               onChange={setBody}
               placeholder="Type your email message here..."
               minHeight="180px"
+              onAttachFile={() => fileInputRef.current?.click()}
             />
           </div>
 

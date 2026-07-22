@@ -2,13 +2,14 @@
 
 import React, { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, Underline, List, Link as LinkIcon, RemoveFormatting } from "lucide-react";
+import { Bold, Italic, Underline, List, Link as LinkIcon, Paperclip, RemoveFormatting } from "lucide-react";
 
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+  onAttachFile?: () => void;
 }
 
 export function RichTextEditor({
@@ -16,6 +17,7 @@ export function RichTextEditor({
   onChange,
   placeholder = "Write your message...",
   minHeight = "150px",
+  onAttachFile,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
@@ -45,7 +47,7 @@ export function RichTextEditor({
   };
 
   const handleAddLink = () => {
-    const url = prompt("Enter link URL:");
+    const url = prompt("Enter website link URL (e.g. https://ukrba.org):");
     if (url) {
       execCmd("createLink", url);
     }
@@ -102,10 +104,25 @@ export function RichTextEditor({
           size="sm"
           className="h-7 w-7 p-0"
           onClick={handleAddLink}
-          title="Insert Link"
+          title="Add Web Hyperlink (URL)"
         >
           <LinkIcon className="h-3.5 w-3.5" />
         </Button>
+
+        {onAttachFile && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1 font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            onClick={onAttachFile}
+            title="Attach Document or Image File"
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+            <span>Attach File</span>
+          </Button>
+        )}
+
         <Button
           type="button"
           variant="ghost"
