@@ -213,7 +213,7 @@ export async function updateAppointment(id: string, input: Partial<CreateAppoint
       startTime,
       endTime,
       isAllDay: input.isAllDay !== undefined ? input.isAllDay : existing.isAllDay,
-      attendees: input.attendees !== undefined ? input.attendees : existing.attendees,
+      attendees: input.attendees !== undefined ? input.attendees : (existing.attendees as any),
       reminderMin: input.reminderMin !== undefined ? input.reminderMin : existing.reminderMin,
       notes: input.notes !== undefined ? input.notes : existing.notes,
     },
