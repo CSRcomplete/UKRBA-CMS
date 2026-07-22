@@ -48,7 +48,7 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
     sentFolderName: "Sent",
   });
 
-  const [provider, setProvider] = useState<"gmail" | "generic">("generic");
+  const [provider, setProvider] = useState<"gmail" | "hostinger" | "generic">("generic");
   const [discovering, setDiscovering] = useState(false);
   const [folders, setFolders] = useState<string[]>([]);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
@@ -67,6 +67,21 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
       smtpPort: "465",
       smtpSsl: true,
       sentFolderName: "[Gmail]/Sent Mail",
+    }));
+  }
+
+  function applyHostingerPreset() {
+    setProvider("hostinger");
+    setForm((f) => ({
+      ...f,
+      label: f.label || "Hostinger Mail",
+      imapHost: "imap.hostinger.com",
+      imapPort: "993",
+      imapSsl: true,
+      smtpHost: "smtp.hostinger.com",
+      smtpPort: "465",
+      smtpSsl: true,
+      sentFolderName: "Sent",
     }));
   }
 
@@ -203,12 +218,29 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {provider === "gmail" ? "Connect Gmail Account" : "Connect IMAP Account"}
+              {provider === "gmail"
+                ? "Connect Gmail Account"
+                : provider === "hostinger"
+                ? "Connect Hostinger Mail"
+                : "Connect IMAP Account"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {/* Provider quick-select */}
-            <div className="flex gap-2 pb-1">
+            <div className="flex flex-wrap gap-2 pb-1">
+              <Button
+                type="button"
+                variant={provider === "hostinger" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5"
+                onClick={applyHostingerPreset}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                Connect Hostinger
+              </Button>
               <Button
                 type="button"
                 variant={provider === "gmail" ? "default" : "outline"}
@@ -234,9 +266,9 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
                   setDiscoverError(null);
                   setForm((f) => ({
                     ...f,
-                    label: f.label === "Gmail" ? "" : f.label,
-                    imapHost: f.imapHost === "imap.gmail.com" ? "" : f.imapHost,
-                    smtpHost: f.smtpHost === "smtp.gmail.com" ? "" : f.smtpHost,
+                    label: f.label === "Gmail" || f.label === "Hostinger Mail" ? "" : f.label,
+                    imapHost: f.imapHost === "imap.gmail.com" || f.imapHost === "imap.hostinger.com" ? "" : f.imapHost,
+                    smtpHost: f.smtpHost === "smtp.gmail.com" || f.smtpHost === "smtp.hostinger.com" ? "" : f.smtpHost,
                     sentFolderName: f.sentFolderName === "[Gmail]/Sent Mail" ? "Sent" : f.sentFolderName,
                   }));
                 }}
@@ -266,6 +298,16 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
                 />
               </div>
             ))}
+
+            {/* Hostinger hint */}
+            {provider === "hostinger" && (
+              <Alert className="border-purple-200 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-100">
+                <Info className="h-4 w-4 shrink-0" />
+                <AlertDescription className="text-xs leading-relaxed">
+                  Hostinger preset automatically sets IMAP (<code>imap.hostinger.com:993</code>) & SMTP (<code>smtp.hostinger.com:465</code>). Simply enter your full Hostinger email address & mailbox password.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* App Password hint for Gmail */}
             {provider === "gmail" && (
