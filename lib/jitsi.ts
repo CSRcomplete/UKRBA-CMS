@@ -7,6 +7,15 @@
  */
 
 /**
+ * Get the active Jitsi domain server.
+ * Defaults to 'meet.ffm.freifunk.net' (free open public server with no moderator login required).
+ * Can be overridden via NEXT_PUBLIC_JITSI_DOMAIN environment variable.
+ */
+export function getJitsiDomain(): string {
+  return process.env.NEXT_PUBLIC_JITSI_DOMAIN || "meet.ffm.freifunk.net";
+}
+
+/**
  * Generate a unique Jitsi-safe room ID from a meeting title.
  * Format: ukrba-<slugified-title>-<6-char-hex>
  * e.g. "ukrba-quarterly-review-a3f9b2"
@@ -26,5 +35,6 @@ export function generateJitsiRoomId(title: string): string {
  * Get the full Jitsi Meet URL for a given room ID.
  */
 export function getJitsiMeetUrl(roomId: string): string {
-  return `https://meet.jit.si/${roomId}`;
+  const domain = getJitsiDomain();
+  return `https://${domain}/${roomId}`;
 }

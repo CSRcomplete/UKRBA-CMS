@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PhoneOff, Maximize2, Minimize2, ExternalLink } from "lucide-react";
+import { getJitsiDomain, getJitsiMeetUrl } from "@/lib/jitsi";
 
 interface JitsiMeetRoomProps {
   roomId: string;
@@ -21,8 +22,8 @@ declare global {
  * JitsiMeetRoom — Embedded Jitsi video call component.
  *
  * Uses the Jitsi External API (loaded via CDN script tag) to embed
- * a Jitsi Meet call in a div inside the CRM. Falls back to opening
- * meet.jit.si in a new tab if the API fails to load.
+ * a Jitsi Meet call in a div inside the CRM. Uses open Jitsi server
+ * to bypass moderator login requirements.
  */
 export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: JitsiMeetRoomProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,32 +32,35 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
   const [apiLoaded, setApiLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  const jitsiUrl = `https://meet.jit.si/${roomId}`;
+  const domain = getJitsiDomain();
+  const jitsiUrl = getJitsiMeetUrl(roomId);
 
   useEffect(() => {
-    // Load Jitsi External API script from CDN
+    // Load Jitsi External API script from active domain
     if (window.JitsiMeetExternalAPI) {
       setApiLoaded(true);
       return;
     }
 
     const script = document.createElement("script");
-    script.src = "https://meet.jit.si/external_api.js";
+    script.src = `https://${domain}/external_api.js`;
     script.async = true;
     script.onload = () => setApiLoaded(true);
     script.onerror = () => setLoadError(true);
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
-  }, []);
+  }, [domain]);
 
   useEffect(() => {
     if (!apiLoaded || !containerRef.current || apiRef.current) return;
 
     try {
-      apiRef.current = new window.JitsiMeetExternalAPI("meet.jit.si", {
+      apiRef.current = new window.JitsiMeetExternalAPI(domain, {
         roomName: roomId,
         parentNode: containerRef.current,
         width: "100%",
@@ -116,7 +120,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
         apiRef.current = null;
       }
     };
-  }, [apiLoaded, roomId, displayName, userEmail, onLeave]);
+  }, [apiLoaded, domain, roomId, displayName, userEmail, onLeave]);
 
   const handleLeave = () => {
     if (apiRef.current) {
