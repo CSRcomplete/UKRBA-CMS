@@ -423,7 +423,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => `**${prev}**`)}
+                  onClick={() => setReplyText((prev) => prev ? `**bold text**\n${prev}` : "**bold text**")}
                   title="Bold"
                 >
                   <Bold className="h-3.5 w-3.5" />
@@ -433,7 +433,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => `*${prev}*`)}
+                  onClick={() => setReplyText((prev) => prev ? `*italic text*\n${prev}` : "*italic text*")}
                   title="Italic"
                 >
                   <Italic className="h-3.5 w-3.5" />
@@ -443,7 +443,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => `\n- ${prev}`)}
+                  onClick={() => setReplyText((prev) => prev ? `- bullet item\n${prev}` : "- bullet item")}
                   title="Bullet List"
                 >
                   <List className="h-3.5 w-3.5" />

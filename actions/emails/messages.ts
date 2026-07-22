@@ -262,7 +262,7 @@ type SendInput = {
   references?: string;  // parent's References + parent's Message-ID (space-separated)
 };
 
-import { getUKRBASignature, getUKRBASignatureHtml } from "@/lib/email-signature";
+import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
   const userId = await requireSession();
@@ -283,14 +283,9 @@ export async function sendEmail(input: SendInput) {
     finalBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
   }
 
-  // Prepare HTML body with embedded logo signature
-  // Strip plain text signature marker if user typed text above signature
+  // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)
   const mainTextContent = input.body.split(/\n\s*--\s*\n/)[0].trim();
-  const htmlContentLines = mainTextContent
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br/>");
+  const htmlContentLines = parseMarkdownToEmailHtml(mainTextContent);
 
   const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role })}`;
 

@@ -60,4 +60,30 @@ export function getUKRBASignatureHtml(
   </table>
 </div>
 `;
+export function parseMarkdownToEmailHtml(text: string): string {
+  if (!text) return "";
+
+  // 1. Escape HTML special characters
+  let escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // 2. Convert Bold (**text** or __text__)
+  escaped = escaped.replace(/(\*\*|__)(.*?)\1/g, "<strong>$2</strong>");
+
+  // 3. Convert Italic (*text* or _text_)
+  escaped = escaped.replace(/(\*|_)(.*?)\1/g, "<em>$2</em>");
+
+  // 4. Convert Bullet points (- item or * item at start of line)
+  escaped = escaped.replace(/^[\s]*[-*]\s+(.*)$/gm, "&bull; $1");
+
+  // 5. Convert URLs (http:// or https://)
+  escaped = escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" style="color: #2563eb; text-decoration: underline;">$1</a>'
+  );
+
+  // 6. Convert newlines to <br/>
+  return escaped.replace(/\n/g, "<br/>");
 }
