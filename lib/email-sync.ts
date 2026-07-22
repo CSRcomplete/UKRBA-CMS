@@ -1,6 +1,6 @@
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
-import { EmailFolder } from "@prisma/client";
+import { EmailFolder, Prisma } from "@prisma/client";
 import Imap from "imap";
 import { connectImap, fetchHeaders, type ParsedHeader } from "@/inngest/lib/imap-utils";
 
@@ -11,7 +11,7 @@ async function searchFolder(
   folderName: string,
   lastUid: number
 ): Promise<{ uids: number[]; highestUid: number }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     imap.openBox(folderName, true, (err) => {
       if (err) return resolve({ uids: [], highestUid: lastUid });
 
@@ -124,12 +124,12 @@ export async function performEmailAccountSync(accountId: string) {
         subject: msg.subject,
         fromName: msg.fromName,
         fromEmail: msg.fromEmail,
-        toRecipients: msg.to,
-        ccRecipients: msg.cc,
+        toRecipients: msg.to as unknown as Prisma.InputJsonValue,
+        ccRecipients: msg.cc as unknown as Prisma.InputJsonValue,
         sentAt: msg.sentAt,
       })),
       skipDuplicates: true,
-    }));
+    });
   }
 
   await prismadb.emailAccount.update({
