@@ -28,7 +28,7 @@ interface MailProps {
   accounts: ConnectedAccount[];
   mails: Mail[];
   activeAccountId: string | null;
-  activeFolder: "INBOX" | "SENT";
+  activeFolder: EmailFolder;
   page: number;
   totalPages: number;
   defaultLayout: number[] | undefined;
