@@ -152,6 +152,7 @@ export async function getEmail(id: string) {
     include: {
       contacts: { include: { contact: { select: { id: true, first_name: true, last_name: true } } } },
       accounts: { include: { account: { select: { id: true, name: true } } } },
+      attachments: true,
     },
   });
   if (!email) throw new Error("Not found");
@@ -285,10 +286,10 @@ export async function sendEmail(input: SendInput) {
     select: { name: true, role: true },
   });
 
-  // Prepare text body
-  let finalBodyText = input.body;
-  if (!finalBodyText.includes("UKRBA") && !finalBodyText.includes("UK Resource & Business Association")) {
-    finalBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
+  // Prepare text body (strip HTML tags if body contains HTML)
+  let cleanBodyText = input.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleanBodyText.includes("UKRBA") && !cleanBodyText.includes("UK Resource & Business Association")) {
+    cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
   }
 
   // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)
@@ -319,7 +320,7 @@ export async function sendEmail(input: SendInput) {
     cc: input.cc?.join(", "),
     bcc: input.bcc?.join(", "),
     subject: input.subject,
-    text: finalBodyText,
+    text: cleanBodyText,
     html: bodyHtml,
     inReplyTo: input.inReplyTo,
     references: input.references,
@@ -338,7 +339,7 @@ export async function sendEmail(input: SendInput) {
       toRecipients: input.to.map((e) => ({ email: e })),
       ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
       bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
-      bodyText: finalBodyText,
+      bodyText: cleanBodyText,
       bodyHtml: bodyHtml,
       sentAt: new Date(),
       isRead: true,
@@ -358,5 +359,5 @@ export async function sendEmail(input: SendInput) {
     });
   }
 
-  return created;
+  return getEmail(created.id);
 }

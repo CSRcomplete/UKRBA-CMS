@@ -403,21 +403,33 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                         <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                           <Paperclip className="h-3.5 w-3.5" /> Attachments ({(msg as any).attachments.length})
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(msg as any).attachments.map((att: any, attIdx: number) => (
-                            <a
-                              key={attIdx}
-                              href={att.storageUrl || "#"}
-                              download={att.filename}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2.5 py-1 text-xs hover:bg-muted font-medium transition-colors"
-                            >
-                              <Download className="h-3.5 w-3.5 text-primary" />
-                              <span>{att.filename}</span>
-                              <span className="text-[10px] text-muted-foreground">({Math.round((att.size || 0) / 1024)} KB)</span>
-                            </a>
-                          ))}
+                        <div className="flex flex-wrap gap-3">
+                          {(msg as any).attachments.map((att: any, attIdx: number) => {
+                            const isImage =
+                              att.mimeType?.startsWith("image/") ||
+                              /\.(png|jpe?g|gif|webp)$/i.test(att.filename || "");
+                            return (
+                              <div key={attIdx} className="flex flex-col gap-1.5 rounded-lg border p-2 bg-muted/20">
+                                {isImage && att.storageUrl && (
+                                  <a href={att.storageUrl} target="_blank" rel="noreferrer" className="overflow-hidden rounded-md border bg-background">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={att.storageUrl} alt={att.filename} className="max-h-36 max-w-[200px] object-cover rounded-md" />
+                                  </a>
+                                )}
+                                <a
+                                  href={att.storageUrl || "#"}
+                                  download={att.filename}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline text-primary"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  <span className="truncate max-w-[150px]">{att.filename}</span>
+                                  <span className="text-[10px] text-muted-foreground">({Math.round((att.size || 0) / 1024)} KB)</span>
+                                </a>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

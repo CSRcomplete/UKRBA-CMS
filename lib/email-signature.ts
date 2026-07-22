@@ -65,6 +65,11 @@ export function getUKRBASignatureHtml(
 export function parseMarkdownToEmailHtml(text: string): string {
   if (!text) return "";
 
+  // If text is already HTML from visual editor, return directly
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return text;
+  }
+
   // 1. Escape HTML special characters
   let escaped = text
     .replace(/&/g, "&amp;")
