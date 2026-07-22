@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { sendEmail, saveDraft, getEmailTemplates, type EmailTemplate } from "@/actions/emails/messages";
 import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
+import { Paperclip, Save, FileText, X } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { getUKRBASignature, getUKRBASignatureHtml } from "@/lib/email-signature";
 
