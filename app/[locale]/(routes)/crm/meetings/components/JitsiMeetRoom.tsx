@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PhoneOff, Maximize2, Minimize2, ExternalLink, Video } from "lucide-react";
+import { PhoneOff, Maximize2, Minimize2, ExternalLink, Video, Copy, Check, Share2 } from "lucide-react";
 import { getJitsiDomain, getJitsiMeetUrl } from "@/lib/jitsi";
+import { toast } from "sonner";
 
 interface JitsiMeetRoomProps {
   roomId: string;
@@ -14,13 +15,12 @@ interface JitsiMeetRoomProps {
 
 /**
  * JitsiMeetRoom — Clean, single-session embedded Jitsi video call component.
- *
- * Uses direct iframe embedding with URL parameters to prevent duplicate WebRTC connections
- * and prevent multiple participant instances from joining the room.
+ * Includes Copy Link and Share features for quick instant meeting invites.
  */
 export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: JitsiMeetRoomProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isWindowOpened, setIsWindowOpened] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const domain = getJitsiDomain();
   const jitsiUrl = getJitsiMeetUrl(roomId);
@@ -29,6 +29,30 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
   const iframeSrc = `https://${domain}/${roomId}#userInfo.displayName="${encodeURIComponent(
     displayName
   )}"&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.disableDeepLinking=true`;
+
+  const copyMeetingLink = () => {
+    navigator.clipboard.writeText(jitsiUrl);
+    setCopied(true);
+    toast.success("Meeting link copied to clipboard!");
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const shareMeeting = () => {
+    const shareData = {
+      title: "Join Video Meeting",
+      text: `Join my video call with UKRBA: ${jitsiUrl}`,
+      url: jitsiUrl,
+    };
+
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      const mailtoUrl = `mailto:?subject=${encodeURIComponent("Join Video Meeting")}&body=${encodeURIComponent(
+        `Hi,\n\nPlease join my UKRBA video call using the link below:\n\n${jitsiUrl}\n\nNo app download or account login required.`
+      )}`;
+      window.open(mailtoUrl, "_blank");
+    }
+  };
 
   const openPopupWindow = () => {
     setIsWindowOpened(true);
@@ -55,7 +79,28 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
       style={{ height: isFullscreen ? "100dvh" : "640px" }}
     >
       {/* Top Controls Bar */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-2 flex-wrap justify-end">
+        {/* Copy Link Button */}
+        <Button
+          size="sm"
+          onClick={copyMeetingLink}
+          className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow"
+        >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied!" : "Copy Link"}
+        </Button>
+
+        {/* Share Button */}
+        <Button
+          size="sm"
+          onClick={shareMeeting}
+          className="h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          Share
+        </Button>
+
+        {/* Launch Window Button */}
         <Button
           size="sm"
           onClick={openPopupWindow}
@@ -65,6 +110,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           Launch Window
         </Button>
 
+        {/* New Tab Button */}
         <a href={jitsiUrl} target="_blank" rel="noopener noreferrer" onClick={() => setIsWindowOpened(true)}>
           <Button
             size="sm"
@@ -76,6 +122,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           </Button>
         </a>
 
+        {/* Fullscreen Button */}
         <Button
           size="sm"
           variant="secondary"
@@ -86,6 +133,7 @@ export function JitsiMeetRoom({ roomId, displayName, userEmail, onLeave }: Jitsi
           {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
         </Button>
 
+        {/* Leave Call Button */}
         <Button
           size="sm"
           className="h-8 gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold"
