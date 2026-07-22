@@ -367,6 +367,10 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                       />
                     ) : (
                       <pre className="whitespace-pre-wrap font-sans text-sm">
+                        {msg.bodyText ?? "(No content)"}
+                      </pre>
+                    )}
+
                     {/* Render Attachments if present */}
                     {Array.isArray((msg as any).attachments) && (msg as any).attachments.length > 0 && (
                       <div className="mt-3 pt-3 border-t space-y-1.5">
