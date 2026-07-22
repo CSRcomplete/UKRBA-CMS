@@ -24,6 +24,10 @@ export function formatJobTitle(role?: string | null): string {
   }
 }
 
+export const UKRBA_LOGO_URL = process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo.png`
+  : "https://crm.ukrba.org/images/logo.png";
+
 export function getUKRBASignature(user?: { name?: string | null; role?: string | null }): string {
   const name = user?.name?.trim() || "UKRBA Team Member";
   const jobTitle = formatJobTitle(user?.role);
@@ -31,17 +35,29 @@ export function getUKRBASignature(user?: { name?: string | null; role?: string |
   return `\n\n--\n${name}\n${jobTitle} | UKRBA\n\nUK Resource & Business Association\nWebsite: https://ukrba.org`;
 }
 
-export function getUKRBASignatureHtml(user?: { name?: string | null; role?: string | null }): string {
+export function getUKRBASignatureHtml(
+  user?: { name?: string | null; role?: string | null },
+  logoUrl: string = UKRBA_LOGO_URL
+): string {
   const name = user?.name?.trim() || "UKRBA Team Member";
   const jobTitle = formatJobTitle(user?.role);
 
   return `
 <br/><br/>
-<div class="ukrba-signature" style="font-family: Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.5; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-  <p style="margin: 0; font-weight: bold; font-size: 15px; color: #111827;">${name}</p>
-  <p style="margin: 2px 0 8px 0; color: #6b7280; font-size: 13px; font-weight: 500;">${jobTitle} | UKRBA</p>
-  <p style="margin: 0; color: #374151; font-weight: 600;">UK Resource &amp; Business Association</p>
-  <p style="margin: 4px 0 0 0; font-size: 12px; color: #2563eb;"><a href="https://ukrba.org" target="_blank" style="color: #2563eb; text-decoration: none;">https://ukrba.org</a></p>
+<div class="ukrba-signature" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333; line-height: 1.5; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+  <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+    <tr>
+      <td style="padding-right: 15px; vertical-align: middle; border-right: 2px solid #7c3aed;">
+        <img src="${logoUrl}" alt="UKRBA Logo" width="120" style="display: block; max-width: 120px; height: auto; border: 0;" />
+      </td>
+      <td style="padding-left: 15px; vertical-align: middle;">
+        <p style="margin: 0; font-weight: bold; font-size: 15px; color: #111827;">${name}</p>
+        <p style="margin: 2px 0 6px 0; color: #6b7280; font-size: 13px; font-weight: 500;">${jobTitle} | UKRBA</p>
+        <p style="margin: 0; color: #374151; font-weight: 600; font-size: 13px;">UK Resource &amp; Business Association</p>
+        <p style="margin: 4px 0 0 0; font-size: 12px;"><a href="https://ukrba.org" target="_blank" style="color: #7c3aed; text-decoration: none; font-weight: 500;">https://ukrba.org</a></p>
+      </td>
+    </tr>
+  </table>
 </div>
 `;
 }
