@@ -659,6 +659,30 @@ model crm_ActivityLinks {
   @@index([entityType, entityId, activityId])
 }
 
+model crm_Appointments {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  location    String?
+  startTime   DateTime
+  endTime     DateTime
+  isAllDay    Boolean   @default(false)
+  attendees   Json      @default("[]")
+  reminderMin Int?      @default(15)
+  notes       String?   @db.Text
+  userId      String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user Users @relation("user_appointments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([deletedAt])
+}
+
 model Boards {
   id                String    @id @default(uuid()) @db.Uuid
   v                 Int       @map("__v")
@@ -991,6 +1015,7 @@ model Users {
   invoiceAttachments           Invoice_Attachments[]    @relation("InvoiceAttachmentUploadedBy")
   invoiceActivity              Invoice_Activity[]       @relation("InvoiceActivityActor")
   ownership_changes_logged     crm_Ownership_History[]  @relation("ownership_changes_by")
+  appointments                 crm_Appointments[]       @relation("user_appointments")
 
   // Organizational Tree properties
   region_id Int?
