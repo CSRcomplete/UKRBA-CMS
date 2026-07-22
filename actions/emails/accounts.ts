@@ -47,6 +47,8 @@ type CreateInput = {
   sentFolderName?: string;
 };
 
+import { performEmailAccountSync } from "@/lib/email-sync";
+
 export async function createEmailAccount(input: CreateInput) {
   const userId = await requireSession();
 
@@ -60,7 +62,7 @@ export async function createEmailAccount(input: CreateInput) {
   if (input.smtpPort < 1 || input.smtpPort > 65535) throw new Error("Invalid SMTP port");
 
   const passwordEncrypted = encrypt(input.password);
-  return prismadb.emailAccount.create({
+  const created = await prismadb.emailAccount.create({
     data: {
       userId,
       label: input.label,
@@ -76,6 +78,11 @@ export async function createEmailAccount(input: CreateInput) {
     },
     select: { id: true, label: true },
   });
+
+  // Trigger immediate initial IMAP sync (non-blocking)
+  performEmailAccountSync(created.id).catch(() => {});
+
+  return created;
 }
 
 export async function deleteEmailAccount(id: string) {
