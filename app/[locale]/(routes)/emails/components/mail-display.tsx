@@ -376,6 +376,15 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
           {/* Interactive Bottom Reply Box */}
           <div className="p-4 bg-background">
             <form onSubmit={handleInlineReply} className="grid gap-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-0.5">
+                <span>Reply Message</span>
+                <span className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Official UK SME Logo Signature attached
+                </span>
+              </div>
               <Textarea
                 ref={inlineReplyRef}
                 value={replyText}

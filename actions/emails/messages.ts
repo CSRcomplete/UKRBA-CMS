@@ -183,7 +183,7 @@ type SendInput = {
   references?: string;  // parent's References + parent's Message-ID (space-separated)
 };
 
-import { getUKRBASignature } from "@/lib/email-signature";
+import { getUKRBASignature, getUKRBASignatureHtml } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
   const userId = await requireSession();
@@ -193,15 +193,27 @@ export async function sendEmail(input: SendInput) {
   });
   if (!account) throw new Error("Account not found");
 
-  // Ensure UKRBA signature is attached
-  let finalBody = input.body;
-  if (!finalBody.includes("UKRBA") && !finalBody.includes("UK Resource & Business Association")) {
-    const user = await prismadb.users.findUnique({
-      where: { id: userId },
-      select: { name: true, role: true },
-    });
-    finalBody += getUKRBASignature({ name: user?.name, role: user?.role });
+  const user = await prismadb.users.findUnique({
+    where: { id: userId },
+    select: { name: true, role: true },
+  });
+
+  // Prepare text body
+  let finalBodyText = input.body;
+  if (!finalBodyText.includes("UKRBA") && !finalBodyText.includes("UK Resource & Business Association")) {
+    finalBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
   }
+
+  // Prepare HTML body with embedded logo signature
+  // Strip plain text signature marker if user typed text above signature
+  const mainTextContent = input.body.split(/\n\s*--\s*\n/)[0].trim();
+  const htmlContentLines = mainTextContent
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+
+  const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role })}`;
 
   const password = decrypt(account.passwordEncrypted);
 
@@ -218,12 +230,13 @@ export async function sendEmail(input: SendInput) {
     cc: input.cc?.join(", "),
     bcc: input.bcc?.join(", "),
     subject: input.subject,
-    text: finalBody,
+    text: finalBodyText,
+    html: bodyHtml,
     inReplyTo: input.inReplyTo,
     references: input.references,
   });
 
-  // Write sent message to DB immediately so it appears in Sent view & thread
+  // Write sent message to DB immediately so it appears in Sent view & thread with HTML logo signature
   const created = await prismadb.email.create({
     data: {
       emailAccountId: input.accountId,
@@ -235,7 +248,8 @@ export async function sendEmail(input: SendInput) {
       toRecipients: input.to.map((e) => ({ email: e })),
       ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
       bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
-      bodyText: finalBody,
+      bodyText: finalBodyText,
+      bodyHtml: bodyHtml,
       sentAt: new Date(),
       isRead: true,
     },
