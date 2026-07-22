@@ -22,6 +22,8 @@ import getRepositoryMenuItem from "./menu-items/Repository";
 import getInvoicesMenuItem from "./menu-items/Invoices";
 import getAdministrationMenuItem from "./menu-items/Administration";
 import getCampaignsMenuItem from "./menu-items/Campaigns";
+import getNewsMenuItem from "./menu-items/News";
+import getDiaryMenuItem from "./menu-items/Diary";
 
 /**
  * AppSidebar Component - Task Groups 1.2, 2.2-2.7, 3.1, 5.3, 5.4
@@ -108,6 +110,8 @@ export function AppSidebar({
     getDocumentsMenuItem({ title: dict?.documents || "Documents" }),
     getRepositoryMenuItem({ title: "Repository" }),
     getInvoicesMenuItem({ title: dict?.invoices || "Invoices" }),
+    getDiaryMenuItem({ title: "Diary" }),
+    getNewsMenuItem({ title: "News & Announcements" }),
   ];
 
   // Administration: admin or ceo users only

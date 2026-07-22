@@ -512,7 +512,7 @@ const DashboardPage = async () => {
 
           {/* 7. News & Announcements */}
           <Link
-            href="/reports"
+            href="/news"
             className="group relative overflow-hidden rounded-xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-violet-500/60 sm:col-span-2 lg:col-span-2"
           >
             <div className="flex items-center justify-between">

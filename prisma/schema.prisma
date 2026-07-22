@@ -683,6 +683,29 @@ model crm_Appointments {
   @@index([deletedAt])
 }
 
+model crm_Announcements {
+  id             String    @id @default(uuid()) @db.Uuid
+  title          String
+  category       String    @default("Company News")
+  content        String    @db.Text
+  attachmentUrl  String?   @db.Text
+  attachmentName String?
+  attachmentSize Int?
+  isPinned       Boolean   @default(false)
+  authorId       String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  author Users @relation("announcement_author", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([category])
+  @@index([isPinned])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
 model Boards {
   id                String    @id @default(uuid()) @db.Uuid
   v                 Int       @map("__v")
@@ -1016,6 +1039,7 @@ model Users {
   invoiceActivity              Invoice_Activity[]       @relation("InvoiceActivityActor")
   ownership_changes_logged     crm_Ownership_History[]  @relation("ownership_changes_by")
   appointments                 crm_Appointments[]       @relation("user_appointments")
+  announcements                crm_Announcements[]      @relation("announcement_author")
 
   // Organizational Tree properties
   region_id Int?
