@@ -11,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { sendEmail, saveDraft, getEmailTemplates, type EmailTemplate } from "@/actions/emails/messages";
 import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
-import { Paperclip, Bold, Italic, List, Save, FileText, X } from "lucide-react";
-import { getUKRBASignature } from "@/lib/email-signature";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { getUKRBASignature, getUKRBASignatureHtml } from "@/lib/email-signature";
 
 type Mode = "new" | "reply" | "forward";
 
@@ -200,23 +200,15 @@ export function ComposeModal({
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Email subject" className="h-8 text-xs font-medium" />
           </div>
 
-          {/* Formatting Toolbar */}
+          {/* Visual WYSIWYG Rich Text Editor */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Message</Label>
-              <div className="flex items-center gap-1">
-                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => insertFormat("**", "**", "bold text")} title="Bold">
-                  <Bold className="h-3.5 w-3.5" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => insertFormat("*", "*", "italic text")} title="Italic">
-                  <Italic className="h-3.5 w-3.5" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => insertFormat("- ", "", "bullet item")} title="Bullet List">
-                  <List className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-            <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9} className="text-xs leading-relaxed" />
+            <Label className="text-xs">Message</Label>
+            <RichTextEditor
+              value={body}
+              onChange={setBody}
+              placeholder="Type your email message here..."
+              minHeight="180px"
+            />
           </div>
 
           {/* Attachments Section */}

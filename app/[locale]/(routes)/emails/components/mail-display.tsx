@@ -50,7 +50,7 @@ import {
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
-
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { getUKRBASignature } from "@/lib/email-signature";
 
 interface MailDisplayProps {
@@ -416,46 +416,12 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                 </span>
               </div>
 
-              {/* Formatting Toolbar */}
-              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => prev ? `**bold text**\n${prev}` : "**bold text**")}
-                  title="Bold"
-                >
-                  <Bold className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => prev ? `*italic text*\n${prev}` : "*italic text*")}
-                  title="Italic"
-                >
-                  <Italic className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setReplyText((prev) => prev ? `- bullet item\n${prev}` : "- bullet item")}
-                  title="Bullet List"
-                >
-                  <List className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-
-              <Textarea
-                ref={inlineReplyRef}
+              {/* Real-Time Visual WYSIWYG Rich Text Editor */}
+              <RichTextEditor
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                className="min-h-[100px] p-3 text-sm resize-y"
+                onChange={setReplyText}
                 placeholder={`Reply to ${replyTargetEmail || "sender"}...`}
+                minHeight="120px"
               />
               {sendError && (
                 <p className="text-xs text-destructive">{sendError}</p>
