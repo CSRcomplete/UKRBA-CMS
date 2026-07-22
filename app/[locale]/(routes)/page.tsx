@@ -370,7 +370,7 @@ const DashboardPage = async () => {
     <Container
       title={dict("containerTitle")}
       description={
-        "Welcome to NextCRM cockpit, here you can see your company overview"
+        "Welcome to UKRBA cockpit, here you can see your company overview"
       }
     >
       {/* Quick Launch Navigation Tiles (Large Easy-to-Navigate Modules) */}
