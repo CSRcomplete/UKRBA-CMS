@@ -32,6 +32,13 @@ interface UserSearchComboboxProps {
   name?: string;
 }
 
+export const GROUP_ASSIGNMENTS = [
+  { id: "ALL_USERS", name: "👥 All Users (Everyone)", avatar: null },
+  { id: "ALL_REGIONAL_DIRECTORS", name: "👔 All Regional Directors", avatar: null },
+  { id: "ALL_AREA_DIRECTORS", name: "🏢 All Area Managers", avatar: null },
+  { id: "ALL_CHANNEL_PARTNERS", name: "🤝 All Channel Partners", avatar: null },
+];
+
 const PAGE_SIZE = 50;
 
 export function UserSearchCombobox({
@@ -55,6 +62,7 @@ export function UserSearchCombobox({
   const debouncedSearch = useDebounce(search, 300);
 
   const selectedInList = accumulatedUsers.find((u) => u.id === value);
+  const selectedGroup = GROUP_ASSIGNMENTS.find((g) => g.id === value);
 
   // Load list of users when open
   useEffect(() => {
@@ -87,16 +95,16 @@ export function UserSearchCombobox({
     setListData(null);
   }, [debouncedSearch]);
 
-  // Load selected user if not in list
+  // Load selected user if not in list or group
   useEffect(() => {
-    if (!value || selectedInList) return;
+    if (!value || selectedInList || selectedGroup) return;
     startTransition(async () => {
       const user = await getUserById(value);
       setSingleUser(user);
     });
-  }, [value, selectedInList]);
+  }, [value, selectedInList, selectedGroup]);
 
-  const displayUser = selectedInList ?? singleUser ?? null;
+  const displayUser = selectedGroup ?? selectedInList ?? singleUser ?? null;
 
   const handleSelect = (userId: string) => {
     onChange(userId === value ? "" : userId);
@@ -141,7 +149,25 @@ export function UserSearchCombobox({
               ) : (
                 <>
                   <CommandEmpty>No users found.</CommandEmpty>
-                  <CommandGroup>
+                  <CommandGroup heading="Group / Bulk Assignments">
+                    {GROUP_ASSIGNMENTS.map((group) => (
+                      <CommandItem
+                        key={group.id}
+                        value={group.id}
+                        onSelect={handleSelect}
+                        className="font-medium text-purple-700 dark:text-purple-300 cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4 text-primary",
+                            value === group.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {group.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandGroup heading="Individual Users">
                     {accumulatedUsers.map((user) => (
                       <CommandItem
                         key={user.id}
