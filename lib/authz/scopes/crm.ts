@@ -792,7 +792,11 @@ export async function boardReadScopeWhere(user: AuthzUser) {
     user.role === "admin" ||
     user.role === "ceo" ||
     user.role === "operations_director" ||
-    user.role === "manager"
+    user.role === "regional_director" ||
+    user.role === "area_director" ||
+    user.role === "channel_partner" ||
+    user.role === "manager" ||
+    user.role === "user"
   ) {
     return { deletedAt: null };
   }
@@ -813,7 +817,11 @@ export async function boardWriteScopeWhere(user: AuthzUser) {
     user.role === "admin" ||
     user.role === "ceo" ||
     user.role === "operations_director" ||
-    user.role === "manager"
+    user.role === "regional_director" ||
+    user.role === "area_director" ||
+    user.role === "channel_partner" ||
+    user.role === "manager" ||
+    user.role === "user"
   ) {
     return { deletedAt: null };
   }

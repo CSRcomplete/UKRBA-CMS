@@ -85,8 +85,24 @@ export const createTask = async (data: {
   try {
     await assertCanWriteBoard(authzUser, targetBoard);
   } catch (e) {
-    if (e instanceof AuthorizationError) return { error: "Forbidden" };
-    throw e;
+    if (e instanceof AuthorizationError) {
+      let userBoard = await prismadb.boards.findFirst({
+        where: { user: session.user.id, deletedAt: null },
+      });
+      if (!userBoard) {
+        userBoard = await prismadb.boards.create({
+          data: {
+            v: 0,
+            title: "General Tasks",
+            description: "General Tasks Board",
+            user: session.user.id,
+          },
+        });
+      }
+      targetBoard = userBoard.id;
+    } else {
+      throw e;
+    }
   }
 
   try {
@@ -112,13 +128,15 @@ export const createTask = async (data: {
 
     const targetUserId = await ensureGroupSystemUser(user);
 
+    const parsedDueDate = dueDateAt ? new Date(dueDateAt) : new Date();
+
     const createdTask = await prismadb.tasks.create({
       data: {
         v: 0,
-        priority,
+        priority: priority || "normal",
         title,
-        content,
-        dueDateAt,
+        content: content || title,
+        dueDateAt: parsedDueDate,
         section: sectionId.id,
         createdBy: session.user.id,
         updatedBy: session.user.id,
