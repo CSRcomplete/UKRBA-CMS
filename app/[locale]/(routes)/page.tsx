@@ -6,6 +6,7 @@ import { leadReadScopeWhere } from "@/lib/authz";
 import Link from "next/link";
 import moment from "moment";
 import { getEscalationAlerts } from "@/lib/task-escalation";
+import { getUnreadAnnouncementsCount } from "@/actions/news/news";
 import {
   Mail,
   FolderOpen,
@@ -38,6 +39,7 @@ const DashboardPage = async () => {
   const userRole = currentUser?.role || "user";
 
   const escalationAlerts = await getEscalationAlerts(userId);
+  const unreadAnnouncementsCount = await getUnreadAnnouncementsCount();
 
   // Fetch personal tasks and meetings for the active user (My Workspace)
   const myTasks = await prismadb.tasks.findMany({
@@ -515,8 +517,18 @@ const DashboardPage = async () => {
           {/* 7. News & Announcements */}
           <Link
             href="/news"
-            className="group relative overflow-hidden rounded-xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-violet-500/60"
+            className={`group relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
+              unreadAnnouncementsCount > 0
+                ? "border-violet-500 ring-2 ring-violet-500/50 bg-gradient-to-br from-violet-500/20 via-background to-violet-500/10 shadow-violet-500/20 shadow-md"
+                : "border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 hover:border-violet-500/60"
+            }`}
           >
+            {unreadAnnouncementsCount > 0 && (
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-rose-600 px-2.5 py-1 text-xs font-bold text-white shadow-lg animate-bounce">
+                <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                {unreadAnnouncementsCount} {unreadAnnouncementsCount === 1 ? "New" : "New"}
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-600 text-white shadow-md transition-transform group-hover:scale-110">
                 <Megaphone className="h-6 w-6" />
@@ -524,7 +536,7 @@ const DashboardPage = async () => {
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-violet-600" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-violet-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-violet-600 transition-colors flex items-center gap-2">
                 7. News & Announcements
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">

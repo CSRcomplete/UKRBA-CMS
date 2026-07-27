@@ -39,6 +39,7 @@ import {
   createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
+  markAnnouncementsAsRead,
   type AnnouncementItem,
 } from "@/actions/news/news";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
@@ -85,6 +86,7 @@ export function NewsClient() {
       const res = await getAnnouncements(selectedCategory);
       setAnnouncements(res.announcements);
       setIsAdmin(res.isAdmin);
+      await markAnnouncementsAsRead();
     } catch {
       // Error
     } finally {

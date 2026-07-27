@@ -193,3 +193,65 @@ export async function deleteAnnouncement(id: string) {
     data: { deletedAt: new Date() },
   });
 }
+
+export async function getUnreadAnnouncementsCount(): Promise<number> {
+  const session = await getSession();
+  if (!session?.user?.id) return 0;
+  const userId = session.user.id;
+
+  try {
+    const totalAnnouncements = await prismadb.crm_Announcements.count({
+      where: { deletedAt: null },
+    });
+
+    if (totalAnnouncements === 0) return 0;
+
+    const readCount = await prismadb.crm_AnnouncementReads.count({
+      where: {
+        userId,
+        announcement: { deletedAt: null },
+      },
+    });
+
+    const unread = totalAnnouncements - readCount;
+    return unread > 0 ? unread : 0;
+  } catch (err) {
+    console.error("Error getting unread announcements count:", err);
+    return 0;
+  }
+}
+
+export async function markAnnouncementsAsRead(): Promise<void> {
+  const session = await getSession();
+  if (!session?.user?.id) return;
+  const userId = session.user.id;
+
+  try {
+    const announcements = await prismadb.crm_Announcements.findMany({
+      where: { deletedAt: null },
+      select: { id: true },
+    });
+
+    if (announcements.length === 0) return;
+
+    await prismadb.$transaction(
+      announcements.map((a) =>
+        prismadb.crm_AnnouncementReads.upsert({
+          where: {
+            announcementId_userId: {
+              announcementId: a.id,
+              userId,
+            },
+          },
+          update: {},
+          create: {
+            announcementId: a.id,
+            userId,
+          },
+        })
+      )
+    );
+  } catch (err) {
+    console.error("Error marking announcements as read:", err);
+  }
+}

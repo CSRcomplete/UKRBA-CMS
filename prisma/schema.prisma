@@ -698,6 +698,7 @@ model crm_Announcements {
   deletedAt      DateTime?
 
   author Users @relation("announcement_author", fields: [authorId], references: [id], onDelete: Cascade)
+  reads  crm_AnnouncementReads[]
 
   @@index([authorId])
   @@index([category])
@@ -1074,6 +1075,7 @@ model Users {
   crated_contacts              crm_Contacts[]           @relation("created_contacts")
   apiKeys                      ApiKeys[]
   assigned_contracts           crm_Contracts[]
+  announcementReads            crm_AnnouncementReads[]
   boards                       Boards[]                 @relation("assigned_user")
   watching_boards              BoardWatchers[]
   watching_accounts            AccountWatchers[]
@@ -2132,3 +2134,20 @@ model crm_Ownership_History {
   @@index([entity_id])
   @@index([entity_type, entity_id])
 }
+
+
+
+model crm_AnnouncementReads {
+  id             String   @id @default(uuid()) @db.Uuid
+  announcementId String   @db.Uuid
+  userId         String   @db.Uuid
+  readAt         DateTime @default(now())
+
+  announcement crm_Announcements @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         Users             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
+}
+
