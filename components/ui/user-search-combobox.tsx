@@ -21,6 +21,7 @@ import {
 import useDebounce from "@/hooks/useDebounce";
 import { searchUsers } from "@/actions/user/search-users";
 import { getUserById } from "@/actions/user/get-user-by-id";
+import { GROUP_ASSIGNMENTS } from "@/lib/constants/group-assignments";
 
 type User = { id: string; name: string | null; avatar: string | null };
 
@@ -31,13 +32,6 @@ interface UserSearchComboboxProps {
   disabled?: boolean;
   name?: string;
 }
-
-export const GROUP_ASSIGNMENTS = [
-  { id: "ALL_USERS", name: "👥 All Users (Everyone)", avatar: null },
-  { id: "ALL_REGIONAL_DIRECTORS", name: "👔 All Regional Directors", avatar: null },
-  { id: "ALL_AREA_DIRECTORS", name: "🏢 All Area Managers", avatar: null },
-  { id: "ALL_CHANNEL_PARTNERS", name: "🤝 All Channel Partners", avatar: null },
-];
 
 const PAGE_SIZE = 50;
 
