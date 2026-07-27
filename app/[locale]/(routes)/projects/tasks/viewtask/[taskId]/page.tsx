@@ -10,9 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 import { TeamConversations } from "./components/team-conversation";
-import { TaskDataTable } from "./components/data-table";
-import { columns } from "./components/columns";
-import { columnsTask } from "./components/columns-task";
+import { TaskDocumentRepositorySection } from "./components/TaskDocumentRepositorySection";
 
 import TaskViewActions from "./components/TaskViewActions";
 import {
@@ -165,15 +163,11 @@ const TaskPage = async (props: TaskPageProps) => {
         {/*         <pre>
           <code>{JSON.stringify(taskDocuments, null, 2)}</code>
         </pre> */}
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight py-5">
-          Task documents ({taskDocuments.length})
-        </h4>
-        <TaskDataTable data={taskDocuments} columns={columnsTask} />
-        <Separator />
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight py-5">
-          Available documents ({documents.length})
-        </h4>
-        <TaskDataTable data={documents} columns={columns} />
+        <TaskDocumentRepositorySection
+          taskId={taskId}
+          taskDocuments={taskDocuments as any}
+          availableDocuments={documents as any}
+        />
       </div>
 
       <div className="w-full md:w-1/3">
