@@ -35,6 +35,9 @@ import {
   X,
   UserCheck,
   Lock,
+  BookOpen,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -72,6 +75,9 @@ export function NewsClient() {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Blog Article Reader modal state
+  const [selectedArticle, setSelectedArticle] = useState<AnnouncementItem | null>(null);
 
   // Target audience users state
   const [availableUsers, setAvailableUsers] = useState<SimpleUser[]>([]);
@@ -135,7 +141,8 @@ export function NewsClient() {
     fetchUsersList();
   };
 
-  const openEditModal = (item: AnnouncementItem) => {
+  const openEditModal = (item: AnnouncementItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setEditingId(item.id);
     setTitle(item.title);
     setCategory(item.category);
@@ -223,7 +230,8 @@ export function NewsClient() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!confirm("Are you sure you want to delete this announcement?")) return;
     try {
       await deleteAnnouncement(id);
@@ -298,7 +306,7 @@ export function NewsClient() {
             <h1 className="text-2xl font-bold tracking-tight">News & Announcements Noticeboard</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Internal company noticeboard for official UKRBA updates, compliance, targeted notices, and staff news.
+            Internal company noticeboard for official UKRBA updates, compliance, targeted notices, and staff news. Click any announcement to read the full article.
           </p>
         </div>
 
@@ -360,7 +368,8 @@ export function NewsClient() {
           {filteredAnnouncements.map((item) => (
             <Card
               key={item.id}
-              className={`overflow-hidden transition-all hover:shadow-md ${
+              onClick={() => setSelectedArticle(item)}
+              className={`group overflow-hidden transition-all duration-200 cursor-pointer hover:border-violet-500 hover:shadow-lg ${
                 item.isPinned ? "border-2 border-violet-500/80 bg-violet-500/5" : ""
               }`}
             >
@@ -376,7 +385,7 @@ export function NewsClient() {
                       {getCategoryBadge(item.category)}
                       {getTargetAudienceBadge(item.targetGroup, item.targetUserIds)}
                     </div>
-                    <CardTitle className="text-lg font-bold text-foreground leading-snug">
+                    <CardTitle className="text-lg font-bold text-foreground leading-snug group-hover:text-violet-600 transition-colors">
                       {item.title}
                     </CardTitle>
                     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -387,17 +396,17 @@ export function NewsClient() {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        {format(parseISO(item.createdAt), "MMM d, yyyy, h:mm:ss a")}
+                        {format(parseISO(item.createdAt), "MMM d, yyyy, h:mm a")}
                       </span>
                     </div>
                   </div>
 
                   {isAdmin && (
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => openEditModal(item)}
+                        onClick={(e) => openEditModal(item, e)}
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       >
                         <Edit className="h-4 w-4" />
@@ -405,7 +414,7 @@ export function NewsClient() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={(e) => handleDelete(item.id, e)}
                         className="h-8 w-8 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -415,43 +424,138 @@ export function NewsClient() {
                 </div>
               </CardHeader>
 
-              <CardContent className="pb-4">
+              <CardContent className="pb-3">
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground"
+                  className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/90 line-clamp-3"
                   dangerouslySetInnerHTML={{ __html: item.content }}
                 />
               </CardContent>
 
-              {item.attachmentUrl && (
-                <CardFooter className="px-5 py-3 bg-muted/20 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-medium">
-                    <Paperclip className="h-4 w-4 text-violet-600" />
-                    <span>{item.attachmentName || "Attached Document"}</span>
-                    {item.attachmentSize && (
-                      <span className="text-[10px] text-muted-foreground">
-                        ({Math.round(item.attachmentSize / 1024)} KB)
-                      </span>
-                    )}
-                  </div>
+              <CardFooter className="px-6 py-2.5 bg-muted/20 flex items-center justify-between border-t border-border/40">
+                <div className="flex items-center gap-2 text-xs font-semibold text-violet-600 dark:text-violet-400 group-hover:translate-x-1 transition-transform">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Read Full Article
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </div>
 
-                  <a
-                    href={item.attachmentUrl}
-                    download={item.attachmentName || "attachment"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:underline"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download File
-                  </a>
-                </CardFooter>
-              )}
+                {item.attachmentUrl && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Paperclip className="h-3.5 w-3.5 text-violet-600" />
+                    <span>Attachment available</span>
+                  </div>
+                )}
+              </CardFooter>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Publish / Edit Modal (Admin Only) */}
+      {/* ── BLOG ARTICLE READER MODAL ────────────────────────────────────────────── */}
+      <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl border border-violet-200 dark:border-violet-900 shadow-2xl">
+          {selectedArticle && (
+            <div>
+              {/* Header Cover Bar */}
+              <div className="relative p-6 sm:p-8 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 text-white rounded-t-2xl space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedArticle.isPinned && (
+                    <Badge className="bg-amber-400 text-amber-950 font-bold flex items-center gap-1">
+                      <Pin className="h-3 w-3 fill-amber-950" /> Pinned Official Notice
+                    </Badge>
+                  )}
+                  <Badge className="bg-white/20 text-white backdrop-blur-md border-0">
+                    {selectedArticle.category}
+                  </Badge>
+                  <Badge className="bg-white/20 text-white backdrop-blur-md border-0">
+                    {selectedArticle.targetGroup === "ALL_REGIONAL_DIRECTORS"
+                      ? "👔 Regional Directors"
+                      : selectedArticle.targetGroup === "ALL_AREA_DIRECTORS"
+                      ? "🏢 Area Managers"
+                      : selectedArticle.targetGroup === "ALL_CHANNEL_PARTNERS"
+                      ? "🤝 Channel Partners"
+                      : selectedArticle.targetGroup === "SPECIFIC"
+                      ? "👤 Targeted Notice"
+                      : "👥 All Staff"}
+                  </Badge>
+                </div>
+
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug">
+                  {selectedArticle.title}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs text-white/90 pt-2 border-t border-white/20">
+                  <div className="flex items-center gap-2 font-medium">
+                    <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-white">
+                      {selectedArticle.authorName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <span>{selectedArticle.authorName}</span>
+                      <span className="block text-[10px] text-white/70">{selectedArticle.authorRole}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{format(parseISO(selectedArticle.createdAt), "MMMM d, yyyy [at] h:mm a")}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Article Body */}
+              <div className="p-6 sm:p-8 space-y-6 bg-background">
+                <div
+                  className="prose prose-violet dark:prose-invert max-w-none text-base leading-relaxed text-foreground min-h-[160px]"
+                  dangerouslySetInnerHTML={{ __html: selectedArticle.content }}
+                />
+
+                {/* File Attachment Box inside Article */}
+                {selectedArticle.attachmentUrl && (
+                  <div className="rounded-xl border border-violet-200 dark:border-violet-900/60 bg-violet-50/50 dark:bg-violet-950/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-600 text-white shrink-0">
+                        <Paperclip className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {selectedArticle.attachmentName || "Attached Document"}
+                        </p>
+                        {selectedArticle.attachmentSize && (
+                          <p className="text-xs text-muted-foreground">
+                            File size: {Math.round(selectedArticle.attachmentSize / 1024)} KB
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <a
+                      href={selectedArticle.attachmentUrl}
+                      download={selectedArticle.attachmentName || "attachment"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button className="bg-violet-600 hover:bg-violet-700 text-white text-xs gap-2">
+                        <Download className="h-4 w-4" />
+                        Download Attached File
+                      </Button>
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-muted/30 border-t flex items-center justify-between">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3.5 w-3.5 text-violet-600" /> UKRBA Official Announcement
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setSelectedArticle(null)}>
+                  Close Article
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── PUBLISH / EDIT MODAL (Admin Only) ─────────────────────────────────── */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
