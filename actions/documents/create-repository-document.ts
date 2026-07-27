@@ -6,14 +6,16 @@ import {
 import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-interface CreateRepositoryDocumentInput {
+export interface CreateRepositoryDocumentInput {
   name: string;
   url: string;
   key: string;
   size: number;
   mimeType: string;
   description?: string;
-  level: "regional_director" | "area_director" | "channel_partner";
+  folder?: string;
+  subfolder?: string;
+  level?: string;
   assignedUser?: string | null;
 }
 
@@ -26,11 +28,14 @@ export async function createRepositoryDocument(input: CreateRepositoryDocumentIn
     throw e;
   }
 
+  const folder = input.folder || "01. Company Information";
+  const subfolder = input.subfolder || "General";
+
   const document = await prismadb.documents.create({
     data: {
       v: 0,
       document_name: input.name,
-      description: input.description || "new repository file",
+      description: input.description || `${folder} > ${subfolder}`,
       document_file_url: input.url,
       key: input.key,
       size: input.size,
@@ -38,7 +43,11 @@ export async function createRepositoryDocument(input: CreateRepositoryDocumentIn
       createdBy: user.id,
       created_by_user: user.id,
       assigned_user: input.assignedUser || null,
-      visibility: input.level, // Store level in visibility field
+      visibility: "repository",
+      tags: {
+        folder,
+        subfolder,
+      },
     },
   });
 

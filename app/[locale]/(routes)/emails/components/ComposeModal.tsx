@@ -71,11 +71,10 @@ export function ComposeModal({
         setSubject("");
       }
 
-      const sigHtml = getUKRBASignatureEditorHtml(currentUser);
       setBody(
         mode === "reply" || mode === "forward"
-          ? `${sigHtml}<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
-          : sigHtml
+          ? `<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
+          : ""
       );
     }
   };
@@ -86,8 +85,7 @@ export function ComposeModal({
     if (!tmpl) return;
 
     if (!subject) setSubject(tmpl.subject);
-    const sig = getUKRBASignature(currentUser);
-    setBody(`${tmpl.body}\n${sig}`);
+    setBody(tmpl.body);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

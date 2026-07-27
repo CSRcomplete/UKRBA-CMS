@@ -22,36 +22,14 @@ const RepositoryPage = async () => {
     redirect("/auth/signin");
   }
 
-  const isSuperUser = ["admin", "ceo", "operations_director"].includes(currentUser.role);
-  const isRD = currentUser.role === "regional_director";
-  const isAD = currentUser.role === "area_director";
-  const isCP = currentUser.role === "channel_partner";
+  // Upload permission: Only CEO and ADMIN can upload files into repository
+  const canUpload = currentUser.role === "admin" || currentUser.role === "ceo";
 
-  const allowedLevels: string[] = [];
-  if (isSuperUser || isRD) {
-    allowedLevels.push("regional_director");
-  }
-  if (isSuperUser || isRD || isAD) {
-    allowedLevels.push("area_director");
-  }
-  if (isSuperUser || isRD || isAD || isCP) {
-    allowedLevels.push("channel_partner");
-  }
-
-  // 2. Fetch documents for repository where visibility maps to allowed levels
-  // and the document is either created by the user, assigned to the user, or not assigned (visible to all at that level).
+  // Fetch all repository documents
   const documents = await prismadb.documents.findMany({
     where: {
       parent_document_id: null,
       deletedAt: null,
-      visibility: {
-        in: allowedLevels,
-      },
-      OR: [
-        { createdBy: userId },
-        { assigned_user: userId },
-        { assigned_user: null },
-      ],
     },
     include: {
       created_by: {
@@ -64,7 +42,7 @@ const RepositoryPage = async () => {
     orderBy: { createdAt: "desc" },
   });
 
-  // 3. Fetch all active users for assign dropdown
+  // Fetch all active users for assign dropdown
   const allUsers = await prismadb.users.findMany({
     where: {
       userStatus: "ACTIVE",
@@ -85,6 +63,7 @@ const RepositoryPage = async () => {
       users={allUsers}
       currentUserId={userId}
       currentUserRole={currentUser.role}
+      canUpload={canUpload}
     />
   );
 };

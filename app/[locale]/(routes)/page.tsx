@@ -408,7 +408,7 @@ const DashboardPage = async () => {
 
           {/* 2. Resources */}
           <Link
-            href="/documents"
+            href="/repository"
             className="group relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900/40 bg-gradient-to-br from-amber-500/10 via-background to-amber-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-amber-500/60"
           >
             <div className="flex items-center justify-between">

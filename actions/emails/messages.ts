@@ -271,7 +271,7 @@ type SendInput = {
   attachments?: AttachmentInput[];
 };
 
-import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml } from "@/lib/email-signature";
+import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml, stripExistingSignature } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
   const userId = await requireSession();
@@ -286,16 +286,15 @@ export async function sendEmail(input: SendInput) {
     select: { name: true, role: true },
   });
 
+  // Strip any pre-existing/duplicate signature lines from input body
+  const cleanedBody = stripExistingSignature(input.body);
+
   // Prepare text body (strip HTML tags if body contains HTML)
-  let cleanBodyText = input.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleanBodyText.includes("UKRBA") && !cleanBodyText.includes("UK Resource & Business Association")) {
-    cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
-  }
+  let cleanBodyText = cleanedBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
 
   // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)
-  const mainTextContent = input.body.split(/\n\s*--\s*\n/)[0].trim();
-  const htmlContentLines = parseMarkdownToEmailHtml(mainTextContent);
-
+  const htmlContentLines = parseMarkdownToEmailHtml(cleanedBody);
   const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role })}`;
 
   const password = decrypt(account.passwordEncrypted);

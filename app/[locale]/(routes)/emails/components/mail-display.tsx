@@ -79,7 +79,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
     }
     let cancelled = false;
     setLoadingThread(true);
-    setReplyText(getUKRBASignatureEditorHtml(currentUser));
+    setReplyText("");
     getEmailThread(mail.id)
       .then((data) => {
         if (!cancelled) {
@@ -155,7 +155,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
         attachments: attachmentPayload,
       });
 
-      setReplyText(getUKRBASignatureEditorHtml(currentUser));
+      setReplyText("");
       setReplyAttachments([]);
       if (newMsg) {
         setThread((prev) => [...prev, newMsg]);

@@ -29,42 +29,60 @@ export const UKRBA_LOGO_URL = process.env.NEXT_PUBLIC_APP_URL
   : "https://crm.ukrba.org/images/ukrba-logo.png";
 
 export function getUKRBASignature(user?: { name?: string | null; role?: string | null }): string {
-  const name = user?.name?.trim() || "UKRBA Team Member";
-  const jobTitle = formatJobTitle(user?.role);
+  const name = user?.name?.trim() || "Kevin Turner";
+  const jobTitle = user?.role ? formatJobTitle(user?.role) : "Chief Executive Officer";
 
-  return `\n\n\n--\n${name}\n${jobTitle} | UKRBA\n\nUK Resource & Business Association\nWebsite: https://ukrba.org`;
+  return `\n\n\n--\n${name}\n${jobTitle}\nUK SME Responsible Business Association\nSupporting SMEs to evidence responsible business, CSR and ESG commitment\nwww.ukrba.org\n\nThe UK SME Responsible Business Association supports small and medium sized businesses in demonstrating responsible business, CSR and ESG activity through practical tools, accreditation and community engagement.\n\nConfidentiality Notice: This email and any attachments are confidential and may be legally privileged. If you are not the intended recipient, please notify the sender immediately and delete this email from your system. Any unauthorised use, disclosure or copying is prohibited.\n\nPlease consider the environment before printing this email.`;
+}
+
+export function stripExistingSignature(body: string): string {
+  if (!body) return "";
+  return body
+    .replace(/<div class="ukrba-email-signature"[\s\S]*?<\/div>\s*$/i, "")
+    .replace(/<div class="ukrba-signature"[\s\S]*?<\/div>\s*$/i, "")
+    .replace(/<(div|p)[^>]*>\s*--\s*[\s\S]*?UKRBA[\s\S]*?<\/\1>/gi, "")
+    .replace(/(<br\s*\/?>|\n|^)\s*--\s*[\s\S]*$/gi, "")
+    .trim();
 }
 
 export function getUKRBASignatureEditorHtml(user?: { name?: string | null; role?: string | null }): string {
-  const name = user?.name?.trim() || "UKRBA Team Member";
-  const jobTitle = formatJobTitle(user?.role);
-
-  return `<div><br></div><div><br></div><div><br></div><div>-- ${name} ${jobTitle} | UKRBA UK Resource & Business Association Website: https://ukrba.org</div>`;
+  return "";
 }
 
 export function getUKRBASignatureHtml(
   user?: { name?: string | null; role?: string | null },
   logoUrl: string = UKRBA_LOGO_URL
 ): string {
-  const name = user?.name?.trim() || "UKRBA Team Member";
-  const jobTitle = formatJobTitle(user?.role);
+  const name = user?.name?.trim() || "Kevin Turner";
+  const jobTitle = user?.role ? formatJobTitle(user?.role) : "Chief Executive Officer";
 
   return `
-<br/><br/><br/>
-<div class="ukrba-signature" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #333333; line-height: 1.5; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-  <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-    <tr>
-      <td style="padding-right: 15px; vertical-align: middle; border-right: 2px solid #0d1b3e;">
-        <img src="${logoUrl}" alt="UK SME Responsible Business Association Logo" width="140" style="display: block; max-width: 140px; height: auto; border: 0;" />
-      </td>
-      <td style="padding-left: 15px; vertical-align: middle;">
-        <p style="margin: 0; font-weight: bold; font-size: 15px; color: #0d1b3e;">${name}</p>
-        <p style="margin: 2px 0 6px 0; color: #16a34a; font-size: 13px; font-weight: 600;">${jobTitle} | UKRBA</p>
-        <p style="margin: 0; color: #374151; font-weight: 600; font-size: 13px;">UK SME Responsible Business Association</p>
-        <p style="margin: 4px 0 0 0; font-size: 12px;"><a href="https://ukrba.org" target="_blank" style="color: #0d1b3e; text-decoration: none; font-weight: 600;">https://ukrba.org</a></p>
-      </td>
-    </tr>
-  </table>
+<br/><br/>
+<div class="ukrba-email-signature" style="font-family: Arial, Helvetica, sans-serif; max-width: 680px; color: #1e293b; line-height: 1.5; margin-top: 24px;">
+  <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 20px; background-color: #ffffff;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+      <tr>
+        <td style="padding-right: 20px; vertical-align: middle; width: 170px; border-right: 1.5px solid #cbd5e1;">
+          <img src="${logoUrl}" alt="UK SME Responsible Business Association Logo" width="150" style="display: block; width: 150px; max-width: 150px; height: auto; border: 0;" />
+        </td>
+        <td style="padding-left: 20px; vertical-align: middle;">
+          <p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; color: #1e293b; line-height: 1.2;">${name}</p>
+          <p style="margin: 0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 700; color: #388e3c; line-height: 1.3;">${jobTitle}</p>
+          <p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.3;">UK SME Responsible Business Association</p>
+          <p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #475569; line-height: 1.4;">Supporting SMEs to evidence responsible business, CSR and ESG commitment</p>
+          <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 600;"><a href="https://www.ukrba.org" target="_blank" style="color: #1e3a8a; text-decoration: none;">www.ukrba.org</a></p>
+        </td>
+      </tr>
+    </table>
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-top: 16px; margin-bottom: 12px;">
+      <tr>
+        <td style="border-bottom: 2px solid #388e3c; height: 1px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+      </tr>
+    </table>
+    <p style="margin: 0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-weight: bold; color: #334155; line-height: 1.4;">The UK SME Responsible Business Association supports small and medium sized businesses in demonstrating responsible business, CSR and ESG activity through practical tools, accreditation and community engagement.</p>
+    <p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #64748b; line-height: 1.35;">Confidentiality Notice: This email and any attachments are confidential and may be legally privileged. If you are not the intended recipient, please notify the sender immediately and delete this email from your system. Any unauthorised use, disclosure or copying is prohibited.</p>
+    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #475569; line-height: 1.35;">Please consider the environment before printing this email.</p>
+  </div>
 </div>
 `;
 }
