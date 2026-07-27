@@ -8,7 +8,7 @@ This guide explains how to connect your Wix Website's **Pricing Plans** to NextC
 
 In your Wix Dashboard:
 1. Go to **Developer Tools** ➔ **Secrets Manager**.
-2. Add a new Secret named `WIX_WEBHOOK_TOKEN` with your secret token value (must match `WIX_WEBHOOK_TOKEN` in your NextCRM `.env`).
+2. Add a new Secret named `CRM_WEBHOOK_TOKEN` with your secret token value (must match `WIX_WEBHOOK_TOKEN` in your NextCRM `.env`).
 
 ---
 
@@ -29,7 +29,7 @@ const NEXTCRM_PURCHASE_URL = "https://crm.ukrba.org/api/v1/webhooks/wix-purchase
  */
 export async function wixPaidPlans_onPlanPurchased(event) {
   try {
-    const webhookToken = await getSecret("WIX_WEBHOOK_TOKEN");
+    const webhookToken = await getSecret("CRM_WEBHOOK_TOKEN");
 
     const payload = {
       email: event.order?.buyer?.email || event.order?.contact?.email || "",

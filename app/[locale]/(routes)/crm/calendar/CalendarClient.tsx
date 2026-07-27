@@ -28,6 +28,8 @@ import {
   Edit,
   CheckCircle2,
   FileText,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 import {
   format,
@@ -665,6 +667,22 @@ export function CalendarClient() {
                   <p className="p-2.5 rounded bg-muted/40 text-muted-foreground whitespace-pre-wrap">
                     {selectedEventDetails.description}
                   </p>
+                </div>
+              )}
+
+              {/* Join Meeting Button */}
+              {selectedEventDetails.meetingUrl && (
+                <div className="pt-3 border-t mt-3">
+                  <a
+                    href={selectedEventDetails.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                  >
+                    <Video className="h-4 w-4" />
+                    <span>Join Meeting</span>
+                    <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                  </a>
                 </div>
               )}
             </div>

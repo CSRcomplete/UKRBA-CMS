@@ -6,6 +6,8 @@ import { generateICSString } from "@/lib/ics-generator";
 import nodemailer from "nodemailer";
 import { decrypt } from "@/lib/email-crypto";
 
+import { getJitsiMeetUrl } from "@/lib/jitsi";
+
 export type CalendarEventType = "appointment" | "meeting" | "task";
 
 export type UnifiedCalendarEvent = {
@@ -24,6 +26,7 @@ export type UnifiedCalendarEvent = {
   reminderMin?: number | null;
   sourceId: string;
   editable: boolean;
+  meetingUrl?: string | null;
 };
 
 async function requireSession() {
@@ -76,6 +79,14 @@ export async function getCalendarEvents(
 
   // Add Appointments
   appointments.forEach((apt) => {
+    let meetingUrl: string | null = null;
+    if (apt.location && (apt.location.startsWith("http://") || apt.location.startsWith("https://"))) {
+      meetingUrl = apt.location;
+    } else {
+      const match = (apt.description || "").match(/https?:\/\/[^\s]+/);
+      if (match) meetingUrl = match[0];
+    }
+
     unifiedEvents.push({
       id: apt.id,
       type: "appointment",
@@ -90,6 +101,7 @@ export async function getCalendarEvents(
       attendees: Array.isArray(apt.attendees) ? (apt.attendees as string[]) : [],
       sourceId: apt.id,
       editable: true,
+      meetingUrl,
     });
   });
 
@@ -99,18 +111,39 @@ export async function getCalendarEvents(
     const durationMin = act.duration || 30;
     const actEnd = new Date(actStart.getTime() + durationMin * 60 * 1000);
 
+    const meta = act.metadata as Record<string, any> | null;
+    const jitsiRoomId: string | undefined = meta?.jitsiRoomId;
+    let meetingUrl: string | null = jitsiRoomId
+      ? getJitsiMeetUrl(jitsiRoomId)
+      : (meta?.meetingLink ?? meta?.meetingUrl ?? null);
+
+    const actLocation = (meta?.location as string | undefined) || (act.type === "meeting" ? "CRM Video Meeting" : "Phone Call");
+
+    if (!meetingUrl) {
+      const match = ((meta?.location as string) || "").match(/https?:\/\/[^\s]+/) || (act.description || "").match(/https?:\/\/[^\s]+/);
+      if (match) {
+        meetingUrl = match[0];
+      }
+    }
+
+    // Default room for CRM meetings if none provided
+    if (!meetingUrl && act.type === "meeting") {
+      meetingUrl = getJitsiMeetUrl(`ukrba-meeting-${act.id}`);
+    }
+
     unifiedEvents.push({
       id: `act-${act.id}`,
       type: "meeting",
       title: `${act.type === "call" ? "📞 Call" : "🤝 Meeting"}: ${act.title}`,
       description: act.description,
-      location: act.type === "meeting" ? "CRM Meeting" : "Phone Call",
+      location: actLocation,
       startTime: actStart.toISOString(),
       endTime: actEnd.toISOString(),
       isAllDay: false,
       status: act.status,
       sourceId: act.id,
       editable: false,
+      meetingUrl,
     });
   });
 
