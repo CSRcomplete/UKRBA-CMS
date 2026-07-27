@@ -21,6 +21,8 @@ export type AnnouncementItem = {
   attachmentName?: string | null;
   attachmentSize?: number | null;
   isPinned: boolean;
+  targetGroup?: string | null;
+  targetUserIds?: string[];
   authorId: string;
   authorName: string;
   authorRole: string;
@@ -68,7 +70,19 @@ export async function getAnnouncements(category?: string): Promise<{
     orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
   });
 
-  const formatted: AnnouncementItem[] = list.map((item) => ({
+  // Filter list by target audience hierarchy and specific user assignment
+  const visibleList = list.filter((item: any) => {
+    if (isAdmin || item.authorId === userId) return true;
+    const tg = item.targetGroup || "ALL";
+    if (tg === "ALL") return true;
+    if (tg === "ALL_REGIONAL_DIRECTORS" && role === "regional_director") return true;
+    if (tg === "ALL_AREA_DIRECTORS" && ["area_director", "operations_director"].includes(role)) return true;
+    if (tg === "ALL_CHANNEL_PARTNERS" && role === "channel_partner") return true;
+    if (Array.isArray(item.targetUserIds) && item.targetUserIds.includes(userId)) return true;
+    return false;
+  });
+
+  const formatted: AnnouncementItem[] = visibleList.map((item: any) => ({
     id: item.id,
     title: item.title,
     category: item.category,
@@ -77,9 +91,11 @@ export async function getAnnouncements(category?: string): Promise<{
     attachmentName: item.attachmentName,
     attachmentSize: item.attachmentSize,
     isPinned: item.isPinned,
+    targetGroup: item.targetGroup || "ALL",
+    targetUserIds: item.targetUserIds || [],
     authorId: item.authorId,
-    authorName: item.author.name || item.author.email || "UKRBA Admin",
-    authorRole: item.author.role || "Administrator",
+    authorName: item.author?.name || item.author?.email || "UKRBA Admin",
+    authorRole: item.author?.role || "Administrator",
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   }));
@@ -92,6 +108,8 @@ export type CreateAnnouncementInput = {
   category: string;
   content: string;
   isPinned?: boolean;
+  targetGroup?: string;
+  targetUserIds?: string[];
   attachment?: {
     name: string;
     content: string; // base64 string
@@ -131,6 +149,8 @@ export async function createAnnouncement(input: CreateAnnouncementInput) {
       category: input.category || "Company News",
       content: input.content,
       isPinned: input.isPinned ?? false,
+      targetGroup: input.targetGroup || "ALL",
+      targetUserIds: input.targetUserIds || [],
       attachmentUrl,
       attachmentName,
       attachmentSize,
@@ -159,6 +179,8 @@ export async function updateAnnouncement(id: string, input: Partial<CreateAnnoun
   if (input.category !== undefined) data.category = input.category;
   if (input.content !== undefined) data.content = input.content;
   if (input.isPinned !== undefined) data.isPinned = input.isPinned;
+  if (input.targetGroup !== undefined) data.targetGroup = input.targetGroup;
+  if (input.targetUserIds !== undefined) data.targetUserIds = input.targetUserIds;
 
   if (input.attachment) {
     data.attachmentName = input.attachment.name;
@@ -200,20 +222,41 @@ export async function getUnreadAnnouncementsCount(): Promise<number> {
   const userId = session.user.id;
 
   try {
-    const totalAnnouncements = await prismadb.crm_Announcements.count({
+    const dbUser = await prismadb.users.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const role = dbUser?.role?.toLowerCase() || "";
+    const isAdmin = ["admin", "ceo"].includes(role);
+
+    const allAnnouncements = await prismadb.crm_Announcements.findMany({
       where: { deletedAt: null },
+      select: { id: true, authorId: true, targetGroup: true, targetUserIds: true },
     });
 
-    if (totalAnnouncements === 0) return 0;
+    const visibleAnnouncements = allAnnouncements.filter((item: any) => {
+      if (isAdmin || item.authorId === userId) return true;
+      const tg = item.targetGroup || "ALL";
+      if (tg === "ALL") return true;
+      if (tg === "ALL_REGIONAL_DIRECTORS" && role === "regional_director") return true;
+      if (tg === "ALL_AREA_DIRECTORS" && ["area_director", "operations_director"].includes(role)) return true;
+      if (tg === "ALL_CHANNEL_PARTNERS" && role === "channel_partner") return true;
+      if (Array.isArray(item.targetUserIds) && item.targetUserIds.includes(userId)) return true;
+      return false;
+    });
+
+    if (visibleAnnouncements.length === 0) return 0;
+
+    const visibleIds = visibleAnnouncements.map((a) => a.id);
 
     const readCount = await prismadb.crm_AnnouncementReads.count({
       where: {
         userId,
-        announcement: { deletedAt: null },
+        announcementId: { in: visibleIds },
       },
     });
 
-    const unread = totalAnnouncements - readCount;
+    const unread = visibleIds.length - readCount;
     return unread > 0 ? unread : 0;
   } catch (err) {
     console.error("Error getting unread announcements count:", err);

@@ -693,6 +693,8 @@ model crm_Announcements {
   attachmentSize Int?
   isPinned       Boolean   @default(false)
   authorId       String    @db.Uuid
+  targetGroup    String?   @default("ALL")
+  targetUserIds  String[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
@@ -703,6 +705,7 @@ model crm_Announcements {
   @@index([authorId])
   @@index([category])
   @@index([isPinned])
+  @@index([targetGroup])
   @@index([createdAt])
   @@index([deletedAt])
 }

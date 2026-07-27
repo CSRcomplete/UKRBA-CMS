@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ChevronRight,
   ArrowLeft,
+  Copy,
 } from "lucide-react";
 import { JitsiMeetRoom } from "./components/JitsiMeetRoom";
 import { MeetingSchedulerForm } from "./components/MeetingSchedulerForm";
@@ -261,16 +262,32 @@ function MeetingCard({
           {/* Embedded join */}
           <Button
             size="sm"
-            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium"
             onClick={() => onJoin(meeting.jitsiRoomId!)}
           >
             <Video className="h-4 w-4" />
             Join Now
           </Button>
+
+          {/* Copy meeting link button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/40"
+            onClick={() => {
+              const url = meeting.jitsiUrl || `https://meet.jit.si/${meeting.jitsiRoomId}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Meeting link copied to clipboard!");
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy Link
+          </Button>
+
           {/* External fallback */}
           {meeting.jitsiUrl && (
             <a href={meeting.jitsiUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1 text-xs">
+              <Button variant="outline" size="sm" className="gap-1 text-xs" title="Open meeting in new tab">
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             </a>
