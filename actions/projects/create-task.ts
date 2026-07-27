@@ -143,7 +143,7 @@ export const createTask = async (data: {
         section: sectionId.id,
         createdBy: session.user.id,
         updatedBy: session.user.id,
-        position: tasksCount > 0 ? tasksCount : 0,
+        position: BigInt(tasksCount > 0 ? tasksCount : 0),
         user: targetUserId,
         taskStatus: "ACTIVE",
       },
@@ -207,8 +207,8 @@ export const createTask = async (data: {
 
     revalidatePath("/[locale]/(routes)/projects", "page");
     return { success: true };
-  } catch (error) {
-    console.log("[CREATE_TASK]", error);
-    return { error: "Failed to create task" };
+  } catch (error: any) {
+    console.error("[CREATE_TASK]", error);
+    return { error: error?.message || "Failed to create task" };
   }
 };
