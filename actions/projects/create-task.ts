@@ -87,76 +87,21 @@ export const createTask = async (data: {
       where: { section: sectionId.id },
     });
 
-    const isGroupAssignment = [
-      "ALL_USERS",
-      "ALL_REGIONAL_DIRECTORS",
-      "ALL_AREA_DIRECTORS",
-      "ALL_CHANNEL_PARTNERS",
-    ].includes(user);
-
-    let recipientUsers: { id: string; email: string | null }[] = [];
-
-    if (user === "ALL_USERS") {
-      recipientUsers = await prismadb.users.findMany({
-        where: { userStatus: "ACTIVE" },
-        select: { id: true, email: true },
-      });
-    } else if (user === "ALL_REGIONAL_DIRECTORS") {
-      recipientUsers = await prismadb.users.findMany({
-        where: { userStatus: "ACTIVE", role: "regional_director" },
-        select: { id: true, email: true },
-      });
-    } else if (user === "ALL_AREA_DIRECTORS") {
-      recipientUsers = await prismadb.users.findMany({
-        where: { userStatus: "ACTIVE", role: { in: ["area_director", "operations_director"] } },
-        select: { id: true, email: true },
-      });
-    } else if (user === "ALL_CHANNEL_PARTNERS") {
-      recipientUsers = await prismadb.users.findMany({
-        where: { userStatus: "ACTIVE", role: "channel_partner" },
-        select: { id: true, email: true },
-      });
-    }
-
-    let createdTask: any = null;
-
-    if (isGroupAssignment && recipientUsers.length > 0) {
-      for (let i = 0; i < recipientUsers.length; i++) {
-        const r = recipientUsers[i];
-        const t = await prismadb.tasks.create({
-          data: {
-            v: 0,
-            priority,
-            title,
-            content,
-            dueDateAt,
-            section: sectionId.id,
-            createdBy: session.user.id,
-            updatedBy: session.user.id,
-            position: tasksCount + i,
-            user: r.id,
-            taskStatus: "ACTIVE",
-          },
-        });
-        if (!createdTask) createdTask = t;
-      }
-    } else {
-      createdTask = await prismadb.tasks.create({
-        data: {
-          v: 0,
-          priority,
-          title,
-          content,
-          dueDateAt,
-          section: sectionId.id,
-          createdBy: session.user.id,
-          updatedBy: session.user.id,
-          position: tasksCount > 0 ? tasksCount : 0,
-          user,
-          taskStatus: "ACTIVE",
-        },
-      });
-    }
+    const createdTask = await prismadb.tasks.create({
+      data: {
+        v: 0,
+        priority,
+        title,
+        content,
+        dueDateAt,
+        section: sectionId.id,
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+        position: tasksCount > 0 ? tasksCount : 0,
+        user,
+        taskStatus: "ACTIVE",
+      },
+    });
 
     if (targetBoard) {
       await prismadb.boards.update({

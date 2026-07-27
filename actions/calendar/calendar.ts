@@ -67,9 +67,24 @@ export async function getCalendarEvents(
   });
 
   // 3. Query Assigned Tasks (Tasks)
+  const role = (user.role || "").toLowerCase();
+  const allowedGroupTargets: string[] = ["ALL_USERS"];
+  if (role === "regional_director" || role === "admin" || role === "ceo") {
+    allowedGroupTargets.push("ALL_REGIONAL_DIRECTORS");
+  }
+  if (role === "area_director" || role === "operations_director" || role === "admin" || role === "ceo") {
+    allowedGroupTargets.push("ALL_AREA_DIRECTORS");
+  }
+  if (role === "channel_partner" || role === "admin" || role === "ceo") {
+    allowedGroupTargets.push("ALL_CHANNEL_PARTNERS");
+  }
+
   const tasks = await prismadb.tasks.findMany({
     where: {
-      user: userId,
+      OR: [
+        { user: userId },
+        { user: { in: allowedGroupTargets } },
+      ],
       dueDateAt: { gte: startDate, lte: endDate },
     },
     orderBy: { dueDateAt: "asc" },
