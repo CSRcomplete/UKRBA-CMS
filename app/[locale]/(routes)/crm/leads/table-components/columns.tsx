@@ -44,19 +44,6 @@ export const createColumns = (
     enableHiding: false,
   },
   {
-    accessorKey: "createdAt",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Expected close" />
-    ),
-    cell: ({ row }) => (
-      <div className="w-[80px]">
-        {moment(row.getValue("createdAt")).format("YY-MM-DD")}
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
     accessorKey: "updatedAt",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Last update" />
@@ -94,13 +81,11 @@ export const createColumns = (
     ),
 
     cell: ({ row }) => (
-      <div className="">
-        {
-          //@ts-ignore
-          //TODO: fix this
-          row.getValue("company") ?? "Unassigned"
-        }
-      </div>
+      <Link href={`/crm/leads/${row.original.id}`} className="font-semibold text-foreground hover:text-primary transition-colors">
+        <div>
+          {row.getValue("company") || "Unassigned"}
+        </div>
+      </Link>
     ),
     enableSorting: false,
     enableHiding: true,
@@ -112,9 +97,9 @@ export const createColumns = (
     ),
 
     cell: ({ row }) => (
-      <Link href={`/crm/leads/${row.original.id}`} data-testid="lead-row-name">
+      <Link href={`/crm/leads/${row.original.id}`} className="font-semibold text-primary hover:underline" data-testid="lead-row-name">
         <div>
-          {[row.original.firstName, row.original.lastName].filter(Boolean).join(" ")}
+          {[row.original.firstName, row.original.lastName].filter(Boolean).join(" ") || "Unnamed Lead"}
         </div>
       </Link>
     ),
@@ -127,7 +112,11 @@ export const createColumns = (
       <DataTableColumnHeader column={column} title="E-mail" />
     ),
 
-    cell: ({ row }) => <div className="w-[150px]">{row.getValue("email")}</div>,
+    cell: ({ row }) => (
+      <Link href={`/crm/leads/${row.original.id}`} className="w-[150px] text-muted-foreground hover:text-foreground transition-colors block truncate">
+        <div>{row.getValue("email") || "-"}</div>
+      </Link>
+    ),
     enableSorting: true,
     enableHiding: true,
   },
@@ -137,7 +126,11 @@ export const createColumns = (
       <DataTableColumnHeader column={column} title="Phone" />
     ),
 
-    cell: ({ row }) => <div className="w-[150px]">{row.getValue("phone")}</div>,
+    cell: ({ row }) => (
+      <Link href={`/crm/leads/${row.original.id}`} className="w-[150px] text-muted-foreground hover:text-foreground transition-colors block">
+        <div>{row.getValue("phone") || "-"}</div>
+      </Link>
+    ),
     enableSorting: false,
     enableHiding: false,
   },

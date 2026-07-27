@@ -187,6 +187,23 @@ export function LeadDataTable<TData, TValue>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (
+                          target.closest("input") ||
+                          target.closest("button") ||
+                          target.closest("[role='checkbox']") ||
+                          target.closest("a")
+                        ) {
+                          return;
+                        }
+                        //@ts-ignore
+                        if (row.original?.id) {
+                          //@ts-ignore
+                          router.push(`/crm/leads/${row.original.id}`);
+                        }
+                      }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>

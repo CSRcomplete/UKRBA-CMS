@@ -33,6 +33,8 @@ interface LeadsViewProps {
   crmData: CrmData;
 }
 
+import { Upload } from "lucide-react";
+
 const LeadsView = ({ data, crmData }: LeadsViewProps) => {
   const { accounts, leadSources, leadStatuses, leadTypes } = crmData;
   const [open, setOpen] = useState(false);
@@ -41,7 +43,7 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between">
           <div>
             <CardTitle>
               <Link href="/crm/leads" className="hover:underline">
@@ -49,8 +51,16 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
               </Link>
             </CardTitle>
           </div>
+          <div className="flex items-center gap-2">
+            <Link href="/crm/leads/upload">
+              <Button size="sm" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                <span>Upload Leads</span>
+              </Button>
+            </Link>
+          </div>
         </div>
-        <Separator />
+        <Separator className="mt-3" />
       </CardHeader>
       <CardContent>
         {!data ||
