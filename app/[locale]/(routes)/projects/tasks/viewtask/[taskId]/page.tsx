@@ -11,6 +11,8 @@ import { Separator } from "@/components/ui/separator";
 
 import { TeamConversations } from "./components/team-conversation";
 import { TaskDocumentRepositorySection } from "./components/TaskDocumentRepositorySection";
+import { EditableTaskDescription } from "./components/EditableTaskDescription";
+import { TaskChecklistSection } from "./components/TaskChecklistSection";
 
 import TaskViewActions from "./components/TaskViewActions";
 import {
@@ -63,90 +65,92 @@ const TaskPage = async (props: TaskPageProps) => {
           </pre> */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle>{task.title}</CardTitle>
-              <CardDescription>{task.content}</CardDescription>
+              <CardTitle className="text-2xl font-bold">{task.title}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <Calendar className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Date created
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
-                    </p>
+            <CardContent className="space-y-6">
+              {/* Editable Trello-Style Task Description */}
+              <EditableTaskDescription
+                taskId={task.id}
+                initialContent={task.content}
+              />
+
+              {/* Trello-Style Task Checklist */}
+              <TaskChecklistSection
+                taskId={task.id}
+                initialChecklist={(task.tags as any)?.checklist || []}
+              />
+
+              <div className="pt-2 border-t">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <Calendar className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Date created
+                      </p>
+                      <p className="text-sm font-medium">
+                        {moment(task.createdAt).format("YYYY-MM-DD HH:mm")}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <Calendar className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">Date due</p>
-                    <p className="text-sm text-muted-foreground">
-                      {moment(task.dueDateAt).format("YYYY-MM-DD HH:mm")}
-                    </p>
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <Calendar className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">Date due</p>
+                      <p className="text-sm font-medium">
+                        {moment(task.dueDateAt).format("YYYY-MM-DD HH:mm")}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <Calendar className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Last modified
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {moment(task.lastEditedAt).format("YYYY-MM-DD HH:mm:ss")}
-                    </p>
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <Shield className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">Priority</p>
+                      <Badge
+                        variant={
+                          task.priority === "high" ? `destructive` : `outline`
+                        }
+                      >
+                        {task.priority}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <Shield className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">Priority</p>
-                    <Badge
-                      variant={
-                        task.priority === "high" ? `destructive` : `outline`
-                      }
-                    >
-                      {task.priority}
-                    </Badge>
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <Shield className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">Status</p>
+                      <Badge
+                        variant={
+                          task.taskStatus === "COMPLETE"
+                            ? `destructive`
+                            : `outline`
+                        }
+                      >
+                        {task.taskStatus}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <Shield className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">Status</p>
-                    <Badge
-                      variant={
-                        task.taskStatus === "COMPLETE"
-                          ? `destructive`
-                          : `outline`
-                      }
-                    >
-                      {task.taskStatus}
-                    </Badge>
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <User className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Assigned to
+                      </p>
+                      <p className="text-sm font-medium">
+                        {task.assigned_user?.name || "Not assigned"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <User className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Assigned to
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {task.assigned_user?.name || "Not assigned"}
-                    </p>
-                  </div>
-                </div>
-                <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
-                  <User className="mt-px h-5 w-5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      Created by
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {creatorUser?.name || "Unknown"}
-                    </p>
+                  <div className="flex items-start space-x-3 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                    <User className="mt-0.5 h-4.5 w-4.5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Created by
+                      </p>
+                      <p className="text-sm font-medium">
+                        {creatorUser?.name || "Unknown"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
