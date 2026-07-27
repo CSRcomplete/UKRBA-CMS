@@ -92,13 +92,15 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
   });
 
   const onSubmit = async (data: NewLeadFormValues) => {
+    const sanitizeUuid = (val?: string | null) => (val && val.trim() !== "" ? val.trim() : undefined);
+
     const result = await updateLead({
       ...data,
-      lead_source_id: data.lead_source_id ?? undefined,
-      lead_status_id: data.lead_status_id ?? undefined,
-      lead_type_id: data.lead_type_id ?? undefined,
-      assigned_to: data.assigned_to ?? undefined,
-      accountIDs: data.accountsIDs ?? undefined,
+      lead_source_id: sanitizeUuid(data.lead_source_id),
+      lead_status_id: sanitizeUuid(data.lead_status_id),
+      lead_type_id: sanitizeUuid(data.lead_type_id),
+      assigned_to: sanitizeUuid(data.assigned_to),
+      accountIDs: sanitizeUuid(data.accountsIDs),
       change_reason: data.change_reason || undefined,
     });
     if (result?.error) {

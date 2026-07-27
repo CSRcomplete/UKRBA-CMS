@@ -84,35 +84,42 @@ export const updateLead = async (data: {
       }
     }
 
+    const cleanUuid = (val?: string | null) => (val && val.trim() !== "" ? val.trim() : null);
+
+    const leadSourceId = cleanUuid(lead_source_id);
+    const leadStatusId = cleanUuid(lead_status_id);
+    const leadTypeId = cleanUuid(lead_type_id);
+    const accountId = cleanUuid(accountIDs);
+
     const lead = await prismadb.crm_Leads.update({
       where: { id },
       data: {
         v: 1,
         updatedBy: userId,
-        firstName,
+        firstName: firstName || null,
         lastName: lastName ? lastName : (before?.lastName || "Lead"),
-        company,
-        jobTitle,
-        email,
-        phone,
-        website,
-        description,
-        lead_source_id: lead_source_id || undefined,
-        lead_status_id: lead_status_id || undefined,
-        lead_type_id: lead_type_id || undefined,
-        refered_by,
-        campaign,
+        company: company || null,
+        jobTitle: jobTitle || null,
+        email: email || null,
+        phone: phone || null,
+        website: website || null,
+        description: description || null,
+        lead_source_id: leadSourceId,
+        lead_status_id: leadStatusId,
+        lead_type_id: leadTypeId,
+        refered_by: refered_by || null,
+        campaign: campaign || null,
         assigned_to: targetAssigneeId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        accountsIDs: accountIDs,
+        accountsIDs: accountId,
       },
     });
 
     // Handle lead conversion to member record
-    if (lead_status_id) {
+    if (leadStatusId) {
       const statusRecord = await prismadb.crm_Lead_Statuses.findUnique({
-        where: { id: lead_status_id },
+        where: { id: leadStatusId },
       });
       if (statusRecord && statusRecord.name === "Lead converted or closed") {
         const existingMember = await prismadb.crm_Members.findUnique({
@@ -150,23 +157,27 @@ export const updateLead = async (data: {
     }
 
     if (assigned_to && assigned_to !== userId) {
-      const notifyRecipient = await prismadb.users.findFirst({
-        where: { id: assigned_to },
-      });
-
-      if (notifyRecipient) {
-        await sendEmail({
-          from: process.env.EMAIL_FROM as string,
-          to: notifyRecipient.email || "info@softbase.cz",
-          subject:
-            notifyRecipient.userLanguage === "en"
-              ? `New lead ${firstName} ${lastName} has been added to the system and assigned to you.`
-              : `Nová příležitost ${firstName} ${lastName} byla přidána do systému a přidělena vám.`,
-          text:
-            notifyRecipient.userLanguage === "en"
-              ? `New lead ${firstName} ${lastName} has been added to the system and assigned to you. You can click here for detail: ${process.env.NEXT_PUBLIC_APP_URL}/crm/leads/${lead.id}`
-              : `Nová příležitost ${firstName} ${lastName} byla přidána do systému a přidělena vám. Detaily naleznete zde: ${process.env.NEXT_PUBLIC_APP_URL}/crm/leads/${lead.id}`,
+      try {
+        const notifyRecipient = await prismadb.users.findFirst({
+          where: { id: assigned_to },
         });
+
+        if (notifyRecipient && notifyRecipient.email && process.env.EMAIL_FROM) {
+          await sendEmail({
+            from: process.env.EMAIL_FROM as string,
+            to: notifyRecipient.email,
+            subject:
+              notifyRecipient.userLanguage === "en"
+                ? `New lead ${firstName} ${lastName} has been added to the system and assigned to you.`
+                : `Nová příležitost ${firstName} ${lastName} byla přidána do systému a přidělena vám.`,
+            text:
+              notifyRecipient.userLanguage === "en"
+                ? `New lead ${firstName} ${lastName} has been added to the system and assigned to you. You can click here for detail: ${process.env.NEXT_PUBLIC_APP_URL}/crm/leads/${lead.id}`
+                : `Nová příležitost ${firstName} ${lastName} byla přidána do systému a přidělena vám. Detaily naleznete zde: ${process.env.NEXT_PUBLIC_APP_URL}/crm/leads/${lead.id}`,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to send lead assignment email:", e);
       }
     }
 
