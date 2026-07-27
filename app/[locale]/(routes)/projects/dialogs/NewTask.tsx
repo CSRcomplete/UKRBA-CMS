@@ -65,7 +65,7 @@ const NewTaskDialog = ({ boards }: Props) => {
   const formSchema = z.object({
     title: z.string().min(3).max(255),
     user: z.string().min(3).max(255),
-    board: z.string().min(3).max(255),
+    board: z.string().optional().nullable().or(z.literal("")),
     priority: z.string().min(3).max(10),
     content: z.string().min(3).max(500),
     dueDateAt: z.date(),
@@ -230,33 +230,6 @@ const NewTaskDialog = ({ boards }: Props) => {
                           disabled={isLoading}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="board"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("newTask.projectLabel")}</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t("newTask.projectPlaceholder")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {boards.map((board: any) => (
-                            <SelectItem key={board.id} value={board.id}>
-                              {board.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

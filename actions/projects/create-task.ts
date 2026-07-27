@@ -14,7 +14,7 @@ import {
 export const createTask = async (data: {
   title: string;
   user: string;
-  board: string;
+  board?: string | null;
   priority: string;
   content: string;
   dueDateAt?: Date;
@@ -33,24 +33,55 @@ export const createTask = async (data: {
 
   const { title, user, board, priority, content, dueDateAt } = data;
 
-  if (!title || !user || !board || !priority || !content) {
+  if (!title || !user || !priority || !content) {
     return { error: "Missing one of the task data" };
   }
 
+  // Resolve target board if not explicitly provided
+  let targetBoard = board && board.trim() !== "" ? board.trim() : null;
+
+  if (!targetBoard) {
+    const firstBoard = await prismadb.boards.findFirst({
+      orderBy: { createdAt: "asc" },
+    });
+    if (firstBoard) {
+      targetBoard = firstBoard.id;
+    } else {
+      const newBoard = await prismadb.boards.create({
+        data: {
+          v: 0,
+          title: "General Tasks",
+          description: "General Tasks Board",
+          user: session.user.id,
+        },
+      });
+      targetBoard = newBoard.id;
+    }
+  }
+
   try {
-    await assertCanWriteBoard(authzUser, board);
+    await assertCanWriteBoard(authzUser, targetBoard);
   } catch (e) {
     if (e instanceof AuthorizationError) return { error: "Forbidden" };
     throw e;
   }
 
   try {
-    const sectionId = await prismadb.sections.findFirst({
-      where: { board },
+    let sectionId = await prismadb.sections.findFirst({
+      where: { board: targetBoard },
       orderBy: { position: "asc" },
     });
 
-    if (!sectionId) return { error: "No section found" };
+    if (!sectionId) {
+      sectionId = await prismadb.sections.create({
+        data: {
+          v: 0,
+          title: "To Do",
+          board: targetBoard,
+          position: 0,
+        },
+      });
+    }
 
     const tasksCount = await prismadb.tasks.count({
       where: { section: sectionId.id },
@@ -72,10 +103,12 @@ export const createTask = async (data: {
       },
     });
 
-    await prismadb.boards.update({
-      where: { id: board },
-      data: { updatedAt: new Date() },
-    });
+    if (targetBoard) {
+      await prismadb.boards.update({
+        where: { id: targetBoard },
+        data: { updatedAt: new Date() },
+      });
+    }
 
     // Send email notification if assigning to a different user
     if (user !== session.user.id) {
@@ -92,9 +125,11 @@ export const createTask = async (data: {
             where: { id: user },
           });
 
-          const boardData = await prismadb.boards.findUnique({
-            where: { id: board },
-          });
+          const boardData = targetBoard
+            ? await prismadb.boards.findUnique({
+                where: { id: targetBoard },
+              })
+            : null;
 
           if (notifyRecipient?.email) {
             await resend.emails.send({

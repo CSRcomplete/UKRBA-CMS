@@ -65,7 +65,7 @@ const UpdateTaskDialog = ({
     dueDateAt: z.date(),
     priority: z.string().min(3).max(10),
     content: z.string().min(3).max(500),
-    boardId: z.string().min(3).max(255),
+    boardId: z.string().optional().or(z.literal("")),
   });
 
   type UpdatedTaskForm = z.infer<typeof formSchema>;
@@ -78,7 +78,7 @@ const UpdateTaskDialog = ({
       dueDateAt: initialData.dueDateAt,
       priority: initialData.priority,
       content: initialData.content,
-      boardId: boardId,
+      boardId: boardId || undefined,
     },
   });
 
@@ -99,6 +99,7 @@ const UpdateTaskDialog = ({
       const result = await updateTask({
         taskId: initialData.id,
         ...data,
+        boardId: data.boardId || undefined,
       });
       if (result?.error) {
         toast.error(result.error);
