@@ -10,7 +10,7 @@ import { logOwnershipChange } from "@/lib/ownership";
 export const updateLead = async (data: {
   id: string;
   firstName?: string | null;
-  lastName: string;
+  lastName?: string | null;
   company?: string | null;
   jobTitle?: string | null;
   email?: string | null;
@@ -90,7 +90,7 @@ export const updateLead = async (data: {
         v: 1,
         updatedBy: userId,
         firstName,
-        lastName,
+        lastName: lastName ? lastName : (before?.lastName || "Lead"),
         company,
         jobTitle,
         email,
