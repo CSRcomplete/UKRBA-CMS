@@ -11,7 +11,8 @@ import {
   AuthorizationError,
 } from "@/lib/authz";
 
-import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP, ensureGroupSystemUser } from "@/lib/constants/group-assignments";
+import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP } from "@/lib/constants/group-assignments";
+import { ensureGroupSystemUser } from "@/actions/projects/ensure-group-system-user";
 
 export const createTask = async (data: {
   title: string;
