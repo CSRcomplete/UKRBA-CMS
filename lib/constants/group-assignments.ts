@@ -1,6 +1,20 @@
 export const GROUP_ASSIGNMENTS = [
-  { id: "ALL_USERS", name: "👥 All Users (Everyone)", avatar: null },
-  { id: "ALL_REGIONAL_DIRECTORS", name: "👔 All Regional Directors", avatar: null },
-  { id: "ALL_AREA_DIRECTORS", name: "🏢 All Area Managers", avatar: null },
-  { id: "ALL_CHANNEL_PARTNERS", name: "🤝 All Channel Partners", avatar: null },
+  { id: "00000000-0000-0000-0000-000000000001", name: "👥 All Users (Everyone)", avatar: null },
+  { id: "00000000-0000-0000-0000-000000000002", name: "👔 All Regional Directors", avatar: null },
+  { id: "00000000-0000-0000-0000-000000000003", name: "🏢 All Area Managers", avatar: null },
+  { id: "00000000-0000-0000-0000-000000000004", name: "🤝 All Channel Partners", avatar: null },
 ];
+
+export const GROUP_TARGET_UUIDS = {
+  ALL_USERS: "00000000-0000-0000-0000-000000000001",
+  ALL_REGIONAL_DIRECTORS: "00000000-0000-0000-0000-000000000002",
+  ALL_AREA_DIRECTORS: "00000000-0000-0000-0000-000000000003",
+  ALL_CHANNEL_PARTNERS: "00000000-0000-0000-0000-000000000004",
+};
+
+export const LEGACY_KEY_MAP: Record<string, string> = {
+  ALL_USERS: "00000000-0000-0000-0000-000000000001",
+  ALL_REGIONAL_DIRECTORS: "00000000-0000-0000-0000-000000000002",
+  ALL_AREA_DIRECTORS: "00000000-0000-0000-0000-000000000003",
+  ALL_CHANNEL_PARTNERS: "00000000-0000-0000-0000-000000000004",
+};

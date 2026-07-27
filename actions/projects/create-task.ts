@@ -11,6 +11,29 @@ import {
   AuthorizationError,
 } from "@/lib/authz";
 
+import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP } from "@/lib/constants/group-assignments";
+
+async function ensureGroupSystemUser(rawUserId: string) {
+  const targetId = LEGACY_KEY_MAP[rawUserId] || rawUserId;
+  const group = GROUP_ASSIGNMENTS.find((g) => g.id === targetId);
+
+  if (group) {
+    await prismadb.users.upsert({
+      where: { id: group.id },
+      update: { name: group.name },
+      create: {
+        id: group.id,
+        v: 0,
+        email: `group_${group.id.slice(0, 8)}@system.local`,
+        name: group.name,
+        userStatus: "ACTIVE",
+      },
+    });
+  }
+
+  return targetId;
+}
+
 export const createTask = async (data: {
   title: string;
   user: string;
@@ -87,6 +110,8 @@ export const createTask = async (data: {
       where: { section: sectionId.id },
     });
 
+    const targetUserId = await ensureGroupSystemUser(user);
+
     const createdTask = await prismadb.tasks.create({
       data: {
         v: 0,
@@ -98,7 +123,7 @@ export const createTask = async (data: {
         createdBy: session.user.id,
         updatedBy: session.user.id,
         position: tasksCount > 0 ? tasksCount : 0,
-        user,
+        user: targetUserId,
         taskStatus: "ACTIVE",
       },
     });
