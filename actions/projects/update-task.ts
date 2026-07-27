@@ -11,6 +11,29 @@ import {
   AuthorizationError,
 } from "@/lib/authz";
 
+import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP } from "@/lib/constants/group-assignments";
+
+async function ensureGroupSystemUser(rawUserId: string) {
+  const targetId = LEGACY_KEY_MAP[rawUserId] || rawUserId;
+  const group = GROUP_ASSIGNMENTS.find((g) => g.id === targetId);
+
+  if (group) {
+    await prismadb.users.upsert({
+      where: { id: group.id },
+      update: { name: group.name },
+      create: {
+        id: group.id,
+        v: 0,
+        email: `group_${group.id.slice(0, 8)}@system.local`,
+        name: group.name,
+        userStatus: "ACTIVE",
+      },
+    });
+  }
+
+  return targetId;
+}
+
 export const updateTask = async (data: {
   taskId: string;
   title: string;
@@ -57,15 +80,17 @@ export const updateTask = async (data: {
   }
 
   try {
+    const targetUserId = await ensureGroupSystemUser(user);
+
     const task = await prismadb.tasks.update({
       where: { id: taskId },
       data: {
         priority,
         title,
         content,
-        updatedBy: user,
-        dueDateAt,
-        user,
+        updatedBy: session.user.id,
+        dueDateAt: dueDateAt ? new Date(dueDateAt) : undefined,
+        user: targetUserId,
       },
     });
 
@@ -77,7 +102,7 @@ export const updateTask = async (data: {
     }
 
     // Send email notification if assigning to a different user
-    if (user !== session.user.id && resolvedBoardId) {
+    if (targetUserId !== session.user.id && resolvedBoardId) {
       try {
         let resend;
         try {
@@ -88,14 +113,14 @@ export const updateTask = async (data: {
 
         if (resend) {
           const notifyRecipient = await prismadb.users.findUnique({
-            where: { id: user },
+            where: { id: targetUserId },
           });
 
           const boardData = await prismadb.boards.findUnique({
             where: { id: resolvedBoardId },
           });
 
-          if (notifyRecipient?.email) {
+          if (notifyRecipient?.email && !notifyRecipient.email.endsWith("@system.local")) {
             await resend.emails.send({
               from:
                 process.env.NEXT_PUBLIC_APP_NAME +

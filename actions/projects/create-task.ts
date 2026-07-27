@@ -154,7 +154,7 @@ export const createTask = async (data: {
     }
 
     // Send email notification if assigning to a different user
-    if (user !== session.user.id && createdTask) {
+    if (targetUserId !== session.user.id && createdTask) {
       try {
         let resend;
         try {
@@ -165,7 +165,7 @@ export const createTask = async (data: {
 
         if (resend) {
           const notifyRecipient = await prismadb.users.findUnique({
-            where: { id: user },
+            where: { id: targetUserId },
           });
 
           const boardData = targetBoard
@@ -174,7 +174,7 @@ export const createTask = async (data: {
               })
             : null;
 
-          if (notifyRecipient?.email) {
+          if (notifyRecipient?.email && !notifyRecipient.email.endsWith("@system.local")) {
             await resend.emails.send({
               from:
                 process.env.NEXT_PUBLIC_APP_NAME +
