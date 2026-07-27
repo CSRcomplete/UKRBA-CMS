@@ -43,32 +43,63 @@ export async function getCalendarEvents(
   const user = await requireSession();
   const userId = user.id as string;
 
-  const startDate = new Date(startDateStr);
-  const endDate = new Date(endDateStr);
+  const dbUser = await prismadb.users.findUnique({
+    where: { id: userId },
+    select: { role: true, email: true },
+  });
 
-  // 1. Query Appointments
+  const role = (dbUser?.role || user.role || "").toLowerCase();
+  const isLeadership = ["admin", "ceo", "operations_director", "regional_director", "area_director", "manager"].includes(role);
+
+  let startDate: Date;
+  let endDate: Date;
+
+  if (startDateStr) {
+    startDate = new Date(startDateStr);
+  } else {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+  }
+
+  if (endDateStr) {
+    endDate = new Date(endDateStr);
+  } else {
+    endDate = new Date();
+    endDate.setDate(endDate.getDate() + 60);
+  }
+
+  // 1. Query Appointments (Overlapping date range)
+  const appointmentWhere: any = {
+    deletedAt: null,
+    startTime: { lte: endDate },
+    endTime: { gte: startDate },
+  };
+
+  if (!isLeadership) {
+    appointmentWhere.userId = userId;
+  }
+
   const appointments = await prismadb.crm_Appointments.findMany({
-    where: {
-      userId,
-      deletedAt: null,
-      startTime: { gte: startDate },
-      endTime: { lte: endDate },
-    },
+    where: appointmentWhere,
     orderBy: { startTime: "asc" },
   });
 
   // 2. Query CRM Meetings/Activities (crm_Activities)
+  const activityWhere: any = {
+    deletedAt: null,
+    date: { gte: startDate, lte: endDate },
+  };
+
+  if (!isLeadership) {
+    activityWhere.createdBy = userId;
+  }
+
   const activities = await prismadb.crm_Activities.findMany({
-    where: {
-      createdBy: userId,
-      deletedAt: null,
-      date: { gte: startDate, lte: endDate },
-    },
+    where: activityWhere,
     orderBy: { date: "asc" },
   });
 
   // 3. Query Assigned Tasks (Tasks)
-  const role = (user.role || "").toLowerCase();
   const allowedGroupTargets: string[] = ["ALL_USERS", GROUP_TARGET_UUIDS.ALL_USERS];
   if (role === "regional_director" || role === "admin" || role === "ceo") {
     allowedGroupTargets.push("ALL_REGIONAL_DIRECTORS", GROUP_TARGET_UUIDS.ALL_REGIONAL_DIRECTORS);
@@ -80,14 +111,19 @@ export async function getCalendarEvents(
     allowedGroupTargets.push("ALL_CHANNEL_PARTNERS", GROUP_TARGET_UUIDS.ALL_CHANNEL_PARTNERS);
   }
 
+  const taskWhere: any = {
+    dueDateAt: { gte: startDate, lte: endDate },
+  };
+
+  if (!isLeadership) {
+    taskWhere.OR = [
+      { user: userId },
+      { user: { in: allowedGroupTargets } },
+    ];
+  }
+
   const tasks = await prismadb.tasks.findMany({
-    where: {
-      OR: [
-        { user: userId },
-        { user: { in: allowedGroupTargets } },
-      ],
-      dueDateAt: { gte: startDate, lte: endDate },
-    },
+    where: taskWhere,
     orderBy: { dueDateAt: "asc" },
   });
 
