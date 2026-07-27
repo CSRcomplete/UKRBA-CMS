@@ -14,6 +14,7 @@ import {
   Users,
   Video,
   Megaphone,
+  Upload,
   Briefcase,
   ArrowRight,
 } from "lucide-react";
@@ -514,7 +515,7 @@ const DashboardPage = async () => {
           {/* 7. News & Announcements */}
           <Link
             href="/news"
-            className="group relative overflow-hidden rounded-xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-violet-500/60 sm:col-span-2 lg:col-span-2"
+            className="group relative overflow-hidden rounded-xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-violet-500/60"
           >
             <div className="flex items-center justify-between">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-600 text-white shadow-md transition-transform group-hover:scale-110">
@@ -528,6 +529,27 @@ const DashboardPage = async () => {
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
                 Official UKRBA notices, staff updates, announcements & reports.
+              </p>
+            </div>
+          </Link>
+
+          {/* 8. Upload Leads */}
+          <Link
+            href="/crm/leads/upload"
+            className="group relative overflow-hidden rounded-xl border border-teal-200 dark:border-teal-900/40 bg-gradient-to-br from-teal-500/10 via-background to-teal-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-teal-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Upload className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-teal-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-teal-600 transition-colors">
+                8. Upload Leads
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Upload business leads individually or in bulk via CSV.
               </p>
             </div>
           </Link>
