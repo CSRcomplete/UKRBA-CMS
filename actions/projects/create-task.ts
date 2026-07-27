@@ -38,8 +38,8 @@ export const createTask = async (data: {
   title: string;
   user: string;
   board?: string | null;
-  priority: string;
-  content: string;
+  priority?: string | null;
+  content?: string | null;
   dueDateAt?: Date;
   account?: string;
 }) => {
@@ -56,9 +56,12 @@ export const createTask = async (data: {
 
   const { title, user, board, priority, content, dueDateAt } = data;
 
-  if (!title || !user || !priority || !content) {
-    return { error: "Missing one of the task data" };
+  if (!title || !title.trim() || !user || !user.trim()) {
+    return { error: "Please provide a task title and assign it to a user or group." };
   }
+
+  const finalPriority = priority && priority.trim() !== "" ? priority.trim() : "medium";
+  const finalContent = content && content.trim() !== "" ? content.trim() : title.trim();
 
   // Resolve target board if not explicitly provided
   let targetBoard = board && board.trim() !== "" ? board.trim() : null;
@@ -133,9 +136,9 @@ export const createTask = async (data: {
     const createdTask = await prismadb.tasks.create({
       data: {
         v: 0,
-        priority: priority || "normal",
-        title,
-        content: content || title,
+        priority: finalPriority,
+        title: title.trim(),
+        content: finalContent,
         dueDateAt: parsedDueDate,
         section: sectionId.id,
         createdBy: session.user.id,

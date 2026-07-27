@@ -63,12 +63,12 @@ const NewTaskDialog = ({ boards }: Props) => {
   const c = useTranslations("Common");
 
   const formSchema = z.object({
-    title: z.string().min(3).max(255),
-    user: z.string().min(3).max(255),
-    board: z.string().optional().nullable().or(z.literal("")),
-    priority: z.string().min(3).max(10),
-    content: z.string().min(3).max(500),
-    dueDateAt: z.date(),
+    title: z.string().min(1, "Title is required").max(255),
+    user: z.string().min(1, "Assigned user is required").max(255),
+    board: z.string().optional(),
+    priority: z.string().optional(),
+    content: z.string().optional(),
+    dueDateAt: z.date().optional(),
   });
 
   type NewAccountFormValues = z.infer<typeof formSchema>;
@@ -76,6 +76,11 @@ const NewTaskDialog = ({ boards }: Props) => {
   const form = useForm<NewAccountFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      title: "",
+      user: "",
+      board: "",
+      priority: "medium",
+      content: "",
       dueDateAt: new Date(),
     },
   });
@@ -169,6 +174,7 @@ const NewTaskDialog = ({ boards }: Props) => {
                           disabled={isLoading}
                           placeholder={t("newTask.descPlaceholder")}
                           {...field}
+                          value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -242,7 +248,8 @@ const NewTaskDialog = ({ boards }: Props) => {
                       <FormLabel>{c("priorityLabel")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        defaultValue={field.value || "medium"}
+                        value={field.value || "medium"}
                       >
                         <FormControl>
                           <SelectTrigger>
