@@ -88,8 +88,10 @@ export const getMeetings = async () => {
 
   return activities.map((activity) => {
     const meta = activity.metadata as Record<string, any> | null;
+    const meetingType: "video" | "phone" | "in_person" = meta?.meetingType || "video";
+    const location: string | undefined = meta?.location;
     const jitsiRoomId: string | undefined = meta?.jitsiRoomId;
-    const jitsiUrl = jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : (meta?.meetingLink ?? null);
+    const jitsiUrl = meetingType === "video" ? (jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : (meta?.meetingLink ?? null)) : null;
 
     const invitees = activity.links
       .map((link) => {
@@ -105,6 +107,8 @@ export const getMeetings = async () => {
     return {
       ...activity,
       invitees,
+      meetingType,
+      location,
       jitsiRoomId,
       jitsiUrl,
     };
@@ -164,11 +168,13 @@ export const scheduleMeeting = async (data: {
   duration?: number;
   inviteeType: "user" | "lead";
   inviteeId: string;
+  meetingType?: "video" | "phone" | "in_person";
+  location?: string;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  const { title, description, date, duration, inviteeType, inviteeId } = data;
+  const { title, description, date, duration, inviteeType, inviteeId, meetingType = "video", location } = data;
 
   if (!title || !date || !inviteeId) {
     return { error: "Missing required fields" };
@@ -191,9 +197,10 @@ export const scheduleMeeting = async (data: {
     }
   }
 
-  // Auto-generate Jitsi room
-  const jitsiRoomId = generateJitsiRoomId(title);
-  const jitsiUrl = getJitsiMeetUrl(jitsiRoomId);
+  // Auto-generate Jitsi room only for video meetings
+  const isVideo = meetingType === "video";
+  const jitsiRoomId = isVideo ? generateJitsiRoomId(title) : undefined;
+  const jitsiUrl = isVideo && jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : undefined;
 
   try {
     const activity = await prismadb.crm_Activities.create({
@@ -206,7 +213,11 @@ export const scheduleMeeting = async (data: {
         status: "scheduled",
         createdBy: session.user.id,
         updatedBy: session.user.id,
-        metadata: { jitsiRoomId, meetingLink: jitsiUrl },
+        metadata: {
+          meetingType,
+          location: location || null,
+          ...(isVideo ? { jitsiRoomId, meetingLink: jitsiUrl } : {}),
+        },
       },
     });
 
@@ -258,28 +269,64 @@ export const scheduleMeeting = async (data: {
             weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
           });
 
+          let typeLabel = "Video Meeting";
+          let headerEmoji = "🎥";
+          if (meetingType === "phone") {
+            typeLabel = "Phone Call Meeting";
+            headerEmoji = "📞";
+          } else if (meetingType === "in_person") {
+            typeLabel = "Face-to-Face Meeting";
+            headerEmoji = "🤝";
+          }
+
+          let locationLineHtml = "";
+          let locationLineText = "";
+          if (meetingType === "video" && jitsiUrl) {
+            locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Video Room:</strong> <a href="${jitsiUrl}" target="_blank" style="color: #3182ce; text-decoration: underline; font-weight: bold;">Click here to join</a></li>`;
+            locationLineText = `Jitsi Meeting Room: ${jitsiUrl}`;
+          } else if (meetingType === "phone") {
+            locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Phone Details:</strong> ${location || "Phone call will be initiated at scheduled time."}</li>`;
+            locationLineText = `Phone Details: ${location || "Phone call will be initiated at scheduled time."}`;
+          } else if (meetingType === "in_person") {
+            locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Location / Venue:</strong> ${location || "Location to be confirmed."}</li>`;
+            locationLineText = `Location / Venue: ${location || "Location to be confirmed."}`;
+          }
+
+          let tipBoxHtml = "";
+          if (meetingType === "video") {
+            tipBoxHtml = `<p style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2b6cb0;">
+              💡 <strong>No software needed.</strong> Click the meeting link to join directly in your browser using Jitsi Meet — free and secure.
+            </p>`;
+          } else if (meetingType === "phone") {
+            tipBoxHtml = `<p style="background: #f7fafc; border-left: 4px solid #4a5568; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2d3748;">
+              📞 <strong>Phone Call Scheduled.</strong> Please ensure your phone is reachable at the designated meeting time.
+            </p>`;
+          } else {
+            tipBoxHtml = `<p style="background: #f0fff4; border-left: 4px solid #38a169; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #276749;">
+              🤝 <strong>Face-to-Face Meeting.</strong> We look forward to meeting with you in person!
+            </p>`;
+          }
+
           await resend.emails.send({
             from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
             to: inviteeEmail,
-            subject: `Meeting with ${creatorName}`,
-            text: `Hello,\n\nA new video meeting has been scheduled with you.\n\nMeeting with: ${hostString}\nDate & Time: ${dateFormatted}\nDuration: ${duration || 30} minutes\nJitsi Meeting Room: ${jitsiUrl}\n\nAgenda:\n${description || "No agenda provided."}\n\nClick the link above to join the video call directly from your browser — no software installation required.\n\nBest regards,\nUKRBA Team`,
+            subject: `${typeLabel} with ${creatorName}`,
+            text: `Hello,\n\nA new ${typeLabel.toLowerCase()} has been scheduled with you.\n\nMeeting with: ${hostString}\nDate & Time: ${dateFormatted}\nDuration: ${duration || 30} minutes\n${locationLineText}\n\nAgenda:\n${description || "No agenda provided."}\n\nBest regards,\nUKRBA Team`,
             html: `
               <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #1a365d; margin-top: 0;">🎥 New Video Meeting Scheduled</h2>
+                <h2 style="color: #1a365d; margin-top: 0;">${headerEmoji} New ${typeLabel} Scheduled</h2>
                 <p>Hello,</p>
-                <p>A new video meeting has been scheduled with you via UKRBA CMS.</p>
+                <p>A new ${typeLabel.toLowerCase()} has been scheduled with you via UKRBA CMS.</p>
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
                 <ol style="padding-left: 20px; margin: 20px 0;">
                   <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${hostString}</li>
                   <li style="margin-bottom: 10px;"><strong>Date & Time:</strong> ${dateFormatted}</li>
                   <li style="margin-bottom: 10px;"><strong>Duration:</strong> ${duration || 30} minutes</li>
-                  <li style="margin-bottom: 10px;"><strong>Video Room:</strong> <a href="${jitsiUrl}" target="_blank" style="color: #3182ce; text-decoration: underline; font-weight: bold;">Click here to join</a></li>
+                  ${locationLineHtml}
                 </ol>
-                ${description ? `<p><strong>Agenda:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
+                ${description ? `<p><strong>Agenda / Notes:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                <p style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2b6cb0;">
-                  💡 <strong>No software needed.</strong> Click the meeting link to join directly in your browser using Jitsi Meet — free and secure.
-                </p>
+                ${tipBoxHtml}
                 <p style="font-size: 0.875rem; color: #718096; margin-bottom: 0;">Best regards,<br />UKRBA Team</p>
               </div>
             `,
@@ -291,7 +338,7 @@ export const scheduleMeeting = async (data: {
     }
 
     revalidatePath("/[locale]/(routes)/crm/meetings", "page");
-    return { success: true, jitsiRoomId, jitsiUrl };
+    return { success: true, jitsiRoomId, jitsiUrl, meetingType };
   } catch (error) {
     console.error("[SCHEDULE_MEETING_ERROR]", error);
     return { error: "Failed to schedule meeting" };

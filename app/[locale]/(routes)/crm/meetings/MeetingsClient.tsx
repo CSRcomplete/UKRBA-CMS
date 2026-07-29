@@ -16,6 +16,9 @@ import {
   ChevronRight,
   ArrowLeft,
   Copy,
+  Phone,
+  Users,
+  MapPin,
 } from "lucide-react";
 import { JitsiMeetRoom } from "./components/JitsiMeetRoom";
 import { MeetingSchedulerForm } from "./components/MeetingSchedulerForm";
@@ -29,6 +32,8 @@ interface Meeting {
   description?: string | null;
   date: Date;
   duration?: number | null;
+  meetingType?: "video" | "phone" | "in_person";
+  location?: string | null;
   jitsiRoomId?: string;
   jitsiUrl?: string | null;
   created_by_user?: { name?: string | null; email?: string | null } | null;
@@ -97,11 +102,11 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Video className="h-6 w-6 text-primary" />
-            Video Meetings
+            <Calendar className="h-6 w-6 text-primary" />
+            CRM Meetings
           </h1>
           <p className="text-sm text-muted-foreground">
-            Powered by <strong>Jitsi Meet</strong> — browser-based video calls, no software needed.
+            Schedule Video Calls (Jitsi), Phone Calls, or Face-to-Face meetings with automatic email notifications.
           </p>
         </div>
 
@@ -122,7 +127,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
             disabled={isPending}
           >
             <Zap className="h-4 w-4" />
-            {isPending ? "Creating..." : "Start Instant Meeting"}
+            {isPending ? "Creating..." : "Start Instant Video Call"}
           </Button>
         </div>
       </div>
@@ -140,11 +145,10 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
           <div className="rounded-xl border p-5 bg-muted/30 space-y-3 text-sm">
             <h3 className="font-semibold text-base flex items-center gap-2"><Info className="h-4 w-4 text-primary" /> How It Works</h3>
             <ul className="space-y-2 text-muted-foreground text-xs list-disc pl-4">
-              <li>Fill in the meeting details and select your invitee.</li>
-              <li>A unique <strong>Jitsi Meet</strong> room is automatically created — no external account needed.</li>
-              <li>Your invitee receives an email with the meeting link.</li>
-              <li>On the meeting time, click <strong>"Join Now"</strong> to open the call directly in this CRM.</li>
-              <li>Works on all modern browsers — no app download required.</li>
+              <li>Select between <strong>Video Call</strong>, <strong>Phone Call</strong>, or <strong>Face-to-Face Meeting</strong>.</li>
+              <li>For Video Calls, a unique <strong>Jitsi Meet</strong> room is automatically created — no account needed.</li>
+              <li>For Phone Calls & Face-to-Face meetings, enter phone number or location venue details.</li>
+              <li>Your invitee will instantly receive a formatted email invitation with meeting details.</li>
             </ul>
           </div>
         </div>
@@ -217,11 +221,31 @@ function MeetingCard({
     ? moment(meeting.date).fromNow()
     : moment(meeting.date).fromNow();
 
+  const meetingType = meeting.meetingType || "video";
+
   return (
     <div className={`p-4 rounded-xl border bg-card transition-all flex flex-col md:flex-row md:items-start justify-between gap-4 hover:shadow-sm ${isUpcoming ? "border-primary/20 bg-primary/5" : "border-muted"}`}>
       <div className="space-y-2 flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-sm">{meeting.title}</span>
+          
+          {/* Meeting Type Badge */}
+          {meetingType === "video" && (
+            <Badge variant="outline" className="text-[11px] gap-1 border-blue-200 text-blue-700 dark:border-blue-900 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30">
+              <Video className="h-3 w-3" /> Video Call
+            </Badge>
+          )}
+          {meetingType === "phone" && (
+            <Badge variant="outline" className="text-[11px] gap-1 border-emerald-200 text-emerald-700 dark:border-emerald-900 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
+              <Phone className="h-3 w-3" /> Phone Call
+            </Badge>
+          )}
+          {meetingType === "in_person" && (
+            <Badge variant="outline" className="text-[11px] gap-1 border-purple-200 text-purple-700 dark:border-purple-900 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/30">
+              <Users className="h-3 w-3" /> Face-to-Face
+            </Badge>
+          )}
+
           <Badge variant={isUpcoming ? "default" : "secondary"} className="text-[11px]">
             {isUpcoming ? `⏰ ${countdown}` : "Past"}
           </Badge>
@@ -232,6 +256,13 @@ function MeetingCard({
 
         {meeting.description && (
           <p className="text-xs text-muted-foreground line-clamp-1">{meeting.description}</p>
+        )}
+
+        {meeting.location && meetingType !== "video" && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <span>{meeting.location}</span>
+          </p>
         )}
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -257,7 +288,7 @@ function MeetingCard({
         </div>
       </div>
 
-      {meeting.jitsiRoomId && (
+      {meetingType === "video" && meeting.jitsiRoomId && (
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Embedded join */}
           <Button
