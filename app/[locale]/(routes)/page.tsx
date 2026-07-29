@@ -20,8 +20,6 @@ import {
   ArrowRight,
   CreditCard,
 } from "lucide-react";
-import { serializeDecimalsList } from "@/lib/serialize-decimals";
-import { AccountsPaymentAllocationsCard } from "./components/dasboard/AccountsPaymentAllocationsCard";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -40,45 +38,6 @@ const DashboardPage = async () => {
   });
 
   const userRole = currentUser?.role || "user";
-
-  // Fetch payment allocations data safely for accounts dashboard big box
-  let paymentAllocations: any[] = [];
-  let totalAllocatedSum = 0;
-  let approvedCount = 0;
-  let pendingCount = 0;
-
-  try {
-    const rawPaymentAllocations = await prismadb.crm_Payment_Allocations.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    });
-
-    paymentAllocations = serializeDecimalsList(rawPaymentAllocations).map((a: any) => ({
-      ...a,
-      sale_amount: Number(a.sale_amount || 0),
-      total_percentage: Number(a.total_percentage || 0),
-      total_allocated: Number(a.total_allocated || 0),
-      partner_percentage: Number(a.partner_percentage || 0),
-      team_allocations: (a.team_allocations as any[]) || [],
-    }));
-
-    const totalAllocatedSumRaw = await prismadb.crm_Payment_Allocations.aggregate({
-      _sum: {
-        total_allocated: true,
-      },
-    });
-    totalAllocatedSum = Number(totalAllocatedSumRaw._sum?.total_allocated || 0);
-
-    approvedCount = await prismadb.crm_Payment_Allocations.count({
-      where: { status: "approved" },
-    });
-
-    pendingCount = await prismadb.crm_Payment_Allocations.count({
-      where: { status: "pending" },
-    });
-  } catch (paymentErr) {
-    console.error("[PAYMENT_ALLOCATION_DASHBOARD_ERROR]", paymentErr);
-  }
 
   const escalationAlerts = await getEscalationAlerts(userId);
   const unreadAnnouncementsCount = await getUnreadAnnouncementsCount();
@@ -607,9 +566,30 @@ const DashboardPage = async () => {
               </p>
             </div>
           </Link>
+
+          {/* 9. Accounts & Payments */}
+          <Link
+            href="/accounts-payments"
+            className="group relative overflow-hidden rounded-xl border border-green-200 dark:border-green-900/40 bg-gradient-to-br from-green-500/10 via-background to-green-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-green-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-green-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-green-600 transition-colors">
+                9. Accounts & Payments
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Live customer sale allocations, partner commission splits &amp; accounts CSV export.
+              </p>
+            </div>
+          </Link>
         </div>
 
-        {/* 9. Recruitment Centre — Admin/CEO only */}
+        {/* 10. Recruitment Centre — Admin/CEO only */}
         {(userRole === "admin" || userRole === "ceo") && (
           <div className="mt-6">
             <h2 className="text-base font-semibold text-muted-foreground mb-3">Administration Only</h2>
@@ -621,7 +601,7 @@ const DashboardPage = async () => {
                 <Briefcase className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">9. Recruitment Centre</h3>
+                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">10. Recruitment Centre</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Full candidate pipeline — CVs, interviews, offers &amp; signed contracts.</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />
@@ -630,16 +610,6 @@ const DashboardPage = async () => {
         )}
       </div>
 
-      {/* ── Dashboard Big Box: Accounts & Payment Allocations ──────────────── */}
-      <div className="mb-10">
-        <AccountsPaymentAllocationsCard
-          allocations={paymentAllocations}
-          totalAllocatedSum={totalAllocatedSum}
-          approvedCount={approvedCount}
-          pendingCount={pendingCount}
-          userRole={userRole}
-        />
-      </div>
       {/* Escalation Alerts Section */}
       {escalationAlerts.length > 0 && (
         <div className="space-y-4 mb-8">
