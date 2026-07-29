@@ -20,6 +20,7 @@ import {
   ArrowRight,
   CreditCard,
 } from "lucide-react";
+import { serializeDecimalsList } from "@/lib/serialize-decimals";
 import { AccountsPaymentAllocationsCard } from "./components/dasboard/AccountsPaymentAllocationsCard";
 
 const DashboardPage = async () => {
@@ -40,35 +41,44 @@ const DashboardPage = async () => {
 
   const userRole = currentUser?.role || "user";
 
-  // Fetch payment allocations data for accounts dashboard big box
-  const rawPaymentAllocations = await prismadb.crm_Payment_Allocations.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+  // Fetch payment allocations data safely for accounts dashboard big box
+  let paymentAllocations: any[] = [];
+  let totalAllocatedSum = 0;
+  let approvedCount = 0;
+  let pendingCount = 0;
 
-  const paymentAllocations = rawPaymentAllocations.map((a) => ({
-    ...a,
-    sale_amount: Number(a.sale_amount),
-    total_percentage: Number(a.total_percentage || 0),
-    total_allocated: Number(a.total_allocated || 0),
-    partner_percentage: Number(a.partner_percentage || 0),
-    team_allocations: (a.team_allocations as any[]) || [],
-  }));
+  try {
+    const rawPaymentAllocations = await prismadb.crm_Payment_Allocations.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
 
-  const totalAllocatedSumRaw = await prismadb.crm_Payment_Allocations.aggregate({
-    _sum: {
-      total_allocated: true,
-    },
-  });
-  const totalAllocatedSum = Number(totalAllocatedSumRaw._sum.total_allocated || 0);
+    paymentAllocations = serializeDecimalsList(rawPaymentAllocations).map((a: any) => ({
+      ...a,
+      sale_amount: Number(a.sale_amount || 0),
+      total_percentage: Number(a.total_percentage || 0),
+      total_allocated: Number(a.total_allocated || 0),
+      partner_percentage: Number(a.partner_percentage || 0),
+      team_allocations: (a.team_allocations as any[]) || [],
+    }));
 
-  const approvedCount = await prismadb.crm_Payment_Allocations.count({
-    where: { status: "approved" },
-  });
+    const totalAllocatedSumRaw = await prismadb.crm_Payment_Allocations.aggregate({
+      _sum: {
+        total_allocated: true,
+      },
+    });
+    totalAllocatedSum = Number(totalAllocatedSumRaw._sum?.total_allocated || 0);
 
-  const pendingCount = await prismadb.crm_Payment_Allocations.count({
-    where: { status: "pending" },
-  });
+    approvedCount = await prismadb.crm_Payment_Allocations.count({
+      where: { status: "approved" },
+    });
+
+    pendingCount = await prismadb.crm_Payment_Allocations.count({
+      where: { status: "pending" },
+    });
+  } catch (paymentErr) {
+    console.error("[PAYMENT_ALLOCATION_DASHBOARD_ERROR]", paymentErr);
+  }
 
   const escalationAlerts = await getEscalationAlerts(userId);
   const unreadAnnouncementsCount = await getUnreadAnnouncementsCount();

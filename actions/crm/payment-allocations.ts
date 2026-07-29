@@ -11,6 +11,8 @@ export type TeamAllocationItem = {
   amount: number;
 };
 
+import { serializeDecimals } from "@/lib/serialize-decimals";
+
 export async function getContactPaymentAllocation(contactId: string) {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -34,16 +36,18 @@ export async function getContactPaymentAllocation(contactId: string) {
       orderBy: { name: "asc" },
     });
 
+    const serializedAlloc = allocation ? serializeDecimals(allocation) : null;
+
     return {
-      allocation: allocation
+      allocation: serializedAlloc
         ? {
-            ...allocation,
-            sale_amount: Number(allocation.sale_amount),
-            partner_percentage: Number(allocation.partner_percentage || 0),
-            partner_amount: Number(allocation.partner_amount || 0),
-            total_percentage: Number(allocation.total_percentage || 0),
-            total_allocated: Number(allocation.total_allocated || 0),
-            team_allocations: (allocation.team_allocations as TeamAllocationItem[]) || [],
+            ...serializedAlloc,
+            sale_amount: Number(serializedAlloc.sale_amount || 0),
+            partner_percentage: Number(serializedAlloc.partner_percentage || 0),
+            partner_amount: Number(serializedAlloc.partner_amount || 0),
+            total_percentage: Number(serializedAlloc.total_percentage || 0),
+            total_allocated: Number(serializedAlloc.total_allocated || 0),
+            team_allocations: (serializedAlloc.team_allocations as TeamAllocationItem[]) || [],
           }
         : null,
       activeUsers: activeUsers.map((u) => ({
