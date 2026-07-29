@@ -18,7 +18,9 @@ import {
   Upload,
   Briefcase,
   ArrowRight,
+  CreditCard,
 } from "lucide-react";
+import { AccountsPaymentAllocationsCard } from "./components/dasboard/AccountsPaymentAllocationsCard";
 
 const DashboardPage = async () => {
   const session = await getSession();
@@ -37,6 +39,36 @@ const DashboardPage = async () => {
   });
 
   const userRole = currentUser?.role || "user";
+
+  // Fetch payment allocations data for accounts dashboard big box
+  const rawPaymentAllocations = await prismadb.crm_Payment_Allocations.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  const paymentAllocations = rawPaymentAllocations.map((a) => ({
+    ...a,
+    sale_amount: Number(a.sale_amount),
+    total_percentage: Number(a.total_percentage || 0),
+    total_allocated: Number(a.total_allocated || 0),
+    partner_percentage: Number(a.partner_percentage || 0),
+    team_allocations: (a.team_allocations as any[]) || [],
+  }));
+
+  const totalAllocatedSumRaw = await prismadb.crm_Payment_Allocations.aggregate({
+    _sum: {
+      total_allocated: true,
+    },
+  });
+  const totalAllocatedSum = Number(totalAllocatedSumRaw._sum.total_allocated || 0);
+
+  const approvedCount = await prismadb.crm_Payment_Allocations.count({
+    where: { status: "approved" },
+  });
+
+  const pendingCount = await prismadb.crm_Payment_Allocations.count({
+    where: { status: "pending" },
+  });
 
   const escalationAlerts = await getEscalationAlerts(userId);
   const unreadAnnouncementsCount = await getUnreadAnnouncementsCount();
@@ -586,6 +618,17 @@ const DashboardPage = async () => {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* ── Dashboard Big Box: Accounts & Payment Allocations ──────────────── */}
+      <div className="mb-10">
+        <AccountsPaymentAllocationsCard
+          allocations={paymentAllocations}
+          totalAllocatedSum={totalAllocatedSum}
+          approvedCount={approvedCount}
+          pendingCount={pendingCount}
+          userRole={userRole}
+        />
       </div>
       {/* Escalation Alerts Section */}
       {escalationAlerts.length > 0 && (

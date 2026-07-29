@@ -2154,3 +2154,32 @@ model crm_AnnouncementReads {
   @@index([userId])
 }
 
+model crm_Payment_Allocations {
+  id               String   @id @default(uuid()) @db.Uuid
+  contact_id       String   @db.Uuid
+  member_id        String?  @db.Uuid
+  lead_id          String?  @db.Uuid
+  customer_name    String
+  sale_amount      Decimal  @default(0) @db.Decimal(14, 2)
+  sale_date        DateTime @default(now())
+  status           String   @default("pending")
+  approved_by      String?  @db.Uuid
+  approved_at      DateTime?
+
+  team_allocations Json     @default("[]")
+
+  partner_name       String?
+  partner_percentage Decimal? @default(0) @db.Decimal(5, 2)
+  partner_amount     Decimal? @default(0) @db.Decimal(14, 2)
+
+  total_percentage Decimal  @default(0) @db.Decimal(5, 2)
+  total_allocated  Decimal  @default(0) @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  @db.Uuid
+
+  @@index([contact_id])
+  @@index([status])
+}
+
