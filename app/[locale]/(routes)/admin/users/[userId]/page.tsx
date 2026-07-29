@@ -82,13 +82,39 @@ export default async function UserPage(props: UserPageProps) {
     },
   });
 
+  // Fetch linked email accounts for target user
+  const emailAccounts = await prismadb.emailAccount.findMany({
+    where: {
+      userId: params.userId,
+    },
+    select: {
+      id: true,
+      label: true,
+      imapHost: true,
+      imapPort: true,
+      imapSsl: true,
+      smtpHost: true,
+      smtpPort: true,
+      smtpSsl: true,
+      username: true,
+      isActive: true,
+      lastSyncedAt: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
   return (
-    <Container title="Manage Staff Member" description="Configure roles, assignments and reporting lines.">
+    <Container title="Manage Staff Member" description="Configure user profile, credentials, roles, assignments, and email accounts.">
       <UserManageForm
         user={user}
         postcodes={postcodes}
         allUsers={allUsers}
         channelPartners={channelPartners}
+        emailAccounts={emailAccounts}
+        currentUserRole={session?.user?.role || "user"}
       />
     </Container>
   );

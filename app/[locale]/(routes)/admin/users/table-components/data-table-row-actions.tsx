@@ -197,6 +197,10 @@ export function DataTableRowActions<TData>({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => router.push(`/admin/users/${data.id}`)}>
+            <Edit className="mr-2 w-4 h-4 text-primary" />
+            Edit Profile & Credentials
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onCopy(data?.id)}>
             <Copy className="mr-2 w-4 h-4" />
             Copy ID
