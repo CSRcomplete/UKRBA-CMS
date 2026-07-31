@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { PutObjectCommand, HeadBucketCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
+import { minioClient, minioPublicClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
 
 const ALLOWED_FOLDERS = ["avatars", "images", "documents", "uploads"] as const;
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const presignedUrl = await getSignedUrl(minioClient, command, { expiresIn: 600 });
+    const presignedUrl = await getSignedUrl(minioPublicClient, command, { expiresIn: 600 });
 
     // The public URL where the file will be accessible after upload
     const fileUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${key}`;

@@ -5,6 +5,8 @@ import { PutObjectCommand, CreateBucketCommand, HeadBucketCommand } from "@aws-s
 import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
 
+export const maxDuration = 300;
+
 const ALLOWED_FOLDERS = ["avatars", "images", "documents", "uploads"] as const;
 type AllowedFolder = (typeof ALLOWED_FOLDERS)[number];
 
