@@ -288,10 +288,27 @@ import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml, str
 export async function sendEmail(input: SendInput) {
   const userId = await requireSession();
 
-  const account = await prismadb.emailAccount.findFirst({
+  let account = await prismadb.emailAccount.findFirst({
     where: { id: input.accountId, userId },
   });
-  if (!account) throw new Error("Email account not found");
+
+  if (!account) {
+    // Fallback to user's first active email account if specified accountId is stale or missing
+    account = await prismadb.emailAccount.findFirst({
+      where: { userId, isActive: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  if (!account) {
+    // Final fallback: any account owned by the user
+    account = await prismadb.emailAccount.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  if (!account) throw new Error("No connected email account found for your profile. Please add your email account in Settings.");
 
   const user = await prismadb.users.findUnique({
     where: { id: userId },
