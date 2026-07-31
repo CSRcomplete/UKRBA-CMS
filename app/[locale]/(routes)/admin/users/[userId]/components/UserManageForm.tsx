@@ -43,6 +43,7 @@ import {
   deleteEmailAccountAdmin,
   toggleEmailAccountActiveAdmin,
 } from "@/actions/admin/users/admin-manage-user-email-accounts";
+import { testEmailConnection } from "@/actions/emails/accounts";
 
 interface UserManageFormProps {
   user: {
@@ -174,6 +175,66 @@ export default function UserManageForm({
     }
   };
 
+  const [testingConnection, setTestingConnection] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const applyHostingerPreset = () => {
+    setEmailForm((prev) => ({
+      ...prev,
+      label: prev.label || `${user.name}'s Hostinger`,
+      imapHost: "imap.hostinger.com",
+      imapPort: 993,
+      imapSsl: true,
+      smtpHost: "smtp.hostinger.com",
+      smtpPort: 465,
+      smtpSsl: true,
+    }));
+  };
+
+  const applyGmailPreset = () => {
+    setEmailForm((prev) => ({
+      ...prev,
+      label: prev.label || `${user.name}'s Gmail`,
+      imapHost: "imap.gmail.com",
+      imapPort: 993,
+      imapSsl: true,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 465,
+      smtpSsl: true,
+    }));
+  };
+
+  const handleTestConnection = async () => {
+    if (!emailForm.username?.trim() || !emailForm.password?.trim()) {
+      toast.error("Please enter email username and password first.");
+      return;
+    }
+    setTestingConnection(true);
+    setTestResult(null);
+    try {
+      const res = await testEmailConnection({
+        imapHost: emailForm.imapHost.trim(),
+        imapPort: emailForm.imapPort,
+        imapSsl: emailForm.imapSsl,
+        username: emailForm.username.trim(),
+        password: emailForm.password,
+      });
+
+      if (res.ok) {
+        setTestResult({ ok: true, message: "Connection successful!" });
+        toast.success("IMAP Connection successful!");
+      } else {
+        setTestResult({ ok: false, message: res.error || "Connection failed." });
+        toast.error(res.error || "Connection failed.");
+      }
+    } catch (err: any) {
+      setTestResult({ ok: false, message: err.message || "Connection test error." });
+      toast.error(err.message || "Connection test error.");
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleCreateEmailAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isCeoOrAdmin) {
@@ -185,18 +246,27 @@ export default function UserManageForm({
     try {
       const res = await createEmailAccountAdmin({
         targetUserId: user.id,
-        ...emailForm,
+        label: emailForm.label.trim(),
+        imapHost: emailForm.imapHost.trim(),
+        imapPort: emailForm.imapPort,
+        imapSsl: emailForm.imapSsl,
+        smtpHost: emailForm.smtpHost.trim(),
+        smtpPort: emailForm.smtpPort,
+        smtpSsl: emailForm.smtpSsl,
+        username: emailForm.username.trim(),
+        password: emailForm.password,
       });
 
       if (res.success) {
         toast.success("Email account linked successfully!");
         setIsEmailModalOpen(false);
+        setTestResult(null);
         setEmailForm({
           label: "",
-          imapHost: "imap.gmail.com",
+          imapHost: "imap.hostinger.com",
           imapPort: 993,
           imapSsl: true,
-          smtpHost: "smtp.gmail.com",
+          smtpHost: "smtp.hostinger.com",
           smtpPort: 465,
           smtpSsl: true,
           username: user.email,
@@ -454,6 +524,17 @@ export default function UserManageForm({
           </DialogHeader>
 
           <form onSubmit={handleCreateEmailAccount} className="space-y-3 py-2">
+            <div className="flex items-center gap-2 pb-1">
+              <Button type="button" size="sm" variant="outline" className="text-xs h-7" onClick={applyHostingerPreset}>
+                <Mail className="h-3.5 w-3.5 mr-1 text-purple-600" />
+                Connect Hostinger
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="text-xs h-7" onClick={applyGmailPreset}>
+                <Mail className="h-3.5 w-3.5 mr-1 text-red-500" />
+                Connect Gmail
+              </Button>
+            </div>
+
             <div className="space-y-1">
               <Label className="text-xs">Account Label *</Label>
               <Input
@@ -525,13 +606,33 @@ export default function UserManageForm({
               />
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsEmailModalOpen(false)}>
-                Cancel
+            {testResult && (
+              <div className={cn(
+                "p-2 text-xs rounded border font-medium",
+                testResult.ok ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"
+              )}>
+                {testResult.message}
+              </div>
+            )}
+
+            <DialogFooter className="pt-2 flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestConnection}
+                disabled={testingConnection}
+              >
+                {testingConnection ? "Testing..." : "Test Connection"}
               </Button>
-              <Button type="submit" disabled={addingEmail}>
-                {addingEmail ? "Linking..." : "Link Account"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsEmailModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={addingEmail}>
+                  {addingEmail ? "Linking..." : "Link Account"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

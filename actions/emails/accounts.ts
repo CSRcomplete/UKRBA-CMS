@@ -120,30 +120,41 @@ export async function testEmailConnection(
 ): Promise<{ ok: boolean; error?: string }> {
   await requireSession();
 
+  const username = (input.username || "").trim();
+  const password = input.password || "";
+  const imapHost = (input.imapHost || "").trim();
+
+  if (!username || !password || !imapHost) {
+    return { ok: false, error: "Username, password, and IMAP host are required." };
+  }
+
   const connectionPromise = new Promise<{ ok: boolean; error?: string }>((resolve) => {
     const imap = new Imap({
-      user: input.username,
-      password: input.password,
-      host: input.imapHost,
-      port: input.imapPort,
-      tls: input.imapSsl,
-      // tlsOptions: { rejectUnauthorized: false } intentionally disabled for self-signed cert support
+      user: username,
+      password: password,
+      host: imapHost,
+      port: input.imapPort || 993,
+      tls: input.imapSsl ?? true,
       tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 8000,
-      connTimeout: 8000,
+      authTimeout: 10000,
+      connTimeout: 10000,
     });
     imap.once("ready", () => {
       imap.end();
       resolve({ ok: true });
     });
     imap.once("error", (err: Error) => {
-      resolve({ ok: false, error: err.message });
+      let msg = err.message || "Authentication failed";
+      if (msg.includes("AUTHENTICATIONFAILED") || msg.toLowerCase().includes("auth")) {
+        msg = "Authentication failed. Please verify the mailbox password for " + username + " on your email provider (e.g. Hostinger Webmail).";
+      }
+      resolve({ ok: false, error: msg });
     });
     imap.connect();
   });
 
   const timeoutPromise = new Promise<{ ok: boolean; error?: string }>((resolve) =>
-    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 10000)
+    setTimeout(() => resolve({ ok: false, error: "Connection timed out connecting to " + imapHost }), 12000)
   );
 
   return Promise.race([connectionPromise, timeoutPromise]);
@@ -162,16 +173,20 @@ export async function listImapFolders(
 ): Promise<{ ok: true; folders: string[] } | { ok: false; error: string }> {
   await requireSession();
 
+  const username = (input.username || "").trim();
+  const password = input.password || "";
+  const imapHost = (input.imapHost || "").trim();
+
   return new Promise((resolve) => {
     const imap = new Imap({
-      user: input.username,
-      password: input.password,
-      host: input.imapHost,
-      port: input.imapPort,
-      tls: input.imapSsl,
+      user: username,
+      password: password,
+      host: imapHost,
+      port: input.imapPort || 993,
+      tls: input.imapSsl ?? true,
       tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 8000,
-      connTimeout: 8000,
+      authTimeout: 10000,
+      connTimeout: 10000,
     });
 
     imap.once("ready", () => {
@@ -195,6 +210,6 @@ export async function listImapFolders(
     imap.once("error", (err: Error) => resolve({ ok: false, error: err.message }));
     imap.connect();
 
-    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 10000);
+    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 12000);
   });
 }
