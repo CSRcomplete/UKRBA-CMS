@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-server";
 
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
+import { serializeDecimals } from "@/lib/serialize-decimals";
 import nodemailer from "nodemailer";
 import { EmailFolder } from "@prisma/client";
 
@@ -213,7 +214,7 @@ export async function getEmail(id: string) {
     prismadb.email.update({ where: { id }, data: { isRead: true } }).catch(() => {});
   }
 
-  return email;
+  return serializeDecimals(email);
 }
 
 export async function getEmailThread(id: string) {
@@ -279,7 +280,7 @@ export async function sendEmail(input: SendInput) {
   const account = await prismadb.emailAccount.findFirst({
     where: { id: input.accountId, userId },
   });
-  if (!account) throw new Error("Account not found");
+  if (!account) throw new Error("Email account not found");
 
   const user = await prismadb.users.findUnique({
     where: { id: userId },
@@ -297,7 +298,13 @@ export async function sendEmail(input: SendInput) {
   const htmlContentLines = parseMarkdownToEmailHtml(cleanedBody);
   const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role })}`;
 
-  const password = decrypt(account.passwordEncrypted);
+  let password = "";
+  try {
+    password = decrypt(account.passwordEncrypted);
+  } catch (err: any) {
+    console.error("Failed to decrypt password for account:", account.username, err);
+    throw new Error(`Invalid or corrupted credentials for ${account.username}. Please re-enter the account password in Settings -> Email Accounts.`);
+  }
 
   const transporter = nodemailer.createTransport({
     host: account.smtpHost,
@@ -313,18 +320,24 @@ export async function sendEmail(input: SendInput) {
     contentType: att.contentType,
   }));
 
-  const info = await transporter.sendMail({
-    from: account.username,
-    to: input.to.join(", "),
-    cc: input.cc?.join(", "),
-    bcc: input.bcc?.join(", "),
-    subject: input.subject,
-    text: cleanBodyText,
-    html: bodyHtml,
-    inReplyTo: input.inReplyTo,
-    references: input.references,
-    attachments: mailAttachments,
-  });
+  let info;
+  try {
+    info = await transporter.sendMail({
+      from: account.username,
+      to: input.to.join(", "),
+      cc: input.cc?.join(", "),
+      bcc: input.bcc?.join(", "),
+      subject: input.subject,
+      text: cleanBodyText,
+      html: bodyHtml,
+      inReplyTo: input.inReplyTo,
+      references: input.references,
+      attachments: mailAttachments,
+    });
+  } catch (err: any) {
+    console.error("SMTP error sending email:", err);
+    throw new Error(err.message || `SMTP Error: Could not send email via ${account.username}`);
+  }
 
   // Write sent message to DB immediately so it appears in Sent view & thread with HTML logo signature
   const created = await prismadb.email.create({
@@ -358,5 +371,6 @@ export async function sendEmail(input: SendInput) {
     });
   }
 
-  return getEmail(created.id);
+  const emailData = await getEmail(created.id);
+  return serializeDecimals(emailData);
 }
