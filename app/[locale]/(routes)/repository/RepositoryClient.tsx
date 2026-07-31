@@ -367,21 +367,42 @@ export default function RepositoryClient({
         const isVideo = file.type.startsWith("video/");
         const folder = isVideo ? "uploads" : "documents";
 
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("folder", folder);
-
-        const res = await fetch("/api/upload", {
+        // Request a presigned URL and upload the file bytes straight to MinIO,
+        // bypassing the app server entirely (avoids the Cloudflare upload size
+        // limit on this domain, which was rejecting files over ~1MB).
+        const presignRes = await fetch("/api/upload/presigned-url", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            folder,
+          }),
         });
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || `Upload failed for ${file.name}`);
+        if (!presignRes.ok) {
+          const errText = await presignRes.text();
+          let message = `Could not start upload for ${file.name}`;
+          try {
+            message = JSON.parse(errText).error || message;
+          } catch {
+            // Non-JSON error body (e.g. an HTML error page) — keep the generic message
+          }
+          throw new Error(message);
         }
 
-        const { fileUrl, key } = await res.json();
+        const { presignedUrl, fileUrl, key } = await presignRes.json();
+
+        const putRes = await fetch(presignedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+
+        if (!putRes.ok) {
+          throw new Error(`Upload failed for ${file.name}`);
+        }
+
         const customDesc = fileDescriptions[file.name] || `${uploadFolder} > ${uploadSubfolder}`;
 
         await createRepositoryDocument({

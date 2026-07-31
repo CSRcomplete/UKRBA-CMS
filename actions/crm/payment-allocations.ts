@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth-server";
 import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import sendEmail from "@/lib/sendmail";
 
 export type TeamAllocationItem = {
   userId: string;
@@ -147,6 +148,23 @@ export async function saveContactPaymentAllocation(data: {
           createdBy: session.user.id,
         },
       });
+
+      // New live sale — notify support so the allocation gets actioned
+      const notifyTo = process.env.SALES_NOTIFY_EMAIL || "support@ukrba.org";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "";
+      try {
+        await sendEmail({
+          from: process.env.EMAIL_FROM,
+          to: notifyTo,
+          subject: `New Live Sale — Payment Allocation Required: ${customerName}`,
+          text: `A new live sale has been recorded for ${customerName} (£${saleAmount.toLocaleString(
+            "en-GB",
+            { minimumFractionDigits: 2 }
+          )}).\n\nPercentage allocation is still pending approval.\n\nOpen the customer record and go to the Payment Allocation tab to allocate and approve:\n${appUrl}/crm/contacts/${contactId}\n\nThank you,\n${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"}`,
+        });
+      } catch (emailErr) {
+        console.error("[SALE_NOTIFY_EMAIL_ERROR]", emailErr);
+      }
     }
 
     revalidatePath(`/crm/contacts/${contactId}`);

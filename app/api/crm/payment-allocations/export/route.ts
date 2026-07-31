@@ -10,9 +10,11 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const contactId = searchParams.get("contactId");
+  const includeAll = searchParams.get("status") === "all";
 
   try {
-    const whereCondition: any = {};
+    // Accounts should only be paying out approved allocations
+    const whereCondition: any = includeAll ? {} : { status: "approved" };
     if (contactId) {
       whereCondition.contact_id = contactId;
     }
