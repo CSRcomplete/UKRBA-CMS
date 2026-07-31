@@ -306,11 +306,15 @@ export async function sendEmail(input: SendInput) {
     throw new Error(`Invalid or corrupted credentials for ${account.username}. Please re-enter the account password in Settings -> Email Accounts.`);
   }
 
+  const isSecure = account.smtpPort === 465 || account.smtpSsl;
   const transporter = nodemailer.createTransport({
     host: account.smtpHost,
     port: account.smtpPort,
-    secure: account.smtpSsl,
+    secure: isSecure,
     auth: { user: account.username, pass: password },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
   // Prepare Nodemailer attachments
