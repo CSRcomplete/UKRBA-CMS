@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth-server";
 
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
-import { serializeDecimals } from "@/lib/serialize-decimals";
+import { serializeDecimals, serializeDecimalsList } from "@/lib/serialize-decimals";
 import nodemailer from "nodemailer";
 import { EmailFolder } from "@prisma/client";
 
@@ -103,6 +103,12 @@ export async function getEmails(
 ) {
   const userId = await requireSession();
 
+  // Validate UUID format to prevent Postgres syntax error 22P02 on invalid string input
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId);
+  if (!isUuid) {
+    return { emails: [], total: 0, page: 1, totalPages: 0 };
+  }
+
   const baseWhere = {
     userId,
     emailAccountId: accountId,
@@ -110,40 +116,45 @@ export async function getEmails(
     isDeleted: false,
   } as const;
 
-  // Build where clause with optional text search fallback
-  const where =
-    search && search.length >= 3
-      ? {
-          ...baseWhere,
-          OR: [
-            { subject: { contains: search, mode: "insensitive" as const } },
-            { fromEmail: { contains: search, mode: "insensitive" as const } },
-            { fromName: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : baseWhere;
+  try {
+    // Build where clause with optional text search fallback
+    const where =
+      search && search.length >= 3
+        ? {
+            ...baseWhere,
+            OR: [
+              { subject: { contains: search, mode: "insensitive" as const } },
+              { fromEmail: { contains: search, mode: "insensitive" as const } },
+              { fromName: { contains: search, mode: "insensitive" as const } },
+            ],
+          }
+        : baseWhere;
 
-  const [emails, rawCount] = await Promise.all([
-    prismadb.email.findMany({
-      where,
-      orderBy: { sentAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      select: {
-        id: true,
-        subject: true,
-        fromName: true,
-        fromEmail: true,
-        sentAt: true,
-        isRead: true,
-        folder: true,
-      },
-    }),
-    prismadb.email.count({ where }),
-  ]);
+    const [emails, rawCount] = await Promise.all([
+      prismadb.email.findMany({
+        where,
+        orderBy: { sentAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        select: {
+          id: true,
+          subject: true,
+          fromName: true,
+          fromEmail: true,
+          sentAt: true,
+          isRead: true,
+          folder: true,
+        },
+      }),
+      prismadb.email.count({ where }),
+    ]);
 
-  const total = Math.min(rawCount, MAX_COUNT);
-  return { emails, total, page, totalPages: Math.ceil(total / PAGE_SIZE) };
+    const total = Math.min(rawCount, MAX_COUNT);
+    return { emails: serializeDecimalsList(emails), total, page, totalPages: Math.ceil(total / PAGE_SIZE) };
+  } catch (err) {
+    console.error("Error fetching emails:", err);
+    return { emails: [], total: 0, page: 1, totalPages: 0 };
+  }
 }
 
 export async function getEmail(id: string) {

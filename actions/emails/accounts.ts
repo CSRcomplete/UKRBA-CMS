@@ -11,27 +11,35 @@ async function requireSession() {
   return session.user.id as string;
 }
 
+import { serializeDecimalsList } from "@/lib/serialize-decimals";
+
 export async function getEmailAccounts() {
   const userId = await requireSession();
-  return prismadb.emailAccount.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      label: true,
-      imapHost: true,
-      imapPort: true,
-      imapSsl: true,
-      smtpHost: true,
-      smtpPort: true,
-      smtpSsl: true,
-      username: true,
-      isActive: true,
-      sentFolderName: true,
-      lastSyncedAt: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  try {
+    const accounts = await prismadb.emailAccount.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        label: true,
+        imapHost: true,
+        imapPort: true,
+        imapSsl: true,
+        smtpHost: true,
+        smtpPort: true,
+        smtpSsl: true,
+        username: true,
+        isActive: true,
+        sentFolderName: true,
+        lastSyncedAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return serializeDecimalsList(accounts);
+  } catch (err) {
+    console.error("Failed to fetch email accounts:", err);
+    return [];
+  }
 }
 
 type CreateInput = {

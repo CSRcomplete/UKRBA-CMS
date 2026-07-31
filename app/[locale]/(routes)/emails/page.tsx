@@ -72,7 +72,8 @@ const EmailRoute = async ({
     );
   }
 
-  const activeAccountId = params.accountId ?? connectedAccounts[0]?.id;
+  const accountMatch = connectedAccounts.find((a) => a.id === params.accountId);
+  const activeAccountId = accountMatch ? accountMatch.id : (connectedAccounts[0]?.id ?? null);
   const activeFolder =
     params.folder === "SENT"
       ? EmailFolder.SENT
