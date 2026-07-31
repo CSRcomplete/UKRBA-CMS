@@ -367,40 +367,63 @@ export default function RepositoryClient({
         const isVideo = file.type.startsWith("video/");
         const folder = isVideo ? "uploads" : "documents";
 
-        // Request a presigned URL and upload the file bytes straight to MinIO,
-        // bypassing the app server entirely (avoids the Cloudflare upload size
-        // limit on this domain, which was rejecting files over ~1MB).
-        const presignRes = await fetch("/api/upload/presigned-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-            folder,
-          }),
-        });
+        let fileUrl: string;
+        let key: string;
 
-        if (!presignRes.ok) {
-          const errText = await presignRes.text();
-          let message = `Could not start upload for ${file.name}`;
-          try {
-            message = JSON.parse(errText).error || message;
-          } catch {
-            // Non-JSON error body (e.g. an HTML error page) — keep the generic message
+        try {
+          // Attempt 1: Presigned URL upload
+          const presignRes = await fetch("/api/upload/presigned-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type,
+              folder,
+            }),
+          });
+
+          if (!presignRes.ok) {
+            throw new Error("Presign request failed");
           }
-          throw new Error(message);
-        }
 
-        const { presignedUrl, fileUrl, key } = await presignRes.json();
+          const presignData = await presignRes.json();
+          const putRes = await fetch(presignData.presignedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
 
-        const putRes = await fetch(presignedUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
+          if (!putRes.ok) {
+            throw new Error("Presigned PUT failed");
+          }
 
-        if (!putRes.ok) {
-          throw new Error(`Upload failed for ${file.name}`);
+          fileUrl = presignData.fileUrl;
+          key = presignData.key;
+        } catch {
+          // Attempt 2: Fallback to /api/upload endpoint (multipart form data)
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("folder", folder);
+
+          const uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!uploadRes.ok) {
+            const errText = await uploadRes.text();
+            let message = `Upload failed for ${file.name}`;
+            try {
+              message = JSON.parse(errText).error || message;
+            } catch {
+              // keep fallback message
+            }
+            throw new Error(message);
+          }
+
+          const uploadData = await uploadRes.json();
+          fileUrl = uploadData.fileUrl;
+          key = uploadData.key;
         }
 
         const customDesc = fileDescriptions[file.name] || `${uploadFolder} > ${uploadSubfolder}`;

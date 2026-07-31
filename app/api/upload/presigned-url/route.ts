@@ -1,7 +1,7 @@
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, HeadBucketCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
@@ -49,6 +49,20 @@ export async function POST(req: NextRequest) {
 
   // Presigned URL valid for 10 minutes
   try {
+    // Auto-create bucket if it doesn't exist
+    try {
+      await minioClient.send(new HeadBucketCommand({ Bucket: MINIO_BUCKET }));
+    } catch (err: any) {
+      const isNotFound =
+        err.name === "NotFound" ||
+        err.name === "NoSuchBucket" ||
+        err.$metadata?.httpStatusCode === 404;
+
+      if (isNotFound) {
+        await minioClient.send(new CreateBucketCommand({ Bucket: MINIO_BUCKET }));
+      }
+    }
+
     const presignedUrl = await getSignedUrl(minioClient, command, { expiresIn: 600 });
 
     // The public URL where the file will be accessible after upload
