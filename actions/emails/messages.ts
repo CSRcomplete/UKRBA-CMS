@@ -101,10 +101,7 @@ export async function getEmails(
   page: number,
   search?: string
 ) {
-  const session = await getSession();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  const userId = session.user.id as string;
-  const userRole = (session.user.role || "").toLowerCase();
+  const userId = await requireSession();
 
   // Validate UUID format to prevent Postgres syntax error 22P02 on invalid string input
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId);
@@ -112,10 +109,12 @@ export async function getEmails(
     return { emails: [], total: 0, page: 1, totalPages: 0 };
   }
 
-  const baseWhere =
-    userRole === "admin" || userRole === "ceo"
-      ? { emailAccountId: accountId, folder, isDeleted: false }
-      : { userId, emailAccountId: accountId, folder, isDeleted: false };
+  const baseWhere = {
+    userId,
+    emailAccountId: accountId,
+    folder,
+    isDeleted: false,
+  } as const;
 
   try {
     // Build where clause with optional text search fallback
@@ -159,17 +158,10 @@ export async function getEmails(
 }
 
 export async function getEmail(id: string) {
-  const session = await getSession();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  const userId = session.user.id as string;
-  const userRole = (session.user.role || "").toLowerCase();
-
-  const where = userRole === "admin" || userRole === "ceo"
-    ? { id, isDeleted: false }
-    : { id, userId, isDeleted: false };
+  const userId = await requireSession();
 
   const email = await prismadb.email.findFirst({
-    where,
+    where: { id, userId, isDeleted: false },
     include: {
       contacts: { include: { contact: { select: { id: true, first_name: true, last_name: true } } } },
       accounts: { include: { account: { select: { id: true, name: true } } } },
@@ -238,6 +230,7 @@ export async function getEmail(id: string) {
 }
 
 export async function getEmailThread(id: string) {
+  const userId = await requireSession();
   const targetEmail = await getEmail(id);
   if (!targetEmail) return [];
 
@@ -250,6 +243,7 @@ export async function getEmailThread(id: string) {
 
   const thread = await prismadb.email.findMany({
     where: {
+      userId,
       emailAccountId: targetEmail.emailAccountId,
       isDeleted: false,
       subject: { contains: cleanSubject, mode: "insensitive" },
@@ -265,7 +259,7 @@ export async function getEmailThread(id: string) {
 
 export async function deleteEmail(id: string) {
   const userId = await requireSession();
-  const email = await prismadb.email.findFirst({ where: { id, userId, isDeleted: false } });
+  const email = await prismadb.email.findFirst({ where: { id, userId } });
   if (!email) throw new Error("Not found");
   await prismadb.email.update({ where: { id }, data: { isDeleted: true } });
 }
@@ -273,7 +267,7 @@ export async function deleteEmail(id: string) {
 export type AttachmentInput = {
   filename: string;
   content: string; // base64 string
-  contentType?: string;
+  contentType: string;
   size?: number;
 };
 
@@ -292,17 +286,12 @@ export type SendInput = {
 import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml, stripExistingSignature } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
-  const session = await getSession();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  const userId = session.user.id as string;
-  const userRole = (session.user.role || "").toLowerCase();
+  const userId = await requireSession();
 
   const account = await prismadb.emailAccount.findFirst({
-    where: userRole === "admin" || userRole === "ceo"
-      ? { id: input.accountId }
-      : { id: input.accountId, userId },
+    where: { id: input.accountId, userId },
   });
-  if (!account) throw new Error("Email account not found or access denied");
+  if (!account) throw new Error("Email account not found");
 
   const user = await prismadb.users.findUnique({
     where: { id: userId },

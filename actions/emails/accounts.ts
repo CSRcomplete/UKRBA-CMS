@@ -14,14 +14,10 @@ async function requireSession() {
 import { serializeDecimalsList } from "@/lib/serialize-decimals";
 
 export async function getEmailAccounts() {
-  const session = await getSession();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  const userId = session.user.id as string;
-  const userRole = (session.user.role || "").toLowerCase();
-
+  const userId = await requireSession();
   try {
     const accounts = await prismadb.emailAccount.findMany({
-      where: userRole === "admin" || userRole === "ceo" ? {} : { userId },
+      where: { userId },
       select: {
         id: true,
         label: true,
