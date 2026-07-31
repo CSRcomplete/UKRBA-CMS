@@ -101,7 +101,10 @@ export async function getEmails(
   page: number,
   search?: string
 ) {
-  const userId = await requireSession();
+  const session = await getSession();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = session.user.id as string;
+  const userRole = (session.user.role || "").toLowerCase();
 
   // Validate UUID format to prevent Postgres syntax error 22P02 on invalid string input
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId);
@@ -109,12 +112,10 @@ export async function getEmails(
     return { emails: [], total: 0, page: 1, totalPages: 0 };
   }
 
-  const baseWhere = {
-    userId,
-    emailAccountId: accountId,
-    folder,
-    isDeleted: false,
-  } as const;
+  const baseWhere =
+    userRole === "admin" || userRole === "ceo"
+      ? { emailAccountId: accountId, folder, isDeleted: false }
+      : { userId, emailAccountId: accountId, folder, isDeleted: false };
 
   try {
     // Build where clause with optional text search fallback
@@ -158,9 +159,17 @@ export async function getEmails(
 }
 
 export async function getEmail(id: string) {
-  const userId = await requireSession();
+  const session = await getSession();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = session.user.id as string;
+  const userRole = (session.user.role || "").toLowerCase();
+
+  const where = userRole === "admin" || userRole === "ceo"
+    ? { id, isDeleted: false }
+    : { id, userId, isDeleted: false };
+
   const email = await prismadb.email.findFirst({
-    where: { id, userId, isDeleted: false },
+    where,
     include: {
       contacts: { include: { contact: { select: { id: true, first_name: true, last_name: true } } } },
       accounts: { include: { account: { select: { id: true, name: true } } } },
@@ -229,7 +238,6 @@ export async function getEmail(id: string) {
 }
 
 export async function getEmailThread(id: string) {
-  const userId = await requireSession();
   const targetEmail = await getEmail(id);
   if (!targetEmail) return [];
 
@@ -240,21 +248,19 @@ export async function getEmailThread(id: string) {
 
   if (!cleanSubject) return [targetEmail];
 
-  const threadEmails = await prismadb.email.findMany({
+  const thread = await prismadb.email.findMany({
     where: {
-      userId,
       emailAccountId: targetEmail.emailAccountId,
       isDeleted: false,
       subject: { contains: cleanSubject, mode: "insensitive" },
     },
     orderBy: { sentAt: "asc" },
     include: {
-      contacts: { include: { contact: { select: { id: true, first_name: true, last_name: true } } } },
-      accounts: { include: { account: { select: { id: true, name: true } } } },
+      attachments: true,
     },
   });
 
-  return threadEmails.length > 0 ? threadEmails : [targetEmail];
+  return serializeDecimalsList(thread);
 }
 
 export async function deleteEmail(id: string) {
@@ -271,7 +277,7 @@ export type AttachmentInput = {
   size?: number;
 };
 
-type SendInput = {
+export type SendInput = {
   accountId: string;
   to: string[];
   cc?: string[];
@@ -286,12 +292,17 @@ type SendInput = {
 import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml, stripExistingSignature } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
-  const userId = await requireSession();
+  const session = await getSession();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = session.user.id as string;
+  const userRole = (session.user.role || "").toLowerCase();
 
   const account = await prismadb.emailAccount.findFirst({
-    where: { id: input.accountId, userId },
+    where: userRole === "admin" || userRole === "ceo"
+      ? { id: input.accountId }
+      : { id: input.accountId, userId },
   });
-  if (!account) throw new Error("Email account not found");
+  if (!account) throw new Error("Email account not found or access denied");
 
   const user = await prismadb.users.findUnique({
     where: { id: userId },
@@ -335,10 +346,16 @@ export async function sendEmail(input: SendInput) {
     contentType: att.contentType,
   }));
 
+  const fromHeader = account.label && account.label !== account.username
+    ? `"${account.label}" <${account.username}>`
+    : user?.name
+      ? `"${user.name}" <${account.username}>`
+      : account.username;
+
   let info;
   try {
     info = await transporter.sendMail({
-      from: account.username,
+      from: fromHeader,
       to: input.to.join(", "),
       cc: input.cc?.join(", "),
       bcc: input.bcc?.join(", "),
@@ -350,8 +367,28 @@ export async function sendEmail(input: SendInput) {
       attachments: mailAttachments,
     });
   } catch (err: any) {
-    console.error("SMTP error sending email:", err);
-    throw new Error(err.message || `SMTP Error: Could not send email via ${account.username}`);
+    if (fromHeader !== account.username) {
+      try {
+        info = await transporter.sendMail({
+          from: account.username,
+          to: input.to.join(", "),
+          cc: input.cc?.join(", "),
+          bcc: input.bcc?.join(", "),
+          subject: input.subject,
+          text: cleanBodyText,
+          html: bodyHtml,
+          inReplyTo: input.inReplyTo,
+          references: input.references,
+          attachments: mailAttachments,
+        });
+      } catch (retryErr: any) {
+        console.error("SMTP error sending email:", retryErr);
+        throw new Error(retryErr.message || `SMTP Error: Could not send email via ${account.username}`);
+      }
+    } else {
+      console.error("SMTP error sending email:", err);
+      throw new Error(err.message || `SMTP Error: Could not send email via ${account.username}`);
+    }
   }
 
   // Write sent message to DB immediately so it appears in Sent view & thread with HTML logo signature
