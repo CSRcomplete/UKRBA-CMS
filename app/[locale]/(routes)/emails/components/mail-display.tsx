@@ -62,6 +62,83 @@ interface MailDisplayProps {
   currentUser?: { name?: string | null; role?: string | null };
 }
 
+function AutoResizingIframe({ html }: { html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const adjustHeight = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (doc && doc.body) {
+          doc.body.style.margin = "0";
+          doc.body.style.padding = "0";
+          doc.body.style.overflow = "hidden";
+
+          const height = Math.max(
+            doc.body.scrollHeight,
+            doc.body.offsetHeight,
+            doc.documentElement.scrollHeight,
+            doc.documentElement.offsetHeight
+          );
+          if (height > 0) {
+            iframe.style.height = `${height + 24}px`;
+          }
+        }
+      } catch {
+        // Ignore
+      }
+    };
+
+    adjustHeight();
+
+    const timer1 = setTimeout(adjustHeight, 150);
+    const timer2 = setTimeout(adjustHeight, 600);
+    const timer3 = setTimeout(adjustHeight, 1500);
+
+    const handleLoad = () => {
+      adjustHeight();
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (doc) {
+          const images = doc.querySelectorAll("img");
+          images.forEach((img) => {
+            if (!img.complete) {
+              img.addEventListener("load", adjustHeight);
+              img.addEventListener("error", adjustHeight);
+            }
+          });
+        }
+      } catch {
+        // Ignore
+      }
+    };
+
+    iframe.addEventListener("load", handleLoad);
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [html]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      srcDoc={html}
+      sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+      referrerPolicy="no-referrer"
+      className="w-full border-0 min-h-[150px] block"
+      style={{ height: "auto", overflow: "hidden" }}
+      title="Email body"
+    />
+  );
+}
+
 export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayProps) {
   const today = new Date();
   const router = useRouter();
@@ -412,20 +489,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
 
                   <div className="text-sm leading-relaxed">
                     {msg.bodyHtml ? (
-                      <iframe
-                        srcDoc={msg.bodyHtml}
-                        sandbox="allow-popups allow-popups-to-escape-sandbox"
-                        referrerPolicy="no-referrer"
-                        className="w-full border-0 min-h-[150px] overflow-hidden"
-                        style={{ height: "auto" }}
-                        title="Email body"
-                        onLoad={(e) => {
-                          const obj = e.currentTarget;
-                          if (obj.contentWindow?.document?.body) {
-                            obj.style.height = `${obj.contentWindow.document.body.scrollHeight + 20}px`;
-                          }
-                        }}
-                      />
+                      <AutoResizingIframe html={msg.bodyHtml} />
                     ) : (
                       <pre className="whitespace-pre-wrap font-sans text-sm">
                         {msg.bodyText ?? "(No content)"}
