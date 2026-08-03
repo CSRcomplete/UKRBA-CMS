@@ -1,5 +1,7 @@
 "use client";
 
+import { useMail } from "@/app/[locale]/(routes)/emails/use-mail";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, nextSaturday, format, addHours } from "date-fns";
@@ -64,6 +66,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
   const today = new Date();
   const router = useRouter();
   const inlineReplyRef = useRef<HTMLTextAreaElement>(null);
+  const [mailState, setMailState] = useMail();
 
   const [thread, setThread] = useState<any[]>([]);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -180,7 +183,27 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center p-2">
+      <div className="flex items-center p-2 gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMailState({ ...mailState, selected: null })}
+              title="Back to emails"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Back to list</TooltipContent>
+        </Tooltip>
+
+        {mail?.subject && (
+          <h2 className="text-sm font-semibold text-foreground truncate max-w-xs md:max-w-md ml-1 mr-auto">
+            {mail.subject}
+          </h2>
+        )}
         <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>

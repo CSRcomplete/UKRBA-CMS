@@ -145,8 +145,9 @@ export async function testEmailConnection(
     });
     imap.once("error", (err: Error) => {
       let msg = err.message || "Authentication failed";
+      console.error(`IMAP test error for ${username}:`, err);
       if (msg.includes("AUTHENTICATIONFAILED") || msg.toLowerCase().includes("auth")) {
-        msg = "Authentication failed. Please verify the mailbox password for " + username + " on your email provider (e.g. Hostinger Webmail).";
+        msg = `Authentication failed for ${username}. On Hostinger, click the three dots next to the mailbox -> 'App passwords', generate an App Password, and paste it here.`;
       }
       resolve({ ok: false, error: msg });
     });
