@@ -65,7 +65,8 @@ interface MailDisplayProps {
 export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayProps) {
   const today = new Date();
   const router = useRouter();
-  const inlineReplyRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const richEditorRef = useRef<{ focus: () => void }>(null);
   const [mailState, setMailState] = useMail();
 
   const [thread, setThread] = useState<any[]>([]);
@@ -108,10 +109,15 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       : (latestEmail?.fromEmail ?? mail?.fromEmail ?? "");
 
   const handleFocusReply = () => {
-    if (inlineReplyRef.current) {
-      inlineReplyRef.current.scrollIntoView({ behavior: "smooth" });
-      inlineReplyRef.current.focus();
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
+    setTimeout(() => {
+      richEditorRef.current?.focus();
+    }, 200);
   };
 
   const replyFileInputRef = useRef<HTMLInputElement>(null);
@@ -353,9 +359,9 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       <Separator />
 
       {mail ? (
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div ref={scrollContainerRef} className="flex flex-1 flex-col overflow-y-auto">
           {/* Conversation Thread History */}
-          <div className="flex-1 overflow-y-auto space-y-6 p-4">
+          <div className="space-y-6 p-4">
             {loadingThread && thread.length === 0 && (
               <div className="p-4 text-xs text-muted-foreground text-center">Loading conversation thread...</div>
             )}
@@ -410,9 +416,15 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                         srcDoc={msg.bodyHtml}
                         sandbox="allow-popups allow-popups-to-escape-sandbox"
                         referrerPolicy="no-referrer"
-                        className="w-full border-0 min-h-[150px]"
+                        className="w-full border-0 min-h-[150px] overflow-hidden"
                         style={{ height: "auto" }}
                         title="Email body"
+                        onLoad={(e) => {
+                          const obj = e.currentTarget;
+                          if (obj.contentWindow?.document?.body) {
+                            obj.style.height = `${obj.contentWindow.document.body.scrollHeight + 20}px`;
+                          }
+                        }}
                       />
                     ) : (
                       <pre className="whitespace-pre-wrap font-sans text-sm">
@@ -479,6 +491,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
 
               {/* Real-Time Visual WYSIWYG Rich Text Editor */}
               <RichTextEditor
+                ref={richEditorRef}
                 value={replyText}
                 onChange={setReplyText}
                 placeholder={`Reply to ${replyTargetEmail || "sender"}...`}

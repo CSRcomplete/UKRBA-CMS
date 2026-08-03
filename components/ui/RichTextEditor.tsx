@@ -12,15 +12,22 @@ interface RichTextEditorProps {
   onAttachFile?: () => void;
 }
 
-export function RichTextEditor({
-  value,
-  onChange,
-  placeholder = "Write your message...",
-  minHeight = "150px",
-  onAttachFile,
-}: RichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const isUpdatingRef = useRef(false);
+export interface RichTextEditorRef {
+  focus: () => void;
+}
+
+export const RichTextEditor = React.forwardRef<RichTextEditorRef, RichTextEditorProps>(
+  ({ value, onChange, placeholder = "Write your message...", minHeight = "150px", onAttachFile }, ref) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+    const isUpdatingRef = useRef(false);
+
+    React.useImperativeHandle(ref, () => ({
+      focus: () => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+        }
+      },
+    }));
 
   useEffect(() => {
     if (editorRef.current && !isUpdatingRef.current) {
@@ -146,4 +153,6 @@ export function RichTextEditor({
       />
     </div>
   );
-}
+});
+
+RichTextEditor.displayName = "RichTextEditor";
