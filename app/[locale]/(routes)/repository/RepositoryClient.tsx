@@ -406,15 +406,39 @@ export default function RepositoryClient({
           }
 
           const presignData = await presignRes.json();
-          const putRes = await fetch(presignData.presignedUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
 
-          if (!putRes.ok) {
-            throw new Error("Presigned PUT failed");
-          }
+          // Upload via XMLHttpRequest with real-time percentage progress tracking
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", presignData.presignedUrl);
+            if (file.type) {
+              xhr.setRequestHeader("Content-Type", file.type);
+            }
+
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
+                const totalMB = (event.total / (1024 * 1024)).toFixed(1);
+                setUploadProgressText(
+                  `Uploading file ${i + 1} of ${fileQueue.length}: ${file.name} (${percent}% - ${loadedMB} MB / ${totalMB} MB)`
+                );
+              }
+            };
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+              } else {
+                reject(new Error(`Upload failed with HTTP status ${xhr.status}`));
+              }
+            };
+
+            xhr.onerror = () => reject(new Error("Network error during file upload"));
+            xhr.ontimeout = () => reject(new Error("Upload timed out"));
+
+            xhr.send(file);
+          });
 
           fileUrl = presignData.fileUrl;
           key = presignData.key;
