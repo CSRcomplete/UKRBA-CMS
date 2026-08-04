@@ -37,8 +37,11 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(moment().add(1, "days").format("YYYY-MM-DDTHH:mm"));
   const [duration, setDuration] = useState("30");
-  const [inviteeType, setInviteeType] = useState<"user" | "lead">("lead");
+  const [inviteeType, setInviteeType] = useState<"user" | "lead" | "external">("lead");
   const [inviteeId, setInviteeId] = useState("");
+  const [externalEmail, setExternalEmail] = useState("");
+  const [externalName, setExternalName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +49,11 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
       toast.error("Meeting title is required");
       return;
     }
-    if (!inviteeId) {
+    if (inviteeType === "external" && !externalEmail.trim()) {
+      toast.error("Please enter an external email address");
+      return;
+    }
+    if (inviteeType !== "external" && !inviteeId) {
       toast.error("Please select an invitee");
       return;
     }
@@ -59,7 +66,9 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
         date: new Date(date),
         duration: duration ? parseInt(duration, 10) : undefined,
         inviteeType,
-        inviteeId,
+        inviteeId: inviteeType === "external" ? "external" : inviteeId,
+        externalEmail: inviteeType === "external" ? externalEmail.trim() : undefined,
+        externalName: inviteeType === "external" ? externalName.trim() : undefined,
         meetingType,
         location,
       });
@@ -75,6 +84,9 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
         setDescription("");
         setLocation("");
         setInviteeId("");
+        setExternalEmail("");
+        setExternalName("");
+        setSearchQuery("");
         if (onScheduled && result.jitsiRoomId) {
           onScheduled(result.jitsiRoomId);
         } else {
@@ -90,6 +102,15 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
   };
 
   const currentOptions = inviteeType === "user" ? eligibleTargets.users : eligibleTargets.leads;
+
+  const filteredOptions = currentOptions.filter((opt) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const nameStr = (opt.name || "").toLowerCase();
+    const emailStr = (opt.email || "").toLowerCase();
+    const companyStr = (opt.company || "").toLowerCase();
+    return nameStr.includes(q) || emailStr.includes(q) || companyStr.includes(q);
+  });
 
   return (
     <Card className="shadow-sm border-muted">
@@ -171,14 +192,17 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Invitee Type *</label>
               <Select
                 value={inviteeType}
-                onValueChange={(v: "user" | "lead") => {
+                onValueChange={(v: "user" | "lead" | "external") => {
                   setInviteeType(v);
                   setInviteeId("");
+                  setExternalEmail("");
+                  setExternalName("");
+                  setSearchQuery("");
                 }}
               >
                 <SelectTrigger>
@@ -187,33 +211,59 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
                 <SelectContent>
                   <SelectItem value="lead">CRM Lead / Member</SelectItem>
                   <SelectItem value="user">Staff Member (Subordinate)</SelectItem>
+                  <SelectItem value="external">External Email Address (Unsaved Contact)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Select Invitee *</label>
-              <Select value={inviteeId} onValueChange={setInviteeId} disabled={currentOptions.length === 0}>
-                <SelectTrigger>
-                  <SelectValue placeholder={currentOptions.length === 0 ? "No eligible options" : "Select person..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentOptions.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>
-                      {opt.name || opt.email} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {inviteeType === "external" ? (
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">External Email Address *</label>
+                  <Input
+                    type="email"
+                    placeholder="e.g. client@externalcompany.com"
+                    value={externalEmail}
+                    onChange={(e) => setExternalEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">External Contact Name (Optional)</label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. John Smith"
+                    value={externalName}
+                    onChange={(e) => setExternalName(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground">Select Invitee *</label>
+                <div className="space-y-1.5">
+                  <Input
+                    placeholder="Search by name, email or company..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 text-xs mb-1"
+                  />
+                  <Select value={inviteeId} onValueChange={setInviteeId} disabled={filteredOptions.length === 0}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder={filteredOptions.length === 0 ? "No matching contacts found" : "Select person..."} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {filteredOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                          {opt.name || opt.email} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
-
-          {inviteeType === "user" && currentOptions.length === 0 && (
-            <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded text-amber-800 dark:text-amber-300 text-xs">
-              <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-              <span>You cannot book meetings with superior or equal staff members. No subordinates found.</span>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">

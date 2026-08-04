@@ -102,7 +102,12 @@ export const getMeetings = async () => {
         }
         return null;
       })
-      .filter(Boolean);
+      .filter(Boolean) as { type: string; name: string }[];
+
+    if (meta?.externalEmail) {
+      const extName = meta.externalName ? `${meta.externalName} (${meta.externalEmail})` : meta.externalEmail;
+      invitees.push({ type: "External", name: extName });
+    }
 
     return {
       ...activity,
@@ -166,17 +171,19 @@ export const scheduleMeeting = async (data: {
   description: string;
   date: Date;
   duration?: number;
-  inviteeType: "user" | "lead";
+  inviteeType: "user" | "lead" | "external";
   inviteeId: string;
+  externalEmail?: string;
+  externalName?: string;
   meetingType?: "video" | "phone" | "in_person";
   location?: string;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  const { title, description, date, duration, inviteeType, inviteeId, meetingType = "video", location } = data;
+  const { title, description, date, duration, inviteeType, inviteeId, externalEmail, externalName, meetingType = "video", location } = data;
 
-  if (!title || !date || !inviteeId) {
+  if (!title || !date || (inviteeType !== "external" && !inviteeId) || (inviteeType === "external" && !externalEmail)) {
     return { error: "Missing required fields" };
   }
 
@@ -216,6 +223,7 @@ export const scheduleMeeting = async (data: {
         metadata: {
           meetingType,
           location: location || null,
+          ...(inviteeType === "external" ? { externalEmail, externalName } : {}),
           ...(isVideo ? { jitsiRoomId, meetingLink: jitsiUrl } : {}),
         },
       },
@@ -230,14 +238,16 @@ export const scheduleMeeting = async (data: {
       },
     });
 
-    // Link to invitee
-    await prismadb.crm_ActivityLinks.create({
-      data: {
-        activityId: activity.id,
-        entityType: inviteeType,
-        entityId: inviteeId,
-      },
-    });
+    // Link to invitee if existing entity
+    if (inviteeType !== "external" && inviteeId) {
+      await prismadb.crm_ActivityLinks.create({
+        data: {
+          activityId: activity.id,
+          entityType: inviteeType,
+          entityId: inviteeId,
+        },
+      });
+    }
 
     // Email notification
     try {
@@ -254,6 +264,8 @@ export const scheduleMeeting = async (data: {
           select: { email: true },
         });
         inviteeEmail = inviteeLead?.email || null;
+      } else if (inviteeType === "external") {
+        inviteeEmail = externalEmail || null;
       }
 
       if (inviteeEmail) {
