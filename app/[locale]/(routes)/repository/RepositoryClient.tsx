@@ -386,9 +386,11 @@ export default function RepositoryClient({
         const isVideo = file.type.startsWith("video/");
         const folder = isVideo ? "uploads" : "documents";
 
-        let fileUrl: string;
-        let key: string;
+        let fileUrl = "";
+        let key = "";
 
+        try {
+          // Attempt 1: Direct Presigned S3/MinIO upload
           const presignRes = await fetch("/api/upload/presigned-url", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -429,18 +431,67 @@ export default function RepositoryClient({
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve();
               } else {
-                reject(new Error(`Upload failed with HTTP status ${xhr.status}`));
+                reject(new Error(`Direct upload returned status ${xhr.status}`));
               }
             };
 
-            xhr.onerror = () => reject(new Error("Network error during file upload"));
-            xhr.ontimeout = () => reject(new Error("Upload timed out"));
+            xhr.onerror = () => reject(new Error("Direct storage CORS/Network error"));
+            xhr.ontimeout = () => reject(new Error("Direct upload timed out"));
 
             xhr.send(file);
           });
 
           fileUrl = presignData.fileUrl;
           key = presignData.key;
+        } catch (directErr: any) {
+          console.warn("[UPLOAD_DIRECT_FAILED] Falling back to server upload route:", directErr.message);
+
+          // Attempt 2: Fallback to /api/upload with progress tracking
+          await new Promise<void>((resolve, reject) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("folder", folder);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/upload");
+
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
+                const totalMB = (event.total / (1024 * 1024)).toFixed(1);
+                setUploadProgressText(
+                  `Uploading file ${i + 1} of ${fileQueue.length}: ${file.name} (${percent}% - ${loadedMB} MB / ${totalMB} MB)`
+                );
+              }
+            };
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  const resData = JSON.parse(xhr.responseText);
+                  fileUrl = resData.fileUrl;
+                  key = resData.key;
+                  resolve();
+                } catch {
+                  reject(new Error("Invalid server response format"));
+                }
+              } else {
+                let errText = `Upload failed with status ${xhr.status}`;
+                try {
+                  const resData = JSON.parse(xhr.responseText);
+                  if (resData.error) errText = resData.error;
+                } catch {}
+                reject(new Error(errText));
+              }
+            };
+
+            xhr.onerror = () => reject(new Error(`Failed to upload ${file.name}. Please check network connection.`));
+            xhr.ontimeout = () => reject(new Error("Server upload timed out"));
+
+            xhr.send(formData);
+          });
+        }
 
         const customDesc = fileDescriptions[file.name] || `${uploadFolder} > ${uploadSubfolder}`;
 
