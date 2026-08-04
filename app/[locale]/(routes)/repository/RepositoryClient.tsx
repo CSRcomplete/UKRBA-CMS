@@ -389,8 +389,6 @@ export default function RepositoryClient({
         let fileUrl: string;
         let key: string;
 
-        try {
-          // Attempt 1: Presigned URL upload
           const presignRes = await fetch("/api/upload/presigned-url", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -402,7 +400,8 @@ export default function RepositoryClient({
           });
 
           if (!presignRes.ok) {
-            throw new Error("Presign request failed");
+            const errJson = await presignRes.json().catch(() => ({}));
+            throw new Error(errJson.error || `Presign request failed with status ${presignRes.status}`);
           }
 
           const presignData = await presignRes.json();
@@ -442,32 +441,6 @@ export default function RepositoryClient({
 
           fileUrl = presignData.fileUrl;
           key = presignData.key;
-        } catch {
-          // Attempt 2: Fallback to /api/upload endpoint (multipart form data)
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("folder", folder);
-
-          const uploadRes = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!uploadRes.ok) {
-            const errText = await uploadRes.text();
-            let message = `Upload failed for ${file.name}`;
-            try {
-              message = JSON.parse(errText).error || message;
-            } catch {
-              // keep fallback message
-            }
-            throw new Error(message);
-          }
-
-          const uploadData = await uploadRes.json();
-          fileUrl = uploadData.fileUrl;
-          key = uploadData.key;
-        }
 
         const customDesc = fileDescriptions[file.name] || `${uploadFolder} > ${uploadSubfolder}`;
 
