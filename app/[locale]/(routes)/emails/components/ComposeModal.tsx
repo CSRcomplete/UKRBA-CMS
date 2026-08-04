@@ -207,13 +207,13 @@ export function ComposeModal({
       <DialogTrigger asChild>
         {trigger ?? <Button size="sm">Compose</Button>}
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{mode === "reply" ? "Reply" : mode === "forward" ? "Forward" : "New Email"}</span>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-4 pb-2 border-b">
+          <DialogTitle className="flex items-center justify-between text-base font-bold">
+            <span>{mode === "reply" ? "Reply" : mode === "forward" ? "Forward" : mode === "draft" ? "Edit Draft" : "New Email"}</span>
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="p-4 space-y-3 overflow-y-auto max-h-[calc(90vh-110px)]">
           {/* Template Selector */}
           {templates.length > 0 && (
             <div className="space-y-1">

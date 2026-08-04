@@ -27,6 +27,7 @@ import {
   Loader2,
   Search,
   Lock,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createRepositoryDocument } from "@/actions/documents/create-repository-document";
+import { createRepositoryDocument, deleteRepositoryDocument } from "@/actions/documents/create-repository-document";
+import { toast } from "sonner";
 import moment from "moment";
 
 export interface FolderConfig {
@@ -195,6 +197,23 @@ export default function RepositoryClient({
   // Video modal state
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeVideoTitle, setActiveVideoTitle] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteDocument = async (docId: string, docName: string) => {
+    if (!canUpload) return;
+    if (!confirm(`Are you sure you want to delete "${docName}" from the repository?`)) return;
+
+    setDeletingId(docId);
+    try {
+      await deleteRepositoryDocument(docId);
+      toast.success(`"${docName}" deleted successfully.`);
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete document");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Get active folder configuration
   const currentFolderConfig = useMemo(() => {
@@ -763,6 +782,18 @@ export default function RepositoryClient({
                                     </Button>
                                   </a>
                                 )}
+                                {canUpload && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={deletingId === doc.id}
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                    onClick={() => handleDeleteDocument(doc.id, doc.document_name)}
+                                    title="Delete file from repository"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -839,7 +870,6 @@ export default function RepositoryClient({
                   multiple
                   onChange={handleFileInputChange}
                   className="hidden"
-                  accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,video/*"
                 />
                 <label htmlFor="multiFileInput" className="cursor-pointer flex flex-col items-center justify-center gap-2">
                   <Upload className="h-8 w-8 text-muted-foreground" />
@@ -847,7 +877,7 @@ export default function RepositoryClient({
                     Click to browse or drag and drop files here
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    PDFs, Docs, Images, or Videos (Multiple files supported)
+                    All file types supported (PDF, DOCX, SVG, PSD, AI, CSV, ZIP, Videos &amp; more)
                   </div>
                 </label>
               </div>

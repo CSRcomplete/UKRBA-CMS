@@ -54,3 +54,38 @@ export async function createRepositoryDocument(input: CreateRepositoryDocumentIn
   revalidatePath("/[locale]/(routes)/repository");
   return document;
 }
+
+export async function deleteRepositoryDocument(documentId: string) {
+  let user;
+  try {
+    user = await requireAuthenticated();
+  } catch (e) {
+    if (e instanceof AuthenticationError) throw new Error("Unauthorized");
+    throw e;
+  }
+
+  // Security Check: Only CEO and Admin can delete repository documents
+  const role = (user.role || "").toLowerCase();
+  if (role !== "admin" && role !== "ceo") {
+    throw new Error("Security Restriction: Only Admin and CEO can delete repository files.");
+  }
+
+  const existingDoc = await prismadb.documents.findUnique({
+    where: { id: documentId },
+  });
+
+  if (!existingDoc) {
+    throw new Error("Document not found.");
+  }
+
+  // Soft delete by updating deletedAt timestamp
+  await prismadb.documents.update({
+    where: { id: documentId },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+
+  revalidatePath("/[locale]/(routes)/repository");
+  return { success: true };
+}

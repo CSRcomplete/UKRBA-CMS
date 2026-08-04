@@ -10,14 +10,6 @@ export const maxDuration = 300;
 const ALLOWED_FOLDERS = ["avatars", "images", "documents", "uploads"] as const;
 type AllowedFolder = (typeof ALLOWED_FOLDERS)[number];
 
-const ALLOWED_CONTENT_TYPES = new Set([
-  "image/jpeg", "image/png", "image/gif", "image/webp",
-  "application/pdf", "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
-]);
-
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,17 +24,13 @@ export async function POST(req: NextRequest) {
     }
 
     const filename = path.basename(file.name ?? "");
-    const contentType = file.type;
+    const contentType = file.type || "application/octet-stream";
     const folder: AllowedFolder = ALLOWED_FOLDERS.includes(rawFolder as AllowedFolder)
       ? (rawFolder as AllowedFolder)
       : "uploads";
 
-    if (!filename || !contentType) {
-      return NextResponse.json({ error: "filename and contentType are required" }, { status: 400 });
-    }
-
-    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
-      return NextResponse.json({ error: "Content type not allowed" }, { status: 400 });
+    if (!filename) {
+      return NextResponse.json({ error: "filename is required" }, { status: 400 });
     }
 
     // Fall back to "bin" if filename has no extension or extension is empty (e.g., ".")

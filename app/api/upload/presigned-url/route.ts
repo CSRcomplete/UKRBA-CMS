@@ -22,20 +22,11 @@ export async function POST(req: NextRequest) {
     ? (rawFolder as AllowedFolder)
     : "uploads";
 
-  if (!filename || !contentType) {
-    return NextResponse.json({ error: "filename and contentType are required" }, { status: 400 });
+  if (!filename) {
+    return NextResponse.json({ error: "filename is required" }, { status: 400 });
   }
 
-  const ALLOWED_CONTENT_TYPES = new Set([
-    "image/jpeg", "image/png", "image/gif", "image/webp",
-    "application/pdf", "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "text/plain",
-    "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
-  ]);
-  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
-    return NextResponse.json({ error: "Content type not allowed" }, { status: 400 });
-  }
+  const effectiveContentType = contentType || "application/octet-stream";
 
   // Fall back to "bin" if filename has no extension or extension is empty (e.g., ".")
   const ext = filename.includes(".") ? filename.split(".").pop()?.trim() || "bin" : "bin";
@@ -44,7 +35,7 @@ export async function POST(req: NextRequest) {
   const command = new PutObjectCommand({
     Bucket: MINIO_BUCKET,
     Key: key,
-    ContentType: contentType,
+    ContentType: effectiveContentType,
   });
 
   // Presigned URL valid for 10 minutes
