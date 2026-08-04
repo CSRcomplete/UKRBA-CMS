@@ -109,3 +109,26 @@ export async function toggleEmailAccountActiveAdmin(targetUserId: string, accoun
 
   return { success: true, updated };
 }
+
+export async function updateEmailAccountLabelAdmin(targetUserId: string, accountId: string, newLabel: string) {
+  await requireAdminOrCeo();
+
+  if (!newLabel?.trim()) throw new Error("Label cannot be empty");
+
+  const account = await prismadb.emailAccount.findFirst({
+    where: { id: accountId, userId: targetUserId },
+  });
+
+  if (!account) throw new Error("Email account not found for this user");
+
+  const updated = await prismadb.emailAccount.update({
+    where: { id: accountId },
+    data: { label: newLabel.trim() },
+    select: { id: true, label: true },
+  });
+
+  revalidatePath("/[locale]/(routes)/admin/users", "page");
+  revalidatePath(`/[locale]/(routes)/admin/users/${targetUserId}`, "page");
+
+  return { success: true, updated };
+}

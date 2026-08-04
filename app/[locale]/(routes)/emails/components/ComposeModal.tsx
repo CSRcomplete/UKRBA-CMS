@@ -15,27 +15,39 @@ import { Paperclip, Save, FileText, X } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { getUKRBASignature, getUKRBASignatureHtml, getUKRBASignatureEditorHtml } from "@/lib/email-signature";
 
-type Mode = "new" | "reply" | "forward";
+type Mode = "new" | "reply" | "forward" | "draft";
 
 type Props = {
   accountId: string;
   mode?: Mode;
   replyTo?: Mail;
+  initialDraft?: Mail;
   trigger?: React.ReactNode;
   currentUser?: { name?: string | null; role?: string | null };
+  onClose?: () => void;
+  openModal?: boolean;
 };
 
 export function ComposeModal({
   accountId,
   mode = "new",
   replyTo,
+  initialDraft,
   trigger,
   currentUser,
+  onClose,
+  openModal,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof openModal === "boolean") {
+      setOpen(openModal);
+    }
+  }, [openModal]);
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,26 +68,43 @@ export function ComposeModal({
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v);
+    if (!v && onClose) {
+      onClose();
+    }
     if (v) {
       setError(null);
       setAttachments([]);
       setSelectedTemplateId("");
-      setTo(mode === "reply" ? replyTo?.fromEmail ?? "" : "");
-      setCc("");
-      const cleanSub = replyTo?.subject ?? "";
-      if (mode === "reply") {
-        setSubject(cleanSub.toLowerCase().startsWith("re:") ? cleanSub : `Re: ${cleanSub}`);
-      } else if (mode === "forward") {
-        setSubject(cleanSub.toLowerCase().startsWith("fwd:") ? cleanSub : `Fwd: ${cleanSub}`);
-      } else {
-        setSubject("");
-      }
 
-      setBody(
-        mode === "reply" || mode === "forward"
-          ? `<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
-          : ""
-      );
+      if (mode === "draft" && initialDraft) {
+        const toRecs = Array.isArray(initialDraft.toRecipients)
+          ? initialDraft.toRecipients.map((r) => r.email).join(", ")
+          : "";
+        const ccRecs = Array.isArray(initialDraft.ccRecipients)
+          ? initialDraft.ccRecipients.map((r) => r.email).join(", ")
+          : "";
+        setTo(toRecs);
+        setCc(ccRecs);
+        setSubject(initialDraft.subject || "");
+        setBody(initialDraft.bodyHtml || initialDraft.bodyText || "");
+      } else {
+        setTo(mode === "reply" ? replyTo?.fromEmail ?? "" : "");
+        setCc("");
+        const cleanSub = replyTo?.subject ?? "";
+        if (mode === "reply") {
+          setSubject(cleanSub.toLowerCase().startsWith("re:") ? cleanSub : `Re: ${cleanSub}`);
+        } else if (mode === "forward") {
+          setSubject(cleanSub.toLowerCase().startsWith("fwd:") ? cleanSub : `Fwd: ${cleanSub}`);
+        } else {
+          setSubject("");
+        }
+
+        setBody(
+          mode === "reply" || mode === "forward"
+            ? `<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
+            : ""
+        );
+      }
     }
   };
 
@@ -114,6 +143,7 @@ export function ComposeModal({
     try {
       await saveDraft({
         accountId,
+        draftId: initialDraft?.id,
         to: to.split(",").map((e) => e.trim()).filter(Boolean),
         cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
         subject,

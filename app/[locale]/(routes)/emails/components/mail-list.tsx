@@ -35,8 +35,12 @@ export function MailList({ items, page, totalPages }: MailListProps) {
           </div>
         ) : (
           items.map((item) => {
-            const sender = item.fromName || item.fromEmail || "Unknown";
-            const snippet = item.bodyText?.replace(/\s+/g, " ").trim() || "";
+            let sender = item.fromName || item.fromEmail || "Unknown";
+            if (item.folder === "SENT" && Array.isArray(item.toRecipients) && item.toRecipients.length > 0) {
+              const firstTo = item.toRecipients[0];
+              sender = `To: ${firstTo.name || firstTo.email}`;
+            }
+            const snippet = item.bodyText?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || "";
 
             return (
               <div

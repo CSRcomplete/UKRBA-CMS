@@ -461,10 +461,22 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                       </Avatar>
                       <div className="grid gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm">{sName}</span>
-                          <Badge variant={msg.folder === "SENT" ? "secondary" : "outline"} className="text-[10px] py-0 h-4">
-                            {msg.folder === "SENT" ? "Sent by You" : "Received"}
+                          <span className="font-semibold text-sm">{sName !== "?" ? sName : (msg.fromEmail || "Draft")}</span>
+                          <Badge variant={msg.folder === "SENT" ? "secondary" : msg.folder === "DRAFTS" ? "destructive" : "outline"} className="text-[10px] py-0 h-4">
+                            {msg.folder === "SENT" ? "Sent by You" : msg.folder === "DRAFTS" ? "Draft" : "Received"}
                           </Badge>
+                          {msg.folder === "DRAFTS" && (
+                            <ComposeModal
+                              accountId={activeAccountId ?? ""}
+                              mode="draft"
+                              initialDraft={msg}
+                              trigger={
+                                <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 ml-2">
+                                  Edit & Send Draft
+                                </Button>
+                              }
+                            />
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           <span className="font-medium text-foreground">From:</span> {msg.fromEmail ?? ""}

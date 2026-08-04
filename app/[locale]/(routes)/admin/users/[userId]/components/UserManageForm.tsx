@@ -42,7 +42,9 @@ import {
   createEmailAccountAdmin,
   deleteEmailAccountAdmin,
   toggleEmailAccountActiveAdmin,
+  updateEmailAccountLabelAdmin,
 } from "@/actions/admin/users/admin-manage-user-email-accounts";
+import { Pencil } from "lucide-react";
 import { testEmailConnection } from "@/actions/emails/accounts";
 
 interface UserManageFormProps {
@@ -316,6 +318,27 @@ export default function UserManageForm({
     return cp ? `${cp.name || cp.email}` : id;
   };
 
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingAccountLabel, setEditingAccountLabel] = useState("");
+  const [savingAccountLabel, setSavingAccountLabel] = useState(false);
+
+  const handleSaveAccountLabel = async (accountId: string) => {
+    if (!editingAccountLabel.trim()) return;
+    setSavingAccountLabel(true);
+    try {
+      const res = await updateEmailAccountLabelAdmin(user.id, accountId, editingAccountLabel.trim());
+      if (res.success) {
+        toast.success("Email account label updated!");
+        setEditingAccountId(null);
+        router.refresh();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update account label");
+    } finally {
+      setSavingAccountLabel(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-4">
       {/* Header & Back Button */}
@@ -468,13 +491,63 @@ export default function UserManageForm({
                   key={acc.id}
                   className="p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm">{acc.label}</span>
-                      <Badge variant={acc.isActive ? "default" : "secondary"} className="text-[10px]">
-                        {acc.isActive ? "Active" : "Disabled"}
-                      </Badge>
-                    </div>
+                  <div className="space-y-1 flex-1">
+                    {editingAccountId === acc.id ? (
+                      <div className="flex items-center gap-1.5 py-0.5 max-w-xs">
+                        <Input
+                          size={1}
+                          value={editingAccountLabel}
+                          onChange={(e) => setEditingAccountLabel(e.target.value)}
+                          className="h-7 text-xs font-medium"
+                          placeholder="Account Label"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveAccountLabel(acc.id);
+                            if (e.key === "Escape") setEditingAccountId(null);
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                          disabled={savingAccountLabel}
+                          onClick={() => handleSaveAccountLabel(acc.id)}
+                          title="Save Label"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground"
+                          onClick={() => setEditingAccountId(null)}
+                          title="Cancel"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{acc.label}</span>
+                        {isCeoOrAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              setEditingAccountId(acc.id);
+                              setEditingAccountLabel(acc.label);
+                            }}
+                            title="Rename Account Label"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                        <Badge variant={acc.isActive ? "default" : "secondary"} className="text-[10px]">
+                          {acc.isActive ? "Active" : "Disabled"}
+                        </Badge>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground font-mono">{acc.username}</p>
                     <div className="text-[11px] text-muted-foreground flex items-center gap-3">
                       <span>IMAP: {acc.imapHost}:{acc.imapPort}</span>

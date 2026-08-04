@@ -63,6 +63,7 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
 
 export async function saveDraft(input: {
   accountId: string;
+  draftId?: string;
   to?: string[];
   cc?: string[];
   bcc?: string[];
@@ -70,6 +71,26 @@ export async function saveDraft(input: {
   body?: string;
 }) {
   const userId = await requireSession();
+
+  if (input.draftId) {
+    const existing = await prismadb.email.findFirst({
+      where: { id: input.draftId, userId, folder: EmailFolder.DRAFTS },
+    });
+    if (existing) {
+      return prismadb.email.update({
+        where: { id: input.draftId },
+        data: {
+          subject: input.subject || "(Draft)",
+          toRecipients: input.to?.map((e) => ({ email: e })) ?? [],
+          ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
+          bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
+          bodyText: input.body || "",
+          bodyHtml: input.body || "",
+          sentAt: new Date(),
+        },
+      });
+    }
+  }
 
   return prismadb.email.create({
     data: {
@@ -83,6 +104,7 @@ export async function saveDraft(input: {
       ccRecipients: input.cc?.map((e) => ({ email: e })) ?? [],
       bccRecipients: input.bcc?.map((e) => ({ email: e })) ?? [],
       bodyText: input.body || "",
+      bodyHtml: input.body || "",
       sentAt: new Date(),
       isRead: true,
     },
@@ -141,6 +163,8 @@ export async function getEmails(
           subject: true,
           fromName: true,
           fromEmail: true,
+          toRecipients: true,
+          bodyText: true,
           sentAt: true,
           isRead: true,
           folder: true,
@@ -149,8 +173,13 @@ export async function getEmails(
       prismadb.email.count({ where }),
     ]);
 
+    const formattedEmails = emails.map((e) => ({
+      ...e,
+      toRecipients: (Array.isArray(e.toRecipients) ? e.toRecipients : []) as { name?: string; email: string }[],
+    }));
+
     const total = Math.min(rawCount, MAX_COUNT);
-    return { emails: serializeDecimalsList(emails), total, page, totalPages: Math.ceil(total / PAGE_SIZE) };
+    return { emails: serializeDecimalsList(formattedEmails), total, page, totalPages: Math.ceil(total / PAGE_SIZE) };
   } catch (err) {
     console.error("Error fetching emails:", err);
     return { emails: [], total: 0, page: 1, totalPages: 0 };

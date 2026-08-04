@@ -93,6 +93,18 @@ export async function createEmailAccount(input: CreateInput) {
   return created;
 }
 
+export async function updateEmailAccountLabel(id: string, newLabel: string) {
+  const userId = await requireSession();
+  if (!newLabel?.trim()) throw new Error("Label cannot be empty");
+  const account = await prismadb.emailAccount.findFirst({ where: { id, userId } });
+  if (!account) throw new Error("Not found");
+  return prismadb.emailAccount.update({
+    where: { id },
+    data: { label: newLabel.trim() },
+    select: { id: true, label: true },
+  });
+}
+
 export async function deleteEmailAccount(id: string) {
   const userId = await requireSession();
   const account = await prismadb.emailAccount.findFirst({ where: { id, userId } });

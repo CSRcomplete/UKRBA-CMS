@@ -17,12 +17,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { Pencil, Check, X as XIcon } from "lucide-react";
 import {
   createEmailAccount,
   deleteEmailAccount,
   setEmailAccountActive,
   testEmailConnection,
   listImapFolders,
+  updateEmailAccountLabel,
 } from "@/actions/emails/accounts";
 import type { getEmailAccounts } from "@/actions/emails/accounts";
 import { triggerSync } from "@/actions/emails/sync";
@@ -35,6 +37,9 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
   const [testing, setTesting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [form, setForm] = useState({
     label: "",
     imapHost: "",
@@ -54,6 +59,25 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
   const [discoverError, setDiscoverError] = useState<string | null>(null);
 
   const refresh = () => router.refresh();
+
+  async function handleSaveRename(id: string) {
+    if (!editingLabel.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateEmailAccountLabel(id, editingLabel.trim());
+      setEditingId(null);
+      refresh();
+    } catch {
+      // Ignore
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  function startEditing(acc: Account) {
+    setEditingId(acc.id);
+    setEditingLabel(acc.label);
+  }
 
   function applyGmailPreset() {
     setProvider("gmail");
@@ -159,8 +183,55 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
           key={acc.id}
           className="flex items-center justify-between rounded-md border border-border px-4 py-3"
         >
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{acc.label}</p>
+          <div className="space-y-0.5 flex-1 max-w-sm mr-2">
+            {editingId === acc.id ? (
+              <div className="flex items-center gap-1.5 py-0.5">
+                <Input
+                  size={1}
+                  value={editingLabel}
+                  onChange={(e) => setEditingLabel(e.target.value)}
+                  className="h-7 text-xs font-medium"
+                  placeholder="Account Label"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveRename(acc.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                  disabled={savingEdit}
+                  onClick={() => handleSaveRename(acc.id)}
+                  title="Save Label"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-muted-foreground"
+                  onClick={() => setEditingId(null)}
+                  title="Cancel"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{acc.label}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => startEditing(acc)}
+                  title="Rename Account"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               {acc.username} @ {acc.imapHost}
             </p>
