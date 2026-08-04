@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     const ext = filename.includes(".") ? filename.split(".").pop()?.trim() || "bin" : "bin";
     const key = `${folder}/${randomUUID()}.${ext}`;
 
+    // Convert Web File stream to Node Buffer or Stream for high-performance direct transfer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       Bucket: MINIO_BUCKET,
       Key: key,
       ContentType: contentType,
+      ContentLength: buffer.length,
       Body: buffer,
     });
 
