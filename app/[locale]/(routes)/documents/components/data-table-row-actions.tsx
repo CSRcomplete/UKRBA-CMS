@@ -34,7 +34,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const router = useRouter();
 
   const { data: session } = useSession();
-  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
 
   const document = row.original;
 

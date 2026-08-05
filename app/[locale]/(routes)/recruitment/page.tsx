@@ -20,7 +20,7 @@ export default async function RecruitmentPage() {
   const role = dbUser?.role?.toLowerCase() || "";
 
   // Recruitment centre is strictly admin/CEO only
-  if (!["admin", "ceo"].includes(role)) {
+  if (!["admin", "ceo", "coo"].includes(role)) {
     redirect("/");
   }
 

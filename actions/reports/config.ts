@@ -28,7 +28,7 @@ export async function loadConfigs(category: ReportCategory) {
 async function loadAndAuthorize(configId: string, user: { id: string; role: string }) {
   const cfg = await prismadb.crm_Report_Config.findUnique({ where: { id: configId } });
   if (!cfg) throw new Error("Not found");
-  if (user.role !== "admin" && user.role !== "manager" && cfg.createdBy !== user.id) {
+  if (user.role !== "admin" && user.role !== "ceo" && user.role !== "coo" && user.role !== "manager" && cfg.createdBy !== user.id) {
     throw new AuthorizationError();
   }
   return cfg;

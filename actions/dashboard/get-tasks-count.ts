@@ -5,7 +5,7 @@ import { requireAuthenticated, AuthenticationError } from "@/lib/authz";
 export const getTasksCount = async () => {
   try {
     const user = await requireAuthenticated();
-    if (user.role === "admin" || user.role === "manager") {
+    if (user.role === "admin" || user.role === "ceo" || user.role === "coo" || user.role === "manager") {
       return await prismadb.tasks.count();
     }
     return await prismadb.tasks.count({ where: { user: user.id } });

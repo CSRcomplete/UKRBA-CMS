@@ -79,7 +79,7 @@ export async function saveContactPaymentAllocation(data: {
   }
 
   const role = (session.user.role || "").toLowerCase();
-  if (role !== "admin" && role !== "ceo") {
+  if (role !== "admin" && role !== "ceo" && role !== "coo") {
     return { error: "Security Restriction: Only CEO and Admin can modify payment allocations." };
   }
 
@@ -182,7 +182,7 @@ export async function approvePaymentAllocation(contactId: string) {
   }
 
   const role = (session.user.role || "").toLowerCase();
-  if (role !== "admin" && role !== "ceo") {
+  if (role !== "admin" && role !== "ceo" && role !== "coo") {
     return { error: "Security Restriction: Only CEO and Admin can approve payment allocations." };
   }
 

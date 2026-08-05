@@ -59,7 +59,7 @@ export function LeadDataTable<TData, TValue>({
   const [loading, setLoading] = React.useState(false);
 
   const { data: session } = useSession();
-  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});

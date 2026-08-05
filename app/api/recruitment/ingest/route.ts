@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // Find the first admin user to attribute creation to
     const adminUser = await prismadb.users.findFirst({
-      where: { role: { in: ["admin", "ceo"] }, userStatus: "ACTIVE" },
+      where: { role: { in: ["admin", "ceo", "coo"] }, userStatus: "ACTIVE" },
       select: { id: true },
     });
 

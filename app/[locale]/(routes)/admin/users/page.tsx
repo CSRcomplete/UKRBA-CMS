@@ -20,7 +20,7 @@ const AdminUsersPage = async () => {
 
   const session = await getSession();
 
-  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo") {
+  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "coo") {
     return (
       <Container
         title={t("title")}

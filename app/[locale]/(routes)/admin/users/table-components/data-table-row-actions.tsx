@@ -92,10 +92,10 @@ export function DataTableRowActions<TData>({
   const filteredSupervisors = users.filter((u) => {
     if (u.id === data.id) return false;
     if (data.role === "operations_director") {
-      return u.role === "ceo" || u.role === "admin";
+      return u.role === "ceo" || u.role === "coo" || u.role === "admin";
     }
     if (data.role === "regional_director") {
-      return u.role === "operations_director" || u.role === "ceo" || u.role === "admin";
+      return u.role === "operations_director" || u.role === "ceo" || u.role === "coo" || u.role === "admin";
     }
     if (data.role === "area_director") {
       return u.role === "regional_director";
@@ -103,7 +103,7 @@ export function DataTableRowActions<TData>({
     if (data.role === "channel_partner") {
       return u.role === "area_director";
     }
-    return u.role === "ceo" || u.role === "admin" || u.role === "operations_director";
+    return u.role === "ceo" || u.role === "coo" || u.role === "admin" || u.role === "operations_director";
   });
 
   const onCopy = (id: string) => {
@@ -231,6 +231,9 @@ export function DataTableRowActions<TData>({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSetRole("ceo")}>
                 CEO
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("coo")}>
+                COO
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSetRole("operations_director")}>
                 Operations Director

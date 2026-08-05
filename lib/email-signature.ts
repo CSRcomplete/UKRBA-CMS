@@ -6,6 +6,8 @@ export function formatJobTitle(role?: string | null): string {
       return "Administrator";
     case "ceo":
       return "Chief Executive Officer";
+    case "coo":
+      return "Chief Operating Officer";
     case "operations_director":
       return "Operations Director";
     case "area_director":

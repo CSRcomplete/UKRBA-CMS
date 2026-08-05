@@ -78,7 +78,9 @@ export default function UserManageForm({
   const [isPending, startTransition] = useTransition();
 
   const isCeoOrAdmin =
-    currentUserRole.toLowerCase() === "admin" || currentUserRole.toLowerCase() === "ceo";
+    currentUserRole.toLowerCase() === "admin" ||
+    currentUserRole.toLowerCase() === "ceo" ||
+    currentUserRole.toLowerCase() === "coo";
 
   // Core Hierarchy & Role states
   const [role, setRole] = useState<AppRole>(user.role);
@@ -732,6 +734,7 @@ export default function UserManageForm({
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="ceo">CEO</SelectItem>
+                  <SelectItem value="coo">COO</SelectItem>
                   <SelectItem value="operations_director">Operations Director</SelectItem>
                   <SelectItem value="regional_director">Regional Director</SelectItem>
                   <SelectItem value="area_director">Area Director</SelectItem>

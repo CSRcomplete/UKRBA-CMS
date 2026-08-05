@@ -31,7 +31,7 @@ export function BatchActionsBar({ table, accounts }: BatchActionsBarProps) {
   const router = useRouter();
 
   const { data: session } = useSession();
-  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map((r) => r.original.id);

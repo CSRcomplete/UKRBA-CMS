@@ -17,7 +17,7 @@ interface AuditLogAdminFilters {
 
 export const getAuditLogAdmin = async (filters: AuditLogAdminFilters = {}) => {
   try {
-    await requireRole(["admin", "ceo"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { error: "Forbidden" };

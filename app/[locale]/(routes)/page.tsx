@@ -120,7 +120,7 @@ const DashboardPage = async () => {
   let recentTasks: any[] = [];
   let recentMeetings: any[] = [];
 
-  if (userRole === "ceo" || userRole === "admin") {
+  if (userRole === "ceo" || userRole === "coo" || userRole === "admin") {
     const allUsers = await prismadb.users.findMany({
       where: {
         role: {
@@ -590,7 +590,7 @@ const DashboardPage = async () => {
         </div>
 
         {/* 10. Recruitment Centre — Admin/CEO only */}
-        {(userRole === "admin" || userRole === "ceo") && (
+        {(userRole === "admin" || userRole === "ceo" || userRole === "coo") && (
           <div className="mt-6">
             <h2 className="text-base font-semibold text-muted-foreground mb-3">Administration Only</h2>
             <Link
@@ -684,7 +684,7 @@ const DashboardPage = async () => {
       )}
 
       {/* Standard Welcome Message for roles without custom tables */}
-      {!["ceo", "admin", "operations_director", "regional_director", "area_director", "channel_partner"].includes(userRole) && (
+      {!["ceo", "coo", "admin", "operations_director", "regional_director", "area_director", "channel_partner"].includes(userRole) && (
         <div className="rounded-md border bg-card p-6 shadow-sm">
           <p className="text-muted-foreground text-center">
             Welcome to UKRBA CRM. Please select a module from the sidebar navigation to get started.
@@ -693,7 +693,7 @@ const DashboardPage = async () => {
       )}
 
       {/* CEO & Admin Dashboard Sections */}
-      {(userRole === "ceo" || userRole === "admin") && (
+      {(userRole === "ceo" || userRole === "coo" || userRole === "admin") && (
         <div className="space-y-8">
           {/* Operations Directors Section */}
           <div className="space-y-4">
@@ -1015,6 +1015,7 @@ const DashboardPage = async () => {
                               {meeting.created_by_user?.name || meeting.created_by_user?.email || "N/A"}
                               {meeting.created_by_user?.role ? ` (${
                                 meeting.created_by_user.role === "ceo" ? "CEO - UKRBA SME" :
+                                meeting.created_by_user.role === "coo" ? "COO - UKRBA SME" :
                                 meeting.created_by_user.role === "operations_director" ? "Operations Director" :
                                 meeting.created_by_user.role === "regional_director" ? "Regional Director" :
                                 meeting.created_by_user.role === "area_director" ? "Area Director" :

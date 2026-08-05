@@ -49,7 +49,7 @@ export async function getAnnouncements(category?: string): Promise<{
   });
 
   const role = dbUser?.role?.toLowerCase() || "";
-  const isAdmin = ["admin", "ceo"].includes(role);
+  const isAdmin = ["admin", "ceo", "coo"].includes(role);
 
   const where: any = { deletedAt: null };
   if (category && category !== "All") {
@@ -128,7 +128,7 @@ export async function createAnnouncement(input: CreateAnnouncementInput) {
   });
 
   const role = dbUser?.role?.toLowerCase() || "";
-  if (!["admin", "ceo"].includes(role)) {
+  if (!["admin", "ceo", "coo"].includes(role)) {
     throw new Error("Only authorized Administrators can publish announcements.");
   }
 
@@ -170,7 +170,7 @@ export async function updateAnnouncement(id: string, input: Partial<CreateAnnoun
   });
 
   const role = dbUser?.role?.toLowerCase() || "";
-  if (!["admin", "ceo"].includes(role)) {
+  if (!["admin", "ceo", "coo"].includes(role)) {
     throw new Error("Only authorized Administrators can edit announcements.");
   }
 
@@ -206,7 +206,7 @@ export async function deleteAnnouncement(id: string) {
   });
 
   const role = dbUser?.role?.toLowerCase() || "";
-  if (!["admin", "ceo"].includes(role)) {
+  if (!["admin", "ceo", "coo"].includes(role)) {
     throw new Error("Only authorized Administrators can delete announcements.");
   }
 
@@ -227,7 +227,7 @@ export async function getUnreadAnnouncementsCount(): Promise<number> {
       select: { role: true },
     });
     const role = dbUser?.role?.toLowerCase() || "";
-    const isAdmin = ["admin", "ceo"].includes(role);
+    const isAdmin = ["admin", "ceo", "coo"].includes(role);
 
     const allAnnouncements = await prismadb.crm_Announcements.findMany({
       where: { deletedAt: null },

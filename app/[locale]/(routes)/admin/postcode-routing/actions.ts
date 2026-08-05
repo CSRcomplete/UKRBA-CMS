@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 
 export async function getPostcodeRoutes() {
-  const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
+  const actor = await requireRole(["admin", "ceo", "coo", "operations_director", "regional_director"]);
   
   if (actor.role === "regional_director" && actor.region_id !== null) {
     return await prismadb.nextcrm_postcode_routing.findMany({
@@ -50,7 +50,7 @@ export async function createPostcodeRoute(data: {
   assigned_region_id: number;
   area_director_ids?: string[];
 }) {
-  const actor = await requireRole(["admin", "ceo", "operations_director"]);
+  const actor = await requireRole(["admin", "ceo", "coo", "operations_director"]);
 
   const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
@@ -115,7 +115,7 @@ export async function updatePostcodeRoute(
     area_director_ids?: string[];
   }
 ) {
-  const actor = await requireRole(["admin", "ceo", "operations_director", "regional_director"]);
+  const actor = await requireRole(["admin", "ceo", "coo", "operations_director", "regional_director"]);
 
   const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
@@ -194,7 +194,7 @@ export async function updatePostcodeRoute(
 }
 
 export async function deletePostcodeRoute(id: string) {
-  await requireRole(["admin", "ceo", "operations_director"]);
+  await requireRole(["admin", "ceo", "coo", "operations_director"]);
 
   try {
     const existingRoute = await prismadb.nextcrm_postcode_routing.findUnique({

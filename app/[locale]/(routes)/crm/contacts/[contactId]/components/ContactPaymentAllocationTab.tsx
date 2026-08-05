@@ -58,7 +58,7 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
   const [partnerPercentage, setPartnerPercentage] = useState<number>(0);
 
   const isCeoOrAdmin =
-    currentUserRole.toLowerCase() === "admin" || currentUserRole.toLowerCase() === "ceo";
+    currentUserRole.toLowerCase() === "admin" || currentUserRole.toLowerCase() === "ceo" || currentUserRole.toLowerCase() === "coo";
 
   useEffect(() => {
     fetchData();

@@ -11,7 +11,7 @@ export const updateUserHierarchy = async (
 ) => {
   let actor;
   try {
-    actor = await requireRole(["admin", "ceo", "operations_director"]);
+    actor = await requireRole(["admin", "ceo", "coo", "operations_director"]);
   } catch (e) {
     if (e instanceof AuthorizationError) return { error: "Forbidden" };
     return { error: "Unauthorized" };

@@ -40,7 +40,7 @@ export async function requireRole(
 }
 
 export function isAdmin(user: AuthzUser): boolean {
-  return user.role === "admin" || user.role === "ceo";
+  return user.role === "admin" || user.role === "ceo" || user.role === "coo";
 }
 
 export function isManagerOrAdmin(user: AuthzUser): boolean {
@@ -48,6 +48,7 @@ export function isManagerOrAdmin(user: AuthzUser): boolean {
     user.role === "manager" ||
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director"
   );
 }

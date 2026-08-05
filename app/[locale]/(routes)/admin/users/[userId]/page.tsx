@@ -16,7 +16,7 @@ export default async function UserPage(props: UserPageProps) {
   const params = await props.params;
   const session = await getSession();
 
-  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "operations_director") {
+  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "coo" && session?.user?.role !== "operations_director") {
     redirect("/admin/users");
   }
 

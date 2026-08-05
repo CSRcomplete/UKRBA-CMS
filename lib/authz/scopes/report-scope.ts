@@ -21,7 +21,7 @@ const EMPTY: ReportScope = {
 };
 
 export function getReportScope(user: AuthzUser): ReportScope {
-  if (user.role === "admin" || user.role === "manager") return EMPTY;
+  if (user.role === "admin" || user.role === "ceo" || user.role === "coo" || user.role === "manager") return EMPTY;
   return {
     opportunity: {
       OR: [{ assigned_to: user.id }, { createdBy: user.id }],

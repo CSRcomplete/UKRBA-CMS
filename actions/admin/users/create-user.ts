@@ -20,7 +20,7 @@ export const createUser = async (data: {
   let actor;
   try {
     // Only admins or ceos can create users
-    actor = await requireRole(["admin", "ceo"]);
+    actor = await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { error: "Forbidden" };

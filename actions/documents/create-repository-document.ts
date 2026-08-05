@@ -66,7 +66,7 @@ export async function deleteRepositoryDocument(documentId: string) {
 
   // Security Check: Only CEO and Admin can delete repository documents
   const role = (user.role || "").toLowerCase();
-  if (role !== "admin" && role !== "ceo") {
+  if (role !== "admin" && role !== "ceo" && role !== "coo") {
     throw new Error("Security Restriction: Only Admin and CEO can delete repository files.");
   }
 

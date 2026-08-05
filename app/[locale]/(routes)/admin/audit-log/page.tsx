@@ -14,7 +14,7 @@ const AuditLogPage = async (props: {
   }>;
 }) => {
   const session = await getSession();
-  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo") redirect("/");
+  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "coo") redirect("/");
 
   const sp = await props.searchParams;
   const currentPage = Math.max(1, parseInt(sp?.page ?? "1", 10) || 1);

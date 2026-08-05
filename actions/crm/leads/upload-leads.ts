@@ -36,6 +36,7 @@ export async function uploadLeads(leads: IndividualLeadInput[]) {
     "area_director",
     "admin",
     "ceo",
+    "coo",
     "operations_director",
     "manager",
     "user",

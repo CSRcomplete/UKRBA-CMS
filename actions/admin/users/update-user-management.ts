@@ -16,7 +16,7 @@ export const updateUserManagement = async (
 ) => {
   try {
     // Authorize requester
-    await requireRole(["admin", "ceo", "operations_director"]);
+    await requireRole(["admin", "ceo", "coo", "operations_director"]);
   } catch (e) {
     if (e instanceof AuthorizationError) return { error: "Forbidden" };
     return { error: "Unauthorized" };

@@ -1038,6 +1038,7 @@ enum AppRole {
   manager
   admin
   ceo
+  coo
   operations_director
   regional_director
   area_director

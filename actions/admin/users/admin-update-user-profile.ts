@@ -19,7 +19,7 @@ export async function adminUpdateUserProfile(
   }
 
   const role = (session.user.role || "").toLowerCase();
-  if (role !== "admin" && role !== "ceo") {
+  if (role !== "admin" && role !== "ceo" && role !== "coo") {
     return { error: "Security Restriction: Only CEO and Admin can modify user profiles and passwords." };
   }
 

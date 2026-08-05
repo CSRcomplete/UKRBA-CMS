@@ -53,7 +53,7 @@ export function DataTableRowActions<TData>({
   const lead = leadSchema.parse(row.original);
 
   const { data: session } = useSession();
-  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo";
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);

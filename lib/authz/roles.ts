@@ -3,6 +3,7 @@ export type AppRole =
   | "manager"
   | "admin"
   | "ceo"
+  | "coo"
   | "operations_director"
   | "regional_director"
   | "area_director"
@@ -13,6 +14,7 @@ export const APP_ROLES: readonly AppRole[] = [
   "manager",
   "admin",
   "ceo",
+  "coo",
   "operations_director",
   "regional_director",
   "area_director",
@@ -33,6 +35,7 @@ const LEGACY_MAP: Record<string, AppRole> = {
   user: "user",
   manager: "manager",
   ceo: "ceo",
+  coo: "coo",
   operations_director: "operations_director",
   regional_director: "regional_director",
   area_director: "area_director",

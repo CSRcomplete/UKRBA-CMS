@@ -116,7 +116,7 @@ export function AppSidebar({
   ];
 
   // Administration & Recruitment: admin or ceo users only
-  if (session?.user?.role === "admin" || session?.user?.role === "ceo") {
+  if (session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo") {
     navItems.push(
       getRecruitmentMenuItem({ title: "Recruitment Centre" }),
       getAdministrationMenuItem({ title: dict?.settings || "Administration" }),

@@ -23,7 +23,7 @@ const RepositoryPage = async () => {
   }
 
   // Upload permission: Only CEO and ADMIN can upload files into repository
-  const canUpload = currentUser.role === "admin" || currentUser.role === "ceo";
+  const canUpload = currentUser.role === "admin" || currentUser.role === "ceo" || currentUser.role === "coo";
 
   // Fetch all repository documents
   const documents = await prismadb.documents.findMany({

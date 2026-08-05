@@ -9,7 +9,7 @@ export default async function LlmKeysPage() {
   const session = await getSession();
   const t = await getTranslations("AdminPage");
 
-  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo") {
+  if (session?.user?.role !== "admin" && session?.user?.role !== "ceo" && session?.user?.role !== "coo") {
     return (
       <Container title="AI Provider Keys" description="LLM API key management">
         <div className="flex w-full h-full items-center justify-center">

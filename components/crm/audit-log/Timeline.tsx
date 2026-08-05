@@ -38,7 +38,7 @@ export function AuditTimeline({ entityType, entityId, initialData, role, onResto
           <AuditEntry
             key={entry.id}
             entry={entry as any}
-            showRestore={role === "admin"}
+            showRestore={role === "admin" || role === "ceo" || role === "coo"}
             onRestore={onRestore ? () => onRestore(entry.id) : undefined}
           />
         ))}

@@ -40,6 +40,7 @@ async function contactScopedWhere(user: AuthzUser, contactId: string): Promise<C
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -59,6 +60,7 @@ async function targetScopedWhere(user: AuthzUser, targetId: string): Promise<Tar
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -98,6 +100,7 @@ async function findContactInScope(user: AuthzUser, contactId: string) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -123,6 +126,7 @@ async function findTargetInScope(user: AuthzUser, targetId: string) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -238,6 +242,7 @@ export async function assertCanCancelContactEnrichment(
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   )
@@ -257,6 +262,7 @@ export async function assertCanCancelTargetEnrichment(
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   )
@@ -272,6 +278,7 @@ export async function filterAuthorizedTargetIds(
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -303,6 +310,7 @@ export async function accountReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -336,6 +344,7 @@ export async function assertCanWriteAccount(
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -359,6 +368,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -474,6 +484,7 @@ export async function contactReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -495,6 +506,7 @@ export async function opportunityReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -516,6 +528,7 @@ export async function contractReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -572,6 +585,7 @@ export async function targetReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -585,6 +599,7 @@ export async function targetListReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -610,6 +625,7 @@ export async function documentReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -727,6 +743,7 @@ export async function campaignReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -740,6 +757,7 @@ export async function campaignTemplateReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {
@@ -791,6 +809,7 @@ export async function boardReadScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "regional_director" ||
     user.role === "area_director" ||
@@ -816,6 +835,7 @@ export async function boardWriteScopeWhere(user: AuthzUser) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "regional_director" ||
     user.role === "area_director" ||

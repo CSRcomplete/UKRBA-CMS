@@ -154,6 +154,7 @@ export function CreateUserForm() {
                     <SelectItem value="area_director">Area Director</SelectItem>
                     <SelectItem value="channel_partner">Channel Partner</SelectItem>
                     <SelectItem value="ceo">CEO</SelectItem>
+                    <SelectItem value="coo">COO</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

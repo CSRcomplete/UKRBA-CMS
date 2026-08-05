@@ -7,6 +7,7 @@ export const getActiveUsersCount = async () => {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {

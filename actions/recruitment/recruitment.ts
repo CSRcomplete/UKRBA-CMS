@@ -68,7 +68,7 @@ async function requireAdmin() {
   });
 
   const role = dbUser?.role?.toLowerCase() || "";
-  if (!["admin", "ceo"].includes(role)) {
+  if (!["admin", "ceo", "coo"].includes(role)) {
     throw new Error("Only authorized Administrators can access the Recruitment Centre.");
   }
 

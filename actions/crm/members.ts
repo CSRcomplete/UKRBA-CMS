@@ -11,6 +11,7 @@ async function memberScopeWhere(user: any) {
   if (
     user.role === "admin" ||
     user.role === "ceo" ||
+    user.role === "coo" ||
     user.role === "operations_director" ||
     user.role === "manager"
   ) {

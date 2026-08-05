@@ -12,7 +12,7 @@ async function requireAdminOrCeo() {
     throw new Error("Unauthorized");
   }
   const role = (session.user.role || "").toLowerCase();
-  if (role !== "admin" && role !== "ceo") {
+  if (role !== "admin" && role !== "ceo" && role !== "coo") {
     throw new Error("Security Restriction: Only CEO and Admin can manage user email accounts.");
   }
   return session;
