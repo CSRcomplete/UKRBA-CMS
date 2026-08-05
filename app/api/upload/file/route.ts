@@ -14,10 +14,15 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Missing key parameter", { status: 400 });
   }
 
+  // Video/audio playback relies on Range requests to seek and to start
+  // playing before the whole file downloads — pass it straight through to S3.
+  const range = req.headers.get("range") || undefined;
+
   try {
     const command = new GetObjectCommand({
       Bucket: MINIO_BUCKET,
       Key: key,
+      Range: range,
     });
 
     const response = await minioClient.send(command);
@@ -26,25 +31,30 @@ export async function GET(req: NextRequest) {
       return new NextResponse("File body is empty", { status: 404 });
     }
 
-    // Convert readable stream to Uint8Array/Buffer
-    const bytes = await response.Body.transformToByteArray();
-
+    const filename = key.split("/").pop() || "file";
     const headers = new Headers();
     if (response.ContentType) {
       headers.set("Content-Type", response.ContentType);
     }
+    headers.set("Content-Disposition", `inline; filename="${filename}"`);
+    headers.set("Accept-Ranges", "bytes");
+
+    // Stream the body straight through instead of buffering the whole
+    // object into memory — required for large video files to work at all.
+    const bodyStream = response.Body.transformToWebStream();
+
+    if (range && response.ContentRange) {
+      if (response.ContentLength !== undefined) {
+        headers.set("Content-Length", response.ContentLength.toString());
+      }
+      headers.set("Content-Range", response.ContentRange);
+      return new NextResponse(bodyStream, { status: 206, headers });
+    }
+
     if (response.ContentLength) {
       headers.set("Content-Length", response.ContentLength.toString());
     }
-
-    // Force inline preview for images/PDFs/videos, download for others
-    const filename = key.split("/").pop() || "file";
-    headers.set("Content-Disposition", `inline; filename="${filename}"`);
-
-    return new NextResponse(Buffer.from(bytes), {
-      status: 200,
-      headers,
-    });
+    return new NextResponse(bodyStream, { status: 200, headers });
   } catch (err) {
     console.error("Failed to download file from S3:", err);
     return new NextResponse("File not found or failed to fetch from storage", { status: 404 });

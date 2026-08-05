@@ -365,6 +365,62 @@ export default function RepositoryClient({
     setFileQueue((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // The /api/upload server route goes through Cloudflare, which rejects
+  // anything much bigger than ~1MB — never worth attempting as a fallback
+  // for real documents/videos, only for tiny files.
+  const SERVER_FALLBACK_SAFE_BYTES = 900 * 1024;
+  // Abort and retry if no upload progress is observed for this long — a
+  // stalled connection/proxy otherwise leaves the request hanging forever
+  // with no error event ever firing.
+  const STALL_TIMEOUT_MS = 60_000;
+  const MAX_DIRECT_ATTEMPTS = 3;
+
+  const putWithStallDetection = (
+    file: File,
+    presignedUrl: string,
+    onProgress: (loaded: number, total: number) => void
+  ) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", presignedUrl);
+      if (file.type) {
+        xhr.setRequestHeader("Content-Type", file.type);
+      }
+
+      let stallTimer: ReturnType<typeof setTimeout>;
+      const resetStallTimer = () => {
+        clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => xhr.abort(), STALL_TIMEOUT_MS);
+      };
+      resetStallTimer();
+
+      xhr.upload.onprogress = (event) => {
+        resetStallTimer();
+        if (event.lengthComputable) onProgress(event.loaded, event.total);
+      };
+
+      xhr.onload = () => {
+        clearTimeout(stallTimer);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Storage rejected the upload (status ${xhr.status})`));
+        }
+      };
+
+      xhr.onerror = () => {
+        clearTimeout(stallTimer);
+        reject(new Error("Network error while uploading to storage"));
+      };
+
+      xhr.onabort = () => {
+        clearTimeout(stallTimer);
+        reject(new Error("Upload stalled — no progress for 60 seconds, connection may have dropped"));
+      };
+
+      xhr.send(file);
+    });
+
   // Submit batch upload
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,64 +445,52 @@ export default function RepositoryClient({
         let fileUrl = "";
         let key = "";
 
-        try {
-          // Attempt 1: Direct Presigned S3/MinIO upload
-          const presignRes = await fetch("/api/upload/presigned-url", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              filename: file.name,
-              contentType: file.type,
-              folder,
-            }),
-          });
+        // Attempt 1: Direct Presigned S3/MinIO upload — retried on stall/network
+        // errors since a full re-upload beats leaving the user stuck forever.
+        const presignRes = await fetch("/api/upload/presigned-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            folder,
+          }),
+        });
 
-          if (!presignRes.ok) {
-            const errJson = await presignRes.json().catch(() => ({}));
-            throw new Error(errJson.error || `Presign request failed with status ${presignRes.status}`);
+        if (!presignRes.ok) {
+          const errJson = await presignRes.json().catch(() => ({}));
+          throw new Error(errJson.error || `Presign request failed with status ${presignRes.status}`);
+        }
+
+        const presignData = await presignRes.json();
+
+        let lastDirectErr: any = null;
+        let directSucceeded = false;
+
+        for (let attempt = 1; attempt <= MAX_DIRECT_ATTEMPTS && !directSucceeded; attempt++) {
+          try {
+            await putWithStallDetection(file, presignData.presignedUrl, (loaded, total) => {
+              const percent = Math.round((loaded / total) * 100);
+              const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
+              const totalMB = (total / (1024 * 1024)).toFixed(1);
+              const attemptSuffix = attempt > 1 ? ` — retry ${attempt}/${MAX_DIRECT_ATTEMPTS}` : "";
+              setUploadProgressText(
+                `Uploading file ${i + 1} of ${fileQueue.length}: ${file.name} (${percent}% - ${loadedMB} MB / ${totalMB} MB)${attemptSuffix}`
+              );
+            });
+            directSucceeded = true;
+          } catch (attemptErr: any) {
+            lastDirectErr = attemptErr;
+            console.warn(`[UPLOAD_DIRECT_ATTEMPT_${attempt}_FAILED]`, attemptErr.message);
           }
+        }
 
-          const presignData = await presignRes.json();
-
-          // Upload via XMLHttpRequest with real-time percentage progress tracking
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("PUT", presignData.presignedUrl);
-            if (file.type) {
-              xhr.setRequestHeader("Content-Type", file.type);
-            }
-
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
-                const totalMB = (event.total / (1024 * 1024)).toFixed(1);
-                setUploadProgressText(
-                  `Uploading file ${i + 1} of ${fileQueue.length}: ${file.name} (${percent}% - ${loadedMB} MB / ${totalMB} MB)`
-                );
-              }
-            };
-
-            xhr.onload = () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                resolve();
-              } else {
-                reject(new Error(`Direct upload returned status ${xhr.status}`));
-              }
-            };
-
-            xhr.onerror = () => reject(new Error("Direct storage CORS/Network error"));
-            xhr.ontimeout = () => reject(new Error("Direct upload timed out"));
-
-            xhr.send(file);
-          });
-
+        if (directSucceeded) {
           fileUrl = presignData.fileUrl;
           key = presignData.key;
-        } catch (directErr: any) {
-          console.warn("[UPLOAD_DIRECT_FAILED] Falling back to server upload route:", directErr.message);
-
-          // Attempt 2: Fallback to /api/upload with progress tracking
+        } else if (file.size <= SERVER_FALLBACK_SAFE_BYTES) {
+          // Only worth trying the server route for small files — it goes
+          // through Cloudflare, which rejects anything much bigger than ~1MB.
           await new Promise<void>((resolve, reject) => {
             const formData = new FormData();
             formData.append("file", file);
@@ -454,17 +498,6 @@ export default function RepositoryClient({
 
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/upload");
-
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                const loadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
-                const totalMB = (event.total / (1024 * 1024)).toFixed(1);
-                setUploadProgressText(
-                  `Uploading file ${i + 1} of ${fileQueue.length}: ${file.name} (${percent}% - ${loadedMB} MB / ${totalMB} MB)`
-                );
-              }
-            };
 
             xhr.onload = () => {
               if (xhr.status >= 200 && xhr.status < 300) {
@@ -487,10 +520,15 @@ export default function RepositoryClient({
             };
 
             xhr.onerror = () => reject(new Error(`Failed to upload ${file.name}. Please check network connection.`));
-            xhr.ontimeout = () => reject(new Error("Server upload timed out"));
 
             xhr.send(formData);
           });
+        } else {
+          throw new Error(
+            lastDirectErr?.message
+              ? `${lastDirectErr.message} — gave up after ${MAX_DIRECT_ATTEMPTS} attempts. Check your connection and try again.`
+              : `Failed to upload ${file.name} after ${MAX_DIRECT_ATTEMPTS} attempts.`
+          );
         }
 
         const customDesc = fileDescriptions[file.name] || `${uploadFolder} > ${uploadSubfolder}`;
