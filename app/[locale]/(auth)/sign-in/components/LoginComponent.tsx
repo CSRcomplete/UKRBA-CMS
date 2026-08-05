@@ -12,18 +12,26 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { KeyRound, Mail } from "lucide-react";
+import Link from "next/link";
 
 export function LoginComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       toast.error("Please enter both email and password.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error("You must agree to the Terms & Conditions to sign in.");
       return;
     }
 
@@ -90,7 +98,22 @@ export function LoginComponent() {
             />
           </div>
 
-          <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+          <div className="flex items-start gap-2 pt-1">
+            <Checkbox
+              id="agree-terms"
+              checked={agreedToTerms}
+              onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+              disabled={isLoading}
+            />
+            <Label htmlFor="agree-terms" className="text-xs font-normal leading-snug text-muted-foreground">
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" className="underline hover:text-foreground">
+                Terms &amp; Conditions
+              </Link>
+            </Label>
+          </div>
+
+          <Button type="submit" className="w-full mt-4" disabled={isLoading || !agreedToTerms}>
             {isLoading ? "Signing In..." : "Sign In"}
           </Button>
         </form>

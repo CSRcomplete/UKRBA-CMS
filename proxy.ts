@@ -42,7 +42,7 @@ export async function proxy(req: NextRequest) {
   if (!path.startsWith("/api")) {
     if (!sessionCookie) {
       // Allow auth pages (sign-in, register, pending, inactive)
-      const authPaths = ["/sign-in", "/register", "/pending", "/inactive"];
+      const authPaths = ["/sign-in", "/register", "/pending", "/inactive", "/terms"];
       const isAuthPage = authPaths.some((p) => path.includes(p));
       if (!isAuthPage) {
         return NextResponse.redirect(new URL("/sign-in", req.nextUrl));
