@@ -49,8 +49,7 @@ export function DirectMeetingScheduler({ inviteeType, inviteeId, inviteeName }: 
         description,
         date: new Date(date),
         duration: duration ? parseInt(duration, 10) : undefined,
-        inviteeType,
-        inviteeId,
+        invitees: [{ type: inviteeType, id: inviteeId }],
         meetingType,
         location,
       });

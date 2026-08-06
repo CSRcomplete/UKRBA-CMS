@@ -9,6 +9,7 @@ import { createZoomMeeting, isZoomConfigured } from "@/lib/zoom";
 
 const ROLE_DESIGNATIONS: Record<string, string> = {
   ceo: "CEO - UKRBA SME",
+  coo: "COO - UKRBA SME",
   operations_director: "Operations Director",
   regional_director: "Regional Director",
   area_director: "Area Director",
@@ -16,21 +17,6 @@ const ROLE_DESIGNATIONS: Record<string, string> = {
   admin: "Admin",
   user: "Staff",
 };
-
-const ROLE_RANKS: Record<string, number> = {
-  ceo: 5,
-  admin: 5,
-  operations_director: 4,
-  regional_director: 3,
-  area_director: 2,
-  channel_partner: 1,
-  user: 1,
-};
-
-function getUserRank(role: string | null | undefined): number {
-  if (!role) return 0;
-  return ROLE_RANKS[role.toLowerCase()] || 0;
-}
 
 export const getMeetings = async () => {
   const session = await getSession();
@@ -102,9 +88,10 @@ export const getMeetings = async () => {
       })
       .filter(Boolean) as { type: string; name: string }[];
 
-    if (meta?.externalEmail) {
-      const extName = meta.externalName ? `${meta.externalName} (${meta.externalEmail})` : meta.externalEmail;
-      invitees.push({ type: "External", name: extName });
+    const externalAttendees: { email: string; name?: string }[] = meta?.externalAttendees
+      || (meta?.externalEmail ? [{ email: meta.externalEmail, name: meta.externalName }] : []);
+    for (const ext of externalAttendees) {
+      invitees.push({ type: "External", name: ext.name ? `${ext.name} (${ext.email})` : ext.email });
     }
 
     return {
@@ -124,9 +111,6 @@ export const getTargetsForMeetingBooking = async () => {
   const session = await getSession();
   if (!session) return { users: [], leads: [] };
 
-  const currentUserRole = session.user.role || "user";
-  const currentUserRank = getUserRank(currentUserRole);
-
   const allUsers = await prismadb.users.findMany({
     where: { userStatus: "ACTIVE" },
     select: {
@@ -138,11 +122,7 @@ export const getTargetsForMeetingBooking = async () => {
     orderBy: { name: "asc" },
   });
 
-  const eligibleUsers = allUsers.filter((u) => {
-    if (u.id === session.user.id) return false;
-    const rank = getUserRank(u.role);
-    return rank < currentUserRank;
-  });
+  const eligibleUsers = allUsers.filter((u) => u.id !== session.user.id);
 
   const leadScope = await leadReadScopeWhere(session.user as any);
   const leads = await prismadb.crm_Leads.findMany({
@@ -166,42 +146,35 @@ export const getTargetsForMeetingBooking = async () => {
   };
 };
 
+export interface MeetingInvitee {
+  type: "user" | "lead" | "external";
+  id?: string;
+  externalEmail?: string;
+  externalName?: string;
+}
+
 export const scheduleMeeting = async (data: {
   title: string;
   description: string;
   date: Date;
   duration?: number;
-  inviteeType: "user" | "lead" | "external";
-  inviteeId: string;
-  externalEmail?: string;
-  externalName?: string;
+  invitees: MeetingInvitee[];
   meetingType?: "video" | "phone" | "in_person";
   location?: string;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  const { title, description, date, duration, inviteeType, inviteeId, externalEmail, externalName, meetingType = "video", location } = data;
+  const { title, description, date, duration, meetingType = "video", location } = data;
+  const invitees = (data.invitees || []).filter(
+    (i) => (i.type !== "external" && i.id) || (i.type === "external" && i.externalEmail)
+  );
 
-  if (!title || !date || (inviteeType !== "external" && !inviteeId) || (inviteeType === "external" && !externalEmail)) {
+  if (!title || !date) {
     return { error: "Missing required fields" };
   }
-
-  // Hierarchy validation
-  if (inviteeType === "user") {
-    const targetUser = await prismadb.users.findUnique({
-      where: { id: inviteeId },
-      select: { role: true },
-    });
-
-    if (!targetUser) return { error: "Invitee staff member not found" };
-
-    const currentUserRank = getUserRank(session.user.role);
-    const targetUserRank = getUserRank(targetUser.role);
-
-    if (targetUserRank >= currentUserRank) {
-      return { error: "Security Policy: You are not authorized to schedule a meeting with a superior or equal rank." };
-    }
+  if (invitees.length === 0) {
+    return { error: "Please add at least one invitee" };
   }
 
   // Auto-create a Zoom meeting only for video meetings
@@ -230,6 +203,10 @@ export const scheduleMeeting = async (data: {
     }
   }
 
+  const externalAttendees = invitees
+    .filter((i) => i.type === "external")
+    .map((i) => ({ email: i.externalEmail!, name: i.externalName }));
+
   try {
     const activity = await prismadb.crm_Activities.create({
       data: {
@@ -244,7 +221,7 @@ export const scheduleMeeting = async (data: {
         metadata: {
           meetingType,
           location: location || null,
-          ...(inviteeType === "external" ? { externalEmail, externalName } : {}),
+          ...(externalAttendees.length > 0 ? { externalAttendees } : {}),
           ...(isVideo ? { zoomMeetingId, zoomJoinUrl, zoomStartUrl, meetingLink: zoomJoinUrl } : {}),
         },
       },
@@ -259,37 +236,44 @@ export const scheduleMeeting = async (data: {
       },
     });
 
-    // Link to invitee if existing entity
-    if (inviteeType !== "external" && inviteeId) {
-      await prismadb.crm_ActivityLinks.create({
-        data: {
-          activityId: activity.id,
-          entityType: inviteeType,
-          entityId: inviteeId,
-        },
-      });
+    // Link each existing-entity invitee (user/lead)
+    for (const invitee of invitees) {
+      if (invitee.type !== "external" && invitee.id) {
+        await prismadb.crm_ActivityLinks.create({
+          data: {
+            activityId: activity.id,
+            entityType: invitee.type,
+            entityId: invitee.id,
+          },
+        });
+      }
     }
 
-    // Email notification
-    try {
-      let inviteeEmail: string | null = null;
-      if (inviteeType === "user") {
+    // Resolve an email address + display name for every invitee
+    const emailTargets: { email: string; name?: string }[] = [];
+    for (const invitee of invitees) {
+      if (invitee.type === "user" && invitee.id) {
         const inviteeUser = await prismadb.users.findUnique({
-          where: { id: inviteeId },
-          select: { email: true },
+          where: { id: invitee.id },
+          select: { email: true, name: true },
         });
-        inviteeEmail = inviteeUser?.email || null;
-      } else if (inviteeType === "lead") {
+        if (inviteeUser?.email) emailTargets.push({ email: inviteeUser.email, name: inviteeUser.name || undefined });
+      } else if (invitee.type === "lead" && invitee.id) {
         const inviteeLead = await prismadb.crm_Leads.findUnique({
-          where: { id: inviteeId },
-          select: { email: true },
+          where: { id: invitee.id },
+          select: { email: true, firstName: true, lastName: true },
         });
-        inviteeEmail = inviteeLead?.email || null;
-      } else if (inviteeType === "external") {
-        inviteeEmail = externalEmail || null;
+        if (inviteeLead?.email) {
+          emailTargets.push({ email: inviteeLead.email, name: `${inviteeLead.firstName || ""} ${inviteeLead.lastName || ""}`.trim() || undefined });
+        }
+      } else if (invitee.type === "external" && invitee.externalEmail) {
+        emailTargets.push({ email: invitee.externalEmail, name: invitee.externalName });
       }
+    }
 
-      if (inviteeEmail) {
+    // Email notification — sent to every invitee
+    try {
+      if (emailTargets.length > 0) {
         let resend;
         try { resend = await resendHelper(); } catch { resend = null; }
 
@@ -340,30 +324,39 @@ export const scheduleMeeting = async (data: {
             </p>`;
           }
 
-          await resend.emails.send({
-            from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
-            to: inviteeEmail,
-            subject: `${typeLabel} with ${creatorName}`,
-            text: `Hello,\n\nA new ${typeLabel.toLowerCase()} has been scheduled with you.\n\nMeeting with: ${hostString}\nDate & Time: ${dateFormatted}\nDuration: ${duration || 30} minutes\n${locationLineText}\n\nAgenda:\n${description || "No agenda provided."}\n\nBest regards,\nUKRBA Team`,
-            html: `
-              <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #1a365d; margin-top: 0;">${headerEmoji} New ${typeLabel} Scheduled</h2>
-                <p>Hello,</p>
-                <p>A new ${typeLabel.toLowerCase()} has been scheduled with you via UKRBA CMS.</p>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                <ol style="padding-left: 20px; margin: 20px 0;">
-                  <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${hostString}</li>
-                  <li style="margin-bottom: 10px;"><strong>Date & Time:</strong> ${dateFormatted}</li>
-                  <li style="margin-bottom: 10px;"><strong>Duration:</strong> ${duration || 30} minutes</li>
-                  ${locationLineHtml}
-                </ol>
-                ${description ? `<p><strong>Agenda / Notes:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                ${tipBoxHtml}
-                <p style="font-size: 0.875rem; color: #718096; margin-bottom: 0;">Best regards,<br />UKRBA Team</p>
-              </div>
-            `,
-          });
+          const otherAttendeeNames = emailTargets.length > 1
+            ? emailTargets.map((t) => t.name || t.email).join(", ")
+            : null;
+
+          await Promise.allSettled(
+            emailTargets.map((target) =>
+              resend.emails.send({
+                from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
+                to: target.email,
+                subject: `${typeLabel} with ${creatorName}`,
+                text: `Hello,\n\nA new ${typeLabel.toLowerCase()} has been scheduled with you.\n\nMeeting with: ${hostString}\nDate & Time: ${dateFormatted}\nDuration: ${duration || 30} minutes\n${locationLineText}${otherAttendeeNames ? `\nOther attendees: ${otherAttendeeNames}` : ""}\n\nAgenda:\n${description || "No agenda provided."}\n\nBest regards,\nUKRBA Team`,
+                html: `
+                  <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h2 style="color: #1a365d; margin-top: 0;">${headerEmoji} New ${typeLabel} Scheduled</h2>
+                    <p>Hello,</p>
+                    <p>A new ${typeLabel.toLowerCase()} has been scheduled with you via UKRBA CMS.</p>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                    <ol style="padding-left: 20px; margin: 20px 0;">
+                      <li style="margin-bottom: 10px;"><strong>Meeting with:</strong> ${hostString}</li>
+                      <li style="margin-bottom: 10px;"><strong>Date & Time:</strong> ${dateFormatted}</li>
+                      <li style="margin-bottom: 10px;"><strong>Duration:</strong> ${duration || 30} minutes</li>
+                      ${locationLineHtml}
+                      ${otherAttendeeNames ? `<li style="margin-bottom: 10px;"><strong>Other attendees:</strong> ${otherAttendeeNames}</li>` : ""}
+                    </ol>
+                    ${description ? `<p><strong>Agenda / Notes:</strong><br />${description.replace(/\n/g, "<br />")}</p>` : ""}
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                    ${tipBoxHtml}
+                    <p style="font-size: 0.875rem; color: #718096; margin-bottom: 0;">Best regards,<br />UKRBA Team</p>
+                  </div>
+                `,
+              })
+            )
+          );
         }
       }
     } catch (emailError) {

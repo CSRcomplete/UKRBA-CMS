@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -14,9 +15,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { scheduleMeeting } from "@/actions/crm/meetings";
+import { scheduleMeeting, type MeetingInvitee } from "@/actions/crm/meetings";
 import moment from "moment";
-import { Calendar, User, Video, Clock, AlignLeft, ShieldAlert, Link2, Phone, Users, MapPin } from "lucide-react";
+import { Calendar, Video, Phone, Users, MapPin, Plus, X } from "lucide-react";
 
 interface MeetingSchedulerFormProps {
   eligibleTargets: {
@@ -24,6 +25,10 @@ interface MeetingSchedulerFormProps {
     leads: any[];
   };
   onScheduled?: (zoomJoinUrl: string) => void;
+}
+
+interface AddedInvitee extends MeetingInvitee {
+  label: string;
 }
 
 export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSchedulerFormProps) {
@@ -36,11 +41,70 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(moment().add(1, "days").format("YYYY-MM-DDTHH:mm"));
   const [duration, setDuration] = useState("30");
+
+  const [addedInvitees, setAddedInvitees] = useState<AddedInvitee[]>([]);
   const [inviteeType, setInviteeType] = useState<"user" | "lead" | "external">("lead");
   const [inviteeId, setInviteeId] = useState("");
   const [externalEmail, setExternalEmail] = useState("");
   const [externalName, setExternalName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const currentOptions = inviteeType === "user" ? eligibleTargets.users : eligibleTargets.leads;
+
+  const filteredOptions = currentOptions.filter((opt) => {
+    if (addedInvitees.some((a) => a.type === inviteeType && a.id === opt.id)) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const nameStr = (opt.name || "").toLowerCase();
+    const emailStr = (opt.email || "").toLowerCase();
+    const companyStr = (opt.company || "").toLowerCase();
+    return nameStr.includes(q) || emailStr.includes(q) || companyStr.includes(q);
+  });
+
+  const handleAddInvitee = () => {
+    if (inviteeType === "external") {
+      if (!externalEmail.trim()) {
+        toast.error("Please enter an external email address");
+        return;
+      }
+      if (addedInvitees.some((a) => a.type === "external" && a.externalEmail === externalEmail.trim())) {
+        toast.error("That email has already been added");
+        return;
+      }
+      setAddedInvitees((prev) => [
+        ...prev,
+        {
+          type: "external",
+          externalEmail: externalEmail.trim(),
+          externalName: externalName.trim() || undefined,
+          label: externalName.trim() ? `${externalName.trim()} (${externalEmail.trim()})` : externalEmail.trim(),
+        },
+      ]);
+      setExternalEmail("");
+      setExternalName("");
+    } else {
+      if (!inviteeId) {
+        toast.error("Please select a person to add");
+        return;
+      }
+      const opt = currentOptions.find((o) => o.id === inviteeId);
+      if (!opt) return;
+      setAddedInvitees((prev) => [
+        ...prev,
+        {
+          type: inviteeType,
+          id: inviteeId,
+          label: `${opt.name || opt.email}${opt.company ? ` (${opt.company})` : ""}`,
+        },
+      ]);
+      setInviteeId("");
+      setSearchQuery("");
+    }
+  };
+
+  const handleRemoveInvitee = (index: number) => {
+    setAddedInvitees((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +112,8 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
       toast.error("Meeting title is required");
       return;
     }
-    if (inviteeType === "external" && !externalEmail.trim()) {
-      toast.error("Please enter an external email address");
-      return;
-    }
-    if (inviteeType !== "external" && !inviteeId) {
-      toast.error("Please select an invitee");
+    if (addedInvitees.length === 0) {
+      toast.error("Please add at least one invitee");
       return;
     }
 
@@ -64,10 +124,7 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
         description,
         date: new Date(date),
         duration: duration ? parseInt(duration, 10) : undefined,
-        inviteeType,
-        inviteeId: inviteeType === "external" ? "external" : inviteeId,
-        externalEmail: inviteeType === "external" ? externalEmail.trim() : undefined,
-        externalName: inviteeType === "external" ? externalName.trim() : undefined,
+        invitees: addedInvitees.map(({ label, ...rest }) => rest),
         meetingType,
         location,
       });
@@ -77,11 +134,12 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
       } else {
         const msg = meetingType === "video"
           ? "Meeting scheduled! Zoom meeting created automatically."
-          : `${meetingType === "phone" ? "Phone call" : "Face-to-face meeting"} scheduled and invitation email sent.`;
+          : `${meetingType === "phone" ? "Phone call" : "Face-to-face meeting"} scheduled and invitation emails sent.`;
         toast.success(msg);
         setTitle("");
         setDescription("");
         setLocation("");
+        setAddedInvitees([]);
         setInviteeId("");
         setExternalEmail("");
         setExternalName("");
@@ -100,17 +158,6 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
     }
   };
 
-  const currentOptions = inviteeType === "user" ? eligibleTargets.users : eligibleTargets.leads;
-
-  const filteredOptions = currentOptions.filter((opt) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const nameStr = (opt.name || "").toLowerCase();
-    const emailStr = (opt.email || "").toLowerCase();
-    const companyStr = (opt.company || "").toLowerCase();
-    return nameStr.includes(q) || emailStr.includes(q) || companyStr.includes(q);
-  });
-
   return (
     <Card className="shadow-sm border-muted">
       <CardHeader className="pb-3">
@@ -119,7 +166,7 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
           Schedule New Meeting
         </CardTitle>
         <CardDescription>
-          Schedule a Video Call, Phone Call, or Face-to-Face meeting with a staff member or lead.
+          Schedule a Video Call, Phone Call, or Face-to-Face meeting with one or more staff members, leads, or external contacts.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -185,14 +232,36 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
             <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg text-xs text-blue-700 dark:text-blue-300">
               <Video className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold mb-0.5">A Zoom meeting will be auto-created and the join link emailed to your invitee.</p>
+                <p className="font-semibold mb-0.5">A Zoom meeting will be auto-created and the join link emailed to every invitee.</p>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Added invitees */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">Invitees * ({addedInvitees.length} added)</label>
+            {addedInvitees.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 p-2 rounded-lg border bg-muted/30">
+                {addedInvitees.map((inv, i) => (
+                  <Badge key={i} variant="secondary" className="gap-1 pr-1 text-xs">
+                    {inv.label}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveInvitee(i)}
+                      className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      aria-label={`Remove ${inv.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Invitee Type *</label>
+              <label className="text-xs font-semibold text-muted-foreground">Add Invitee</label>
               <Select
                 value={inviteeType}
                 onValueChange={(v: "user" | "lead" | "external") => {
@@ -208,7 +277,7 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lead">CRM Lead / Member</SelectItem>
-                  <SelectItem value="user">Staff Member (Subordinate)</SelectItem>
+                  <SelectItem value="user">Staff Member</SelectItem>
                   <SelectItem value="external">External Email Address (Unsaved Contact)</SelectItem>
                 </SelectContent>
               </Select>
@@ -217,28 +286,32 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
             {inviteeType === "external" ? (
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">External Email Address *</label>
+                  <label className="text-xs font-semibold text-muted-foreground">External Email Address</label>
                   <Input
                     type="email"
                     placeholder="e.g. client@externalcompany.com"
                     value={externalEmail}
                     onChange={(e) => setExternalEmail(e.target.value)}
-                    required
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">External Contact Name (Optional)</label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. John Smith"
-                    value={externalName}
-                    onChange={(e) => setExternalName(e.target.value)}
-                  />
+                <div className="flex gap-2 items-end">
+                  <div className="space-y-1 flex-1">
+                    <label className="text-xs font-semibold text-muted-foreground">Contact Name (Optional)</label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. John Smith"
+                      value={externalName}
+                      onChange={(e) => setExternalName(e.target.value)}
+                    />
+                  </div>
+                  <Button type="button" size="sm" className="gap-1" onClick={handleAddInvitee}>
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Select Invitee *</label>
+                <label className="text-xs font-semibold text-muted-foreground">Select Person</label>
                 <div className="space-y-1.5">
                   <Input
                     placeholder="Search by name, email or company..."
@@ -246,18 +319,23 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-8 text-xs mb-1"
                   />
-                  <Select value={inviteeId} onValueChange={setInviteeId} disabled={filteredOptions.length === 0}>
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder={filteredOptions.length === 0 ? "No matching contacts found" : "Select person..."} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {filteredOptions.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id} className="text-xs">
-                          {opt.name || opt.email} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={inviteeId} onValueChange={setInviteeId} disabled={filteredOptions.length === 0}>
+                      <SelectTrigger className="h-9 text-xs flex-1">
+                        <SelectValue placeholder={filteredOptions.length === 0 ? "No matching contacts found" : "Select person..."} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {filteredOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                            {opt.name || opt.email} {opt.company ? `(${opt.company})` : ""} {opt.role ? `[${opt.role.replace(/_/g, " ")}]` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="sm" className="gap-1" onClick={handleAddInvitee} disabled={!inviteeId}>
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -305,18 +383,18 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
           <Button
             type="submit"
             className="w-full mt-2 gap-1.5"
-            disabled={loading || (inviteeType === "user" && currentOptions.length === 0)}
+            disabled={loading || addedInvitees.length === 0}
           >
             {meetingType === "video" && <Video className="h-4 w-4" />}
             {meetingType === "phone" && <Phone className="h-4 w-4" />}
             {meetingType === "in_person" && <Users className="h-4 w-4" />}
-            {loading 
-              ? "Scheduling..." 
-              : meetingType === "video" 
+            {loading
+              ? "Scheduling..."
+              : meetingType === "video"
                 ? "Schedule Video Meeting & Create Room"
                 : meetingType === "phone"
-                  ? "Schedule Phone Call & Send Invite"
-                  : "Schedule Face-to-Face Meeting & Send Invite"}
+                  ? "Schedule Phone Call & Send Invites"
+                  : "Schedule Face-to-Face Meeting & Send Invites"}
           </Button>
         </form>
       </CardContent>
