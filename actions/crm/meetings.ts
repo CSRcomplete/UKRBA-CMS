@@ -5,7 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { leadReadScopeWhere } from "@/lib/authz";
 import resendHelper from "@/lib/resend";
-import { generateJitsiRoomId, getJitsiMeetUrl } from "@/lib/jitsi";
+import { createZoomMeeting, isZoomConfigured } from "@/lib/zoom";
 
 const ROLE_DESIGNATIONS: Record<string, string> = {
   ceo: "CEO - UKRBA SME",
@@ -31,10 +31,6 @@ function getUserRank(role: string | null | undefined): number {
   if (!role) return 0;
   return ROLE_RANKS[role.toLowerCase()] || 0;
 }
-
-// generateJitsiRoomId and getJitsiMeetUrl live in @/lib/jitsi
-// (imported above — kept separate to comply with Next.js "use server" export rules)
-
 
 export const getMeetings = async () => {
   const session = await getSession();
@@ -90,8 +86,10 @@ export const getMeetings = async () => {
     const meta = activity.metadata as Record<string, any> | null;
     const meetingType: "video" | "phone" | "in_person" = meta?.meetingType || "video";
     const location: string | undefined = meta?.location;
-    const jitsiRoomId: string | undefined = meta?.jitsiRoomId;
-    const jitsiUrl = meetingType === "video" ? (jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : (meta?.meetingLink ?? null)) : null;
+    const zoomMeetingId: string | undefined = meta?.zoomMeetingId;
+    const zoomJoinUrl = meetingType === "video" ? (meta?.zoomJoinUrl ?? meta?.meetingLink ?? null) : null;
+    const isHost = activity.createdBy === userId;
+    const zoomStartUrl = meetingType === "video" && isHost ? (meta?.zoomStartUrl ?? null) : null;
 
     const invitees = activity.links
       .map((link) => {
@@ -114,8 +112,10 @@ export const getMeetings = async () => {
       invitees,
       meetingType,
       location,
-      jitsiRoomId,
-      jitsiUrl,
+      isHost,
+      zoomMeetingId,
+      zoomJoinUrl,
+      zoomStartUrl,
     };
   });
 };
@@ -204,10 +204,31 @@ export const scheduleMeeting = async (data: {
     }
   }
 
-  // Auto-generate Jitsi room only for video meetings
+  // Auto-create a Zoom meeting only for video meetings
   const isVideo = meetingType === "video";
-  const jitsiRoomId = isVideo ? generateJitsiRoomId(title) : undefined;
-  const jitsiUrl = isVideo && jitsiRoomId ? getJitsiMeetUrl(jitsiRoomId) : undefined;
+  let zoomMeetingId: number | undefined;
+  let zoomJoinUrl: string | undefined;
+  let zoomStartUrl: string | undefined;
+
+  if (isVideo) {
+    if (!isZoomConfigured()) {
+      return { error: "Zoom is not configured on this server. Ask an admin to set ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET." };
+    }
+    try {
+      const zoomMeeting = await createZoomMeeting({
+        topic: title,
+        startTime: new Date(date),
+        durationMinutes: duration,
+        agenda: description,
+      });
+      zoomMeetingId = zoomMeeting.id;
+      zoomJoinUrl = zoomMeeting.joinUrl;
+      zoomStartUrl = zoomMeeting.startUrl;
+    } catch (zoomError) {
+      console.error("[SCHEDULE_MEETING_ZOOM_ERROR]", zoomError);
+      return { error: "Failed to create Zoom meeting. Please try again or contact an admin." };
+    }
+  }
 
   try {
     const activity = await prismadb.crm_Activities.create({
@@ -224,7 +245,7 @@ export const scheduleMeeting = async (data: {
           meetingType,
           location: location || null,
           ...(inviteeType === "external" ? { externalEmail, externalName } : {}),
-          ...(isVideo ? { jitsiRoomId, meetingLink: jitsiUrl } : {}),
+          ...(isVideo ? { zoomMeetingId, zoomJoinUrl, zoomStartUrl, meetingLink: zoomJoinUrl } : {}),
         },
       },
     });
@@ -293,9 +314,9 @@ export const scheduleMeeting = async (data: {
 
           let locationLineHtml = "";
           let locationLineText = "";
-          if (meetingType === "video" && jitsiUrl) {
-            locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Video Room:</strong> <a href="${jitsiUrl}" target="_blank" style="color: #3182ce; text-decoration: underline; font-weight: bold;">Click here to join</a></li>`;
-            locationLineText = `Jitsi Meeting Room: ${jitsiUrl}`;
+          if (meetingType === "video" && zoomJoinUrl) {
+            locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Video Room:</strong> <a href="${zoomJoinUrl}" target="_blank" style="color: #3182ce; text-decoration: underline; font-weight: bold;">Click here to join via Zoom</a></li>`;
+            locationLineText = `Zoom Meeting: ${zoomJoinUrl}`;
           } else if (meetingType === "phone") {
             locationLineHtml = `<li style="margin-bottom: 10px;"><strong>Phone Details:</strong> ${location || "Phone call will be initiated at scheduled time."}</li>`;
             locationLineText = `Phone Details: ${location || "Phone call will be initiated at scheduled time."}`;
@@ -307,7 +328,7 @@ export const scheduleMeeting = async (data: {
           let tipBoxHtml = "";
           if (meetingType === "video") {
             tipBoxHtml = `<p style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2b6cb0;">
-              💡 <strong>No software needed.</strong> Click the meeting link to join directly in your browser using Jitsi Meet — free and secure.
+              💡 <strong>Join via Zoom.</strong> Click the meeting link to join — the Zoom app will open automatically, or you can join from your browser.
             </p>`;
           } else if (meetingType === "phone") {
             tipBoxHtml = `<p style="background: #f7fafc; border-left: 4px solid #4a5568; padding: 12px; border-radius: 4px; font-size: 0.875rem; color: #2d3748;">
@@ -350,7 +371,7 @@ export const scheduleMeeting = async (data: {
     }
 
     revalidatePath("/[locale]/(routes)/crm/meetings", "page");
-    return { success: true, jitsiRoomId, jitsiUrl, meetingType };
+    return { success: true, zoomMeetingId, zoomJoinUrl, zoomStartUrl, meetingType };
   } catch (error) {
     console.error("[SCHEDULE_MEETING_ERROR]", error);
     return { error: "Failed to schedule meeting" };
@@ -358,17 +379,21 @@ export const scheduleMeeting = async (data: {
 };
 
 /**
- * Create an instant ad-hoc Jitsi meeting (no scheduling, just a room)
+ * Create an instant ad-hoc Zoom meeting (no scheduling, just a room)
  */
 export const createInstantMeeting = async (title?: string) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
+  if (!isZoomConfigured()) {
+    return { error: "Zoom is not configured on this server. Ask an admin to set ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET." };
+  }
+
   const roomTitle = title || `Instant Meeting ${new Date().toLocaleTimeString()}`;
-  const jitsiRoomId = generateJitsiRoomId(roomTitle);
-  const jitsiUrl = getJitsiMeetUrl(jitsiRoomId);
 
   try {
+    const zoomMeeting = await createZoomMeeting({ topic: roomTitle });
+
     await prismadb.crm_Activities.create({
       data: {
         type: "meeting",
@@ -378,12 +403,19 @@ export const createInstantMeeting = async (title?: string) => {
         status: "scheduled",
         createdBy: session.user.id,
         updatedBy: session.user.id,
-        metadata: { jitsiRoomId, meetingLink: jitsiUrl, instant: true },
+        metadata: {
+          meetingType: "video",
+          zoomMeetingId: zoomMeeting.id,
+          zoomJoinUrl: zoomMeeting.joinUrl,
+          zoomStartUrl: zoomMeeting.startUrl,
+          meetingLink: zoomMeeting.joinUrl,
+          instant: true,
+        },
       },
     });
 
     revalidatePath("/[locale]/(routes)/crm/meetings", "page");
-    return { success: true, jitsiRoomId, jitsiUrl };
+    return { success: true, zoomMeetingId: zoomMeeting.id, zoomJoinUrl: zoomMeeting.joinUrl, zoomStartUrl: zoomMeeting.startUrl };
   } catch (error) {
     console.error("[INSTANT_MEETING_ERROR]", error);
     return { error: "Failed to create instant meeting" };

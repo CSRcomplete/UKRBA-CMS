@@ -31,7 +31,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
-    "@jitsi/react-sdk": "^1.4.4",
     "@mendable/firecrawl-js": "^1.29.3",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@openai/agents": "^0.8.0",

@@ -15,7 +15,6 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { scheduleMeeting } from "@/actions/crm/meetings";
-import { generateJitsiRoomId, getJitsiMeetUrl } from "@/lib/jitsi";
 import moment from "moment";
 import { Calendar, User, Video, Clock, AlignLeft, ShieldAlert, Link2, Phone, Users, MapPin } from "lucide-react";
 
@@ -24,7 +23,7 @@ interface MeetingSchedulerFormProps {
     users: any[];
     leads: any[];
   };
-  onScheduled?: (jitsiRoomId: string) => void;
+  onScheduled?: (zoomJoinUrl: string) => void;
 }
 
 export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSchedulerFormProps) {
@@ -77,7 +76,7 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
         toast.error(result.error);
       } else {
         const msg = meetingType === "video"
-          ? "Meeting scheduled! Jitsi room created automatically."
+          ? "Meeting scheduled! Zoom meeting created automatically."
           : `${meetingType === "phone" ? "Phone call" : "Face-to-face meeting"} scheduled and invitation email sent.`;
         toast.success(msg);
         setTitle("");
@@ -87,8 +86,8 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
         setExternalEmail("");
         setExternalName("");
         setSearchQuery("");
-        if (onScheduled && result.jitsiRoomId) {
-          onScheduled(result.jitsiRoomId);
+        if (onScheduled && result.zoomJoinUrl) {
+          onScheduled(result.zoomJoinUrl);
         } else {
           router.refresh();
         }
@@ -146,7 +145,7 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
                   <SelectItem value="video">
                     <span className="flex items-center gap-2">
                       <Video className="h-4 w-4 text-blue-500" />
-                      Video Meeting (Jitsi)
+                      Video Meeting (Zoom)
                     </span>
                   </SelectItem>
                   <SelectItem value="phone">
@@ -181,13 +180,12 @@ export function MeetingSchedulerForm({ eligibleTargets, onScheduled }: MeetingSc
             </div>
           )}
 
-          {/* Jitsi URL Preview */}
+          {/* Zoom meeting preview */}
           {meetingType === "video" && title.trim() && (
             <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg text-xs text-blue-700 dark:text-blue-300">
               <Video className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold mb-0.5">Jitsi Room will be auto-created:</p>
-                <p className="font-mono opacity-80 truncate">meet.jit.si/ukrba-{title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30)}-XXXXXX</p>
+                <p className="font-semibold mb-0.5">A Zoom meeting will be auto-created and the join link emailed to your invitee.</p>
               </div>
             </div>
           )}

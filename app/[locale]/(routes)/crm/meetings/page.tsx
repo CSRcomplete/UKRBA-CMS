@@ -19,7 +19,7 @@ export default async function MeetingsPage() {
   return (
     <Container
       title="Video Meetings"
-      description="Powered by Jitsi Meet — browser-based video conferencing integrated directly into UKRBA CMS."
+      description="Powered by Zoom — video conferencing integrated directly into UKRBA CMS."
     >
       <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading meetings...</div>}>
         <MeetingsClient

@@ -14,13 +14,11 @@ import {
   Zap,
   ExternalLink,
   ChevronRight,
-  ArrowLeft,
   Copy,
   Phone,
   Users,
   MapPin,
 } from "lucide-react";
-import { JitsiMeetRoom } from "./components/JitsiMeetRoom";
 import { MeetingSchedulerForm } from "./components/MeetingSchedulerForm";
 import { createInstantMeeting } from "@/actions/crm/meetings";
 import { toast } from "sonner";
@@ -34,8 +32,10 @@ interface Meeting {
   duration?: number | null;
   meetingType?: "video" | "phone" | "in_person";
   location?: string | null;
-  jitsiRoomId?: string;
-  jitsiUrl?: string | null;
+  isHost?: boolean;
+  zoomMeetingId?: string;
+  zoomJoinUrl?: string | null;
+  zoomStartUrl?: string | null;
   created_by_user?: { name?: string | null; email?: string | null } | null;
   invitees?: { type: string; name: string }[];
 }
@@ -49,7 +49,6 @@ interface MeetingsClientProps {
 
 export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleTargets }: MeetingsClientProps) {
   const router = useRouter();
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [view, setView] = useState<"main" | "schedule">("main");
 
@@ -61,39 +60,13 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
       const result = await createInstantMeeting();
       if (result.error) {
         toast.error(result.error);
-      } else if (result.jitsiRoomId) {
-        toast.success("Instant meeting room created!");
-        setActiveRoomId(result.jitsiRoomId);
+      } else if (result.zoomJoinUrl) {
+        toast.success("Instant Zoom meeting created! Opening now...");
+        window.open(result.zoomStartUrl || result.zoomJoinUrl, "_blank", "noopener,noreferrer");
+        router.refresh();
       }
     });
   };
-
-  const handleLeaveRoom = () => {
-    setActiveRoomId(null);
-    router.refresh();
-  };
-
-  // Jitsi embedded room view
-  if (activeRoomId) {
-    return (
-      <div className="space-y-3 p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="gap-1" onClick={handleLeaveRoom}>
-            <ArrowLeft className="h-4 w-4" /> Back to Meetings
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Room: <code className="text-xs bg-muted px-1 py-0.5 rounded">{activeRoomId}</code>
-          </div>
-        </div>
-        <JitsiMeetRoom
-          roomId={activeRoomId}
-          displayName={userDisplayName}
-          userEmail={userEmail}
-          onLeave={handleLeaveRoom}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
@@ -106,7 +79,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
             CRM Meetings
           </h1>
           <p className="text-sm text-muted-foreground">
-            Schedule Video Calls (Jitsi), Phone Calls, or Face-to-Face meetings with automatic email notifications.
+            Schedule Video Calls (Zoom), Phone Calls, or Face-to-Face meetings with automatic email notifications.
           </p>
         </div>
 
@@ -137,7 +110,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MeetingSchedulerForm
             eligibleTargets={eligibleTargets}
-            onScheduled={(roomId) => {
+            onScheduled={() => {
               setView("main");
               router.refresh();
             }}
@@ -146,7 +119,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
             <h3 className="font-semibold text-base flex items-center gap-2"><Info className="h-4 w-4 text-primary" /> How It Works</h3>
             <ul className="space-y-2 text-muted-foreground text-xs list-disc pl-4">
               <li>Select between <strong>Video Call</strong>, <strong>Phone Call</strong>, or <strong>Face-to-Face Meeting</strong>.</li>
-              <li>For Video Calls, a unique <strong>Jitsi Meet</strong> room is automatically created — no account needed.</li>
+              <li>For Video Calls, a unique <strong>Zoom</strong> meeting is automatically created.</li>
               <li>For Phone Calls & Face-to-Face meetings, enter phone number or location venue details.</li>
               <li>Your invitee will instantly receive a formatted email invitation with meeting details.</li>
             </ul>
@@ -170,12 +143,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
             ) : (
               <div className="space-y-3">
                 {upcomingMeetings.map((meeting) => (
-                  <MeetingCard
-                    key={meeting.id}
-                    meeting={meeting}
-                    isUpcoming
-                    onJoin={(roomId) => setActiveRoomId(roomId)}
-                  />
+                  <MeetingCard key={meeting.id} meeting={meeting} isUpcoming />
                 ))}
               </div>
             )}
@@ -190,12 +158,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
               </h2>
               <div className="space-y-2 opacity-70">
                 {pastMeetings.slice(0, 5).map((meeting) => (
-                  <MeetingCard
-                    key={meeting.id}
-                    meeting={meeting}
-                    isUpcoming={false}
-                    onJoin={(roomId) => setActiveRoomId(roomId)}
-                  />
+                  <MeetingCard key={meeting.id} meeting={meeting} isUpcoming={false} />
                 ))}
               </div>
             </div>
@@ -211,11 +174,9 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
 function MeetingCard({
   meeting,
   isUpcoming,
-  onJoin,
 }: {
   meeting: Meeting;
   isUpcoming: boolean;
-  onJoin: (roomId: string) => void;
 }) {
   const countdown = isUpcoming
     ? moment(meeting.date).fromNow()
@@ -288,17 +249,18 @@ function MeetingCard({
         </div>
       </div>
 
-      {meetingType === "video" && meeting.jitsiRoomId && (
+      {meetingType === "video" && meeting.zoomJoinUrl && (
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Embedded join */}
-          <Button
-            size="sm"
-            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-            onClick={() => onJoin(meeting.jitsiRoomId!)}
-          >
-            <Video className="h-4 w-4" />
-            Join Now
-          </Button>
+          {/* Join / Start via Zoom */}
+          <a href={meeting.isHost && meeting.zoomStartUrl ? meeting.zoomStartUrl : meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              size="sm"
+              className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            >
+              <Video className="h-4 w-4" />
+              {meeting.isHost ? "Start Meeting" : "Join Now"}
+            </Button>
+          </a>
 
           {/* Copy meeting link button */}
           <Button
@@ -306,8 +268,7 @@ function MeetingCard({
             size="sm"
             className="gap-1 text-xs text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/40"
             onClick={() => {
-              const url = meeting.jitsiUrl || `https://meet.jit.si/${meeting.jitsiRoomId}`;
-              navigator.clipboard.writeText(url);
+              navigator.clipboard.writeText(meeting.zoomJoinUrl!);
               toast.success("Meeting link copied to clipboard!");
             }}
           >
@@ -316,13 +277,11 @@ function MeetingCard({
           </Button>
 
           {/* External fallback */}
-          {meeting.jitsiUrl && (
-            <a href={meeting.jitsiUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1 text-xs" title="Open meeting in new tab">
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
-            </a>
-          )}
+          <a href={meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-1 text-xs" title="Open meeting in new tab">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </a>
         </div>
       )}
     </div>

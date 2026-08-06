@@ -6,7 +6,6 @@ import { generateICSString } from "@/lib/ics-generator";
 import nodemailer from "nodemailer";
 import { decrypt } from "@/lib/email-crypto";
 
-import { getJitsiMeetUrl } from "@/lib/jitsi";
 import { GROUP_TARGET_UUIDS } from "@/lib/constants/group-assignments";
 
 export type CalendarEventType = "appointment" | "meeting" | "task";
@@ -164,10 +163,7 @@ export async function getCalendarEvents(
     const actEnd = new Date(actStart.getTime() + durationMin * 60 * 1000);
 
     const meta = act.metadata as Record<string, any> | null;
-    const jitsiRoomId: string | undefined = meta?.jitsiRoomId;
-    let meetingUrl: string | null = jitsiRoomId
-      ? getJitsiMeetUrl(jitsiRoomId)
-      : (meta?.meetingLink ?? meta?.meetingUrl ?? null);
+    let meetingUrl: string | null = meta?.zoomJoinUrl ?? meta?.meetingLink ?? meta?.meetingUrl ?? null;
 
     const actLocation = (meta?.location as string | undefined) || (act.type === "meeting" ? "CRM Video Meeting" : "Phone Call");
 
@@ -176,11 +172,6 @@ export async function getCalendarEvents(
       if (match) {
         meetingUrl = match[0];
       }
-    }
-
-    // Default room for CRM meetings if none provided
-    if (!meetingUrl && act.type === "meeting") {
-      meetingUrl = getJitsiMeetUrl(`ukrba-meeting-${act.id}`);
     }
 
     unifiedEvents.push({
