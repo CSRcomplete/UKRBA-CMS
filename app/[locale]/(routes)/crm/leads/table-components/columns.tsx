@@ -10,6 +10,7 @@ import { Lead } from "../table-data/schema";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import { SALES_STATUS_LABELS } from "@/lib/sales-status";
+import { extractPostcodeArea } from "@/lib/postcode";
 import moment from "moment";
 
 type ConfigItem = { id: string; name: string };
@@ -135,11 +136,13 @@ export const createColumns = (
     enableHiding: false,
   },
   {
-    accessorKey: "postcode",
+    id: "postcode",
+    accessorFn: (row: any) => extractPostcodeArea(row.postcode),
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Postcode" />
     ),
-    cell: ({ row }) => <div className="w-[100px]">{row.getValue("postcode") || "-"}</div>,
+    cell: ({ row }) => <div className="w-[100px]">{(row.original as any).postcode || "-"}</div>,
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: true,
     enableHiding: true,
   },

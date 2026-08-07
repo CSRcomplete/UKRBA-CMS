@@ -25,17 +25,19 @@ import { NewLeadForm } from "../leads/components/NewLeadForm";
 import { LeadDataTable } from "../leads/table-components/data-table";
 
 import type { getAllCrmData } from "@/actions/crm/get-crm-data";
+import type { PostcodeOption } from "@/actions/crm/get-postcode-options";
 
 type CrmData = Awaited<ReturnType<typeof getAllCrmData>>;
 
 interface LeadsViewProps {
   data: any[];
   crmData: CrmData;
+  postcodeOptions?: PostcodeOption[];
 }
 
 import { Upload } from "lucide-react";
 
-const LeadsView = ({ data, crmData }: LeadsViewProps) => {
+const LeadsView = ({ data, crmData, postcodeOptions = [] }: LeadsViewProps) => {
   const { accounts, leadSources, leadStatuses, leadTypes } = crmData;
   const [open, setOpen] = useState(false);
   const t = useTranslations("CrmPage");
@@ -73,6 +75,7 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
               leadSources={leadSources}
               leadStatuses={leadStatuses}
               leadTypes={leadTypes}
+              postcodeOptions={postcodeOptions}
             />
           ))}
       </CardContent>

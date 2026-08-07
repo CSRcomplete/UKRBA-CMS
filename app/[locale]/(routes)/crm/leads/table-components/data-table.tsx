@@ -49,6 +49,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type ConfigItem = { id: string; name: string };
+type PostcodeOption = { postcode_area: string; area_name: string | null };
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -56,6 +57,7 @@ interface DataTableProps<TData, TValue> {
   leadSources?: ConfigItem[];
   leadStatuses?: ConfigItem[];
   leadTypes?: ConfigItem[];
+  postcodeOptions?: PostcodeOption[];
 }
 
 export function LeadDataTable<TData, TValue>({
@@ -63,6 +65,7 @@ export function LeadDataTable<TData, TValue>({
   leadSources = [],
   leadStatuses = [],
   leadTypes = [],
+  postcodeOptions = [],
 }: DataTableProps<TData, TValue>) {
   const columns = createColumns(leadSources, leadStatuses, leadTypes) as ColumnDef<TData, TValue>[];
   const router = useRouter();
@@ -229,7 +232,7 @@ export function LeadDataTable<TData, TValue>({
         </div>
       ) : (
         <>
-          <DataTableToolbar table={table} leadSources={leadSources} leadStatuses={leadStatuses} />
+          <DataTableToolbar table={table} leadSources={leadSources} leadStatuses={leadStatuses} postcodeOptions={postcodeOptions} />
           {selectedCount > 0 && (
             <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2 text-sm">
               <span className="font-medium">{selectedCount} selected</span>

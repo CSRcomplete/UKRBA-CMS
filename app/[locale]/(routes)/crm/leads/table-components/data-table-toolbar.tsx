@@ -11,11 +11,13 @@ import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { SALES_STATUS_LABELS } from "@/lib/sales-status";
 
 type ConfigItem = { id: string; name: string };
+type PostcodeOption = { postcode_area: string; area_name: string | null };
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   leadSources?: ConfigItem[];
   leadStatuses?: ConfigItem[];
+  postcodeOptions?: PostcodeOption[];
 }
 
 const salesStatusOptions = Object.entries(SALES_STATUS_LABELS).map(([value, label]) => ({
@@ -27,6 +29,7 @@ export function DataTableToolbar<TData>({
   table,
   leadSources = [],
   leadStatuses = [],
+  postcodeOptions = [],
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
 
@@ -41,14 +44,16 @@ export function DataTableToolbar<TData>({
           }
           className="h-8 w-[150px] lg:w-[200px]"
         />
-        <Input
-          placeholder="Filter by postcode..."
-          value={(table.getColumn("postcode")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("postcode")?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[120px] lg:w-[150px]"
-        />
+        {table.getColumn("postcode") && (
+          <DataTableFacetedFilter
+            column={table.getColumn("postcode")}
+            title="Postcode"
+            options={postcodeOptions.map((p) => ({
+              value: p.postcode_area,
+              label: p.area_name ? `${p.postcode_area} — ${p.area_name}` : p.postcode_area,
+            }))}
+          />
+        )}
         {table.getColumn("lead_status") && (
           <DataTableFacetedFilter
             column={table.getColumn("lead_status")}

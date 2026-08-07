@@ -7,21 +7,24 @@ import LeadsView from "../components/LeadsView";
 
 import { getAllCrmData } from "@/actions/crm/get-crm-data";
 import { getLeads } from "@/actions/crm/get-leads";
+import { getPostcodeOptions } from "@/actions/crm/get-postcode-options";
 import { getTranslations } from "next-intl/server";
 
 const LeadsPage = async () => {
   const t = await getTranslations("CrmPage");
-  const crmData = await getAllCrmData();
-  const leads = await getLeads();
+  const [crmData, leads, postcodeOptions] = await Promise.all([
+    getAllCrmData(),
+    getLeads(),
+    getPostcodeOptions(),
+  ]);
 
-  console.log(leads[0], "leads");
   return (
     <Container
       title={t("leads.pageTitle")}
       description={t("leads.pageDescription")}
     >
       <Suspense fallback={<CrmTableSkeleton />}>
-        <LeadsView crmData={crmData} data={leads} />
+        <LeadsView crmData={crmData} data={leads} postcodeOptions={postcodeOptions} />
       </Suspense>
     </Container>
   );

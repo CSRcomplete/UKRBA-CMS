@@ -1,5 +1,6 @@
 import { prismadb } from "@/lib/prisma";
 import { logOwnershipChange } from "@/lib/ownership";
+import { extractPostcodeArea } from "@/lib/postcode";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -288,9 +289,7 @@ export async function POST(req: Request) {
       regionalDirectorId = referredRdUser.id;
     } else if (postcode) {
       // Regular postcode allocation routing
-      const cleanPostcode = postcode.replace(/\s+/g, "").toUpperCase();
-      const prefixMatch = cleanPostcode.match(/^([A-Z]{1,2})/);
-      const prefix = prefixMatch ? prefixMatch[1] : "";
+      const prefix = extractPostcodeArea(postcode);
 
       const routingRule = await prismadb.nextcrm_postcode_routing.findUnique({
         where: { postcode_area: prefix }
