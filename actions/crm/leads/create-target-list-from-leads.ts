@@ -4,7 +4,7 @@ import { prismadb } from "@/lib/prisma";
 import { requireAuthenticated, filterAuthorizedLeadIds } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 
-export const createTargetListFromLeads = async (leadIds: string[], listName: string) => {
+export const createTargetListFromLeads = async (leadIds: string[], listName: string, description?: string) => {
   let user;
   try {
     user = await requireAuthenticated();
@@ -64,7 +64,7 @@ export const createTargetListFromLeads = async (leadIds: string[], listName: str
   const list = await prismadb.crm_TargetLists.create({
     data: {
       name,
-      description: `Created from ${leads.length} filtered lead(s) on ${new Date().toLocaleDateString("en-GB")}`,
+      description: description?.trim() || `Created from ${leads.length} filtered lead(s) on ${new Date().toLocaleDateString("en-GB")}`,
       created_by: user.id,
       targets: {
         create: Array.from(new Set(targetIds)).map((id) => ({ target_id: id })),

@@ -13,8 +13,9 @@ import { columns } from "../table-components/columns";
 import { TargetListsDataTable } from "../table-components/data-table";
 import { useRouter } from "next/navigation";
 import CreateTargetListModal from "@/components/modals/CreateTargetListModal";
+import type { PostcodeOption, AudienceLead } from "@/components/crm/leads/LeadAudiencePicker";
 
-const TargetListsView = ({ data }: any) => {
+const TargetListsView = ({ data, postcodeOptions, leads }: { data: any; postcodeOptions: PostcodeOption[]; leads: AudienceLead[] }) => {
   const router = useRouter();
 
   return (
@@ -31,7 +32,7 @@ const TargetListsView = ({ data }: any) => {
             <CardDescription></CardDescription>
           </div>
           <div className="flex space-x-2">
-            <CreateTargetListModal />
+            <CreateTargetListModal postcodeOptions={postcodeOptions} leads={leads} />
           </div>
         </div>
         <Separator />
