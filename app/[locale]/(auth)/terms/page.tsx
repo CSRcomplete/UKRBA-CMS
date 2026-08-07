@@ -3,84 +3,63 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Check, X, ArrowLeft } from "lucide-react";
+import { Check, ArrowLeft } from "lucide-react";
 
-const TIERS = [
+const SECTIONS = [
   {
-    name: "Basic",
-    price: "£50 / year",
-    tag: "JOIN",
-    greatFor: "Joining the UK's responsible business community.",
-    youReceive: ["Membership & digital certificate", "UKRBA Member logo", "Public member listing", "Member resources & events"],
-    whatUkrbaDoes: ["Lists your business publicly", "Sends member news & updates"],
-    whatYouDo: ["Manage your own responsible business activities", "Maintain your own policies", "Record your own CSR & ESG activities"],
+    title: "1. Lawful Information",
+    body: [
+      "Any information you upload to the CRM has been obtained lawfully, and you are entitled to share it with UKRBA.",
+    ],
   },
   {
-    name: "Verified",
-    price: "£19.99 / month",
-    tag: "DO IT YOURSELF",
-    greatFor: "Organisations that want independent verification while managing their own CSR & ESG programme.",
-    youReceive: ["Everything in Basic", "Verified status, certificate & badge", "Online diary & shareable diary URL", "Downloadable CSR & ESG Report", "Public business profile"],
-    whatUkrbaDoes: ["Independently verifies your organisation", "Carries out ongoing verification reviews"],
-    whatYouDo: ["Manage your own responsible business programme", "Upload your own CSR & ESG activities"],
+    title: "2. Existing Business Contacts",
+    body: [
+      "We recognise that you may already have your own business contacts and clients.",
+      "Nothing in this agreement prevents you from continuing to use your own existing contacts for the lawful purposes for which they were originally obtained.",
+      "However, once information is uploaded into the UKRBA CRM, it becomes part of the UKRBA business database and may only be accessed and used for legitimate UKRBA business purposes whilst held within the CRM.",
+    ],
   },
   {
-    name: "Accredited",
-    price: "£59.99 / month",
-    tag: "MANAGED BY UKRBA",
-    mostPopular: true,
-    greatFor: "Organisations that want UKRBA to support their accreditation — with monthly social value included.",
-    youReceive: ["Everything in Verified", "Full accreditation & certificate", "Complete policy library", "Accredited Badge for your website & email signature", "5 trees + 24 meals every month"],
-    whatUkrbaDoes: ["Manages your accreditation", "Maintains your policy library", "Records your monthly Social Value"],
-    whatYouDo: ["Continue uploading your own CSR & ESG activities whenever you wish", "Display your Accredited Badge"],
+    title: "3. Confidentiality",
+    body: [
+      "All information contained within the CRM is confidential.",
+      "You agree not to copy, share or use CRM information for any purpose outside UKRBA without prior written permission.",
+    ],
   },
   {
-    name: "Premium",
-    price: "£99.99 / month",
-    tag: "EVERYTHING IN ACCREDITED, PLUS",
-    greatFor: "Organisations that want double the monthly social impact, with priority support.",
-    youReceive: ["Double the monthly Social Value", "10 trees every month", "48 meals every month", "Premium Badge & Certificate", "Premium Business Profile", "Enhanced CSR & ESG reporting"],
-    whatUkrbaDoes: ["Everything in Accredited", "Priority support & accreditation assistance"],
-    whatYouDo: ["Display your Premium Badge on your website, emails & social media"],
+    title: "4. Data Protection",
+    body: [
+      "UKRBA is committed to protecting the information held within the CRM and processes data in accordance with UK data protection legislation.",
+      "Users must take reasonable care to keep information accurate, protect their login details and report any suspected data breach or unauthorised access immediately.",
+    ],
+  },
+  {
+    title: "5. Leaving UKRBA",
+    body: [
+      "If your relationship with UKRBA ends, your access to the CRM will be removed.",
+      "You must not retain or continue to use information taken from the UKRBA CRM after your access has ended.",
+    ],
   },
 ];
 
-const FEATURE_ROWS: [string, boolean, boolean, boolean, boolean][] = [
-  ["Membership", true, true, true, true],
-  ["Certificate", true, true, true, true],
-  ["Display badge on website", true, true, true, true],
-  ["Display badge in email signature", true, true, true, true],
-  ["Public business profile", true, true, true, true],
-  ["Share your public profile", true, true, true, true],
-  ["Independent verification", false, true, true, true],
-  ["Online diary", false, true, true, true],
-  ["Upload your own activities", false, true, true, true],
-  ["Downloadable CSR & ESG Report", false, true, true, true],
-  ["Share your diary URL", false, true, true, true],
-  ["Full accreditation", false, false, true, true],
-  ["Policy library", false, false, true, true],
-  ["Policy reviews", false, false, true, true],
-  ["UKRBA records monthly Social Value", false, false, true, true],
-  ["Priority support", false, false, false, true],
+const ACCEPTANCE_POINTS = [
+  "You have read and understood this agreement.",
+  "You will only upload information you are legally entitled to share.",
+  "You understand that information uploaded into the UKRBA CRM forms part of the UKRBA business database.",
+  "You will use CRM information only for authorised UKRBA business purposes.",
+  "You will keep CRM information confidential.",
+  "You understand that your acceptance of this agreement will be recorded electronically.",
 ];
 
 export default function TermsPage() {
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <div className="w-full max-w-3xl mx-auto px-4 py-10 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Terms & Conditions — UKRBA Membership</h1>
+        <h1 className="text-2xl font-bold tracking-tight">UKRBA CRM User Agreement</h1>
         <Button variant="outline" size="sm" asChild className="gap-1.5">
           <Link href="/sign-in">
             <ArrowLeft className="h-4 w-4" /> Back to Sign In
@@ -89,197 +68,48 @@ export default function TermsPage() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        UK SME Responsible Business Association (UKRBA) — Trust • Transparency • Responsibility. This page sets
-        out the membership options, features, and social value commitments referenced throughout the UKRBA CRM
-        and member-facing materials.
+        Welcome to the UKRBA CRM. This system has been developed to help us manage enquiries, members, prospects
+        and business relationships in a secure and professional manner.
+      </p>
+      <p className="text-sm text-muted-foreground">
+        By selecting <strong className="text-foreground">&ldquo;I Agree&rdquo;</strong> and accessing the CRM, you confirm that you
+        accept the following:
       </p>
 
-      {/* Tier cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {TIERS.map((tier) => (
-          <Card
-            key={tier.name}
-            className={tier.mostPopular ? "border-emerald-500 ring-1 ring-emerald-500/40" : ""}
-          >
-            <CardHeader className="space-y-1">
-              {tier.mostPopular && (
-                <span className="w-fit text-[10px] font-bold uppercase tracking-wide bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-                  Most Popular
-                </span>
-              )}
-              <CardTitle className="text-lg">{tier.name}</CardTitle>
-              <CardDescription className="text-base font-semibold text-foreground">{tier.price}</CardDescription>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{tier.tag}</span>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div>
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">You receive</h4>
-                <ul className="space-y-1">
-                  {tier.youReceive.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5">
-                      <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">What UKRBA does</h4>
-                <ul className="space-y-1">
-                  {tier.whatUkrbaDoes.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5">
-                      <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">What you do</h4>
-                <ul className="space-y-1">
-                  {tier.whatYouDo.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5">
-                      <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="pt-2 border-t">
-                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Great for</h4>
-                <p className="text-xs text-muted-foreground">{tier.greatFor}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {SECTIONS.map((section) => (
+        <Card key={section.title}>
+          <CardHeader>
+            <CardTitle className="text-base">{section.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            {section.body.map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </CardContent>
+        </Card>
+      ))}
 
-      {/* Feature comparison table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Compare memberships at a glance</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Feature</TableHead>
-                <TableHead className="text-center">Basic</TableHead>
-                <TableHead className="text-center">Verified</TableHead>
-                <TableHead className="text-center">Accredited</TableHead>
-                <TableHead className="text-center">Premium</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {FEATURE_ROWS.map(([feature, basic, verified, accredited, premium]) => (
-                <TableRow key={feature}>
-                  <TableCell className="font-medium">{feature}</TableCell>
-                  {[basic, verified, accredited, premium].map((included, idx) => (
-                    <TableCell key={idx} className="text-center">
-                      {included ? (
-                        <Check className="h-4 w-4 text-emerald-600 inline" />
-                      ) : (
-                        <X className="h-4 w-4 text-muted-foreground/40 inline" />
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-              <TableRow>
-                <TableCell className="font-medium">Trees every month</TableCell>
-                <TableCell className="text-center text-muted-foreground/40">—</TableCell>
-                <TableCell className="text-center text-muted-foreground/40">—</TableCell>
-                <TableCell className="text-center font-semibold text-emerald-700">5</TableCell>
-                <TableCell className="text-center font-semibold text-emerald-700">10</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Meals every month</TableCell>
-                <TableCell className="text-center text-muted-foreground/40">—</TableCell>
-                <TableCell className="text-center text-muted-foreground/40">—</TableCell>
-                <TableCell className="text-center font-semibold text-emerald-700">24</TableCell>
-                <TableCell className="text-center font-semibold text-emerald-700">48</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Price</TableCell>
-                <TableCell className="text-center font-semibold">£50 / yr</TableCell>
-                <TableCell className="text-center font-semibold">£19.99 / mo</TableCell>
-                <TableCell className="text-center font-semibold">£59.99 / mo</TableCell>
-                <TableCell className="text-center font-semibold">£99.99 / mo</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Social value */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Accredited & Premium members — included monthly social value</CardTitle>
+          <CardTitle className="text-base">6. Acceptance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg border bg-muted/20">
-              <p className="font-semibold">Accredited — £59.99 / month</p>
-              <p className="text-muted-foreground">5 trees • 24 meals</p>
-            </div>
-            <div className="p-3 rounded-lg border bg-muted/20">
-              <p className="font-semibold">Premium — £99.99 / month</p>
-              <p className="text-muted-foreground">10 trees • 48 meals</p>
-            </div>
-          </div>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-muted-foreground">
-            <li className="flex items-start gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" /> Trees planted through Mbedza Projects</li>
-            <li className="flex items-start gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" /> Meals donated through The Felix Project</li>
-            <li className="flex items-start gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" /> Automatically recorded by UKRBA</li>
-            <li className="flex items-start gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" /> Included within your CSR & ESG reporting</li>
+          <p className="text-muted-foreground">
+            By selecting <strong className="text-foreground">&ldquo;I Agree&rdquo;</strong>, you confirm that:
+          </p>
+          <ul className="space-y-1.5">
+            {ACCEPTANCE_POINTS.map((item) => (
+              <li key={item} className="flex items-start gap-1.5 text-muted-foreground">
+                <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                <span>{item}</span>
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>
 
-      {/* Marketing tools + why businesses join */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Market your membership</CardTitle>
-          <CardDescription>Every membership gives you ready-made marketing tools to win business and build trust.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground">
-          {[
-            "Display your badge on your website",
-            "Add your badge to email signatures",
-            "Promote your membership on social media",
-            "Share your certificate with customers",
-            "Invite customers to your public UKRBA profile",
-            "Share your unique Responsible Business Diary URL",
-          ].map((item) => (
-            <div key={item} className="flex items-start gap-1.5">
-              <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" /> {item}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Why businesses join UKRBA</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          {[
-            "Win more business",
-            "Build customer trust",
-            "Demonstrate independent verification",
-            "Produce professional CSR & ESG reports",
-            "Save administration time",
-            "Create genuine social impact",
-          ].map((item) => (
-            <div key={item} className="p-3 rounded-lg border bg-muted/20 flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-600 shrink-0" /> {item}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <p className="text-xs text-muted-foreground text-center pt-2 border-t">
-        UK SME Responsible Business Association • ukrba.org
+      <p className="text-sm text-muted-foreground text-center pt-2 border-t">
+        Thank you for helping us protect our members, our partners and our business.
       </p>
     </div>
   );
