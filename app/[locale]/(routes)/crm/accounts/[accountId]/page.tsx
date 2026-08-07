@@ -8,6 +8,7 @@ import { getAllCrmData } from "@/actions/crm/get-crm-data";
 import { getOpportunitiesFullByAccountId } from "@/actions/crm/get-opportunities-with-includes-by-accountId";
 import { getContactsByAccountId } from "@/actions/crm/get-contacts-by-accountId";
 import { getLeadsByAccountId } from "@/actions/crm/get-leads-by-accountId";
+import { getPostcodeOptions } from "@/actions/crm/get-postcode-options";
 import { getDocumentsByAccountId } from "@/actions/documents/get-documents-by-accountId";
 import { getContractsByAccountId } from "@/actions/crm/get-contracts";
 import { getAccountProducts } from "@/actions/crm/account-products/get-account-products";
@@ -58,6 +59,7 @@ const AccountDetailPage = async (props: AccountDetailPageProps) => {
     await getContractsByAccountId(accountId)
   );
   const leads: crm_Leads[] = await getLeadsByAccountId(accountId);
+  const postcodeOptions = await getPostcodeOptions();
   const documents: Documents[] = await getDocumentsByAccountId(accountId);
   const tasks: crm_Accounts_Tasks[] = await getAccountsTasks(accountId);
   const invoices = await getInvoicesByAccountId(accountId);
@@ -122,7 +124,7 @@ const AccountDetailPage = async (props: AccountDetailPageProps) => {
               crmData={crmData}
               accountId={accountId}
             />
-            <LeadsView data={leads} crmData={crmData} />
+            <LeadsView data={leads} crmData={crmData} postcodeOptions={postcodeOptions} />
             <AccountProductsView
               data={accountProducts}
               accountId={accountId}
