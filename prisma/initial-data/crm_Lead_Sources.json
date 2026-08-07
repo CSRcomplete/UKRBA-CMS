@@ -1,9 +1,13 @@
 [
-  { "name": "Wix Website" },
-  { "name": "Web" },
+  { "name": "Exhibition" },
+  { "name": "Website" },
+  { "name": "£5 Assessment" },
   { "name": "Referral" },
-  { "name": "Cold Call" },
-  { "name": "Email Campaign" },
-  { "name": "Event" },
-  { "name": "Other" }
+  { "name": "Cold Outreach" },
+  { "name": "RD/AD/CP Generated" },
+  { "name": "Chamber/Partner" },
+  { "name": "Affiliate" },
+  { "name": "Facebook/Advertising" },
+  { "name": "White Label" },
+  { "name": "Strategic Partner" }
 ]

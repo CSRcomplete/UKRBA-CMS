@@ -1,6 +1,16 @@
 import { prismadb } from "@/lib/prisma";
 import { convertLeadToMember } from "@/actions/crm/leads/convert-lead-to-member";
+import { SalesStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+
+function resolveSalesStatus(planName: string): SalesStatus {
+  const p = planName.toLowerCase();
+  if (p.includes("white label")) return "white_label";
+  if (p.includes("premium")) return "premium";
+  if (p.includes("accredited")) return "accredited";
+  if (p.includes("verified")) return "verified";
+  return "basic";
+}
 
 export async function POST(req: Request) {
   if (req.headers.get("content-type") !== "application/json") {
@@ -146,10 +156,13 @@ export async function POST(req: Request) {
       });
     }
 
-    // 4. Promote Lead ➔ Contact & Member with Status "Subscribed - [Plan Name]"
+    // 4. Promote Lead -> Contact & Member, tagging the sales status (membership
+    // tier) inferred from the purchased plan name rather than baking it into
+    // the lead's pipeline status
     const result = await convertLeadToMember({
       leadId: matchingLead.id,
       planName: planName,
+      salesStatus: resolveSalesStatus(planName),
       changeReason: `Wix Paid Plans online purchase (${planName})`,
     });
 

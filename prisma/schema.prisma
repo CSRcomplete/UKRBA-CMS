@@ -91,6 +91,7 @@ model crm_Leads {
   lead_source                   crm_Lead_Sources?     @relation("lead_source_relation", fields: [lead_source_id], references: [id])
   lead_status                   crm_Lead_Statuses?    @relation("lead_status_relation", fields: [lead_status_id], references: [id])
   lead_type                     crm_Lead_Types?       @relation("lead_type_relation", fields: [lead_type_id], references: [id])
+  sales_status                  SalesStatus?
   refered_by                    String?
   campaign                      String?
   assigned_to                   String?               @db.Uuid
@@ -483,6 +484,7 @@ model crm_Contacts {
   social_tiktok    String?
   contact_type_id  String?            @db.Uuid
   contact_type     crm_Contact_Types? @relation(fields: [contact_type_id], references: [id])
+  sales_status     SalesStatus?
   tags             String[]
   notes            String[]
 
@@ -1043,6 +1045,17 @@ enum AppRole {
   regional_director
   area_director
   channel_partner
+}
+
+// Membership tier sold on a closed deal — kept separate from the lead's
+// working pipeline status (crm_Lead_Statuses) and Lead Source. Only settable
+// by the lead's own assigned director/partner or CEO/COO/Admin.
+enum SalesStatus {
+  basic
+  verified
+  accredited
+  premium
+  white_label
 }
 
 model Users {

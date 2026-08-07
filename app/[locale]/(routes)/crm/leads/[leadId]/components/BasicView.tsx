@@ -31,6 +31,9 @@ import { EnvelopeClosedIcon, LightningBoltIcon } from "@radix-ui/react-icons";
 import { LucideLandmark } from "lucide-react";
 import { LeadDetailActions } from "./LeadDetailActions";
 import { getAllCrmData } from "@/actions/crm/get-crm-data";
+import { getSession } from "@/lib/auth-server";
+import { requireAuthenticated, isAdmin } from "@/lib/authz";
+import { SalesStatusEditor } from "./SalesStatusEditor";
 
 interface OppsViewProps {
   data: any;
@@ -42,6 +45,18 @@ export async function BasicView({ data }: OppsViewProps) {
   const crmData = await getAllCrmData();
   const { leadSources, leadStatuses, leadTypes } = crmData;
   if (!data) return <div>Opportunity not found</div>;
+
+  const session = await getSession();
+  let canEditSalesStatus = false;
+  if (session?.user?.id) {
+    const authUser = await requireAuthenticated();
+    canEditSalesStatus = isAdmin(authUser) || [
+      data.assigned_to,
+      data.assigned_partner_id,
+      data.assigned_area_director_id,
+      data.assigned_regional_director_id,
+    ].filter(Boolean).includes(authUser.id);
+  }
   return (
     <div className="pb-3 space-y-5">
       {/*      <pre>{JSON.stringify(data, null, 2)}</pre> */}
@@ -194,6 +209,17 @@ export async function BasicView({ data }: OppsViewProps) {
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">Status</p>
                   <p className="text-sm text-muted-foreground">{data.lead_status?.name ?? "—"}</p>
+                </div>
+              </div>
+              <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                <Medal className="mt-px h-5 w-5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Sales Status</p>
+                  <SalesStatusEditor
+                    leadId={data.id}
+                    salesStatus={data.sales_status ?? null}
+                    canEdit={canEditSalesStatus}
+                  />
                 </div>
               </div>
               <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
