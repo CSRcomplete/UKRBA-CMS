@@ -27,14 +27,26 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
-import { PanelTopClose, PanelTopOpen } from "lucide-react";
+import { PanelTopClose, PanelTopOpen, Send } from "lucide-react";
 import { createColumns } from "./columns";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import AlertModal from "@/components/modals/alert-modal";
 import { useSession } from "@/lib/auth-client";
 import { bulkDeleteLeads } from "@/actions/crm/leads/bulk-delete-leads";
+import { createTargetListFromLeads } from "@/actions/crm/leads/create-target-list-from-leads";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type ConfigItem = { id: string; name: string };
 
@@ -97,6 +109,11 @@ export function LeadDataTable<TData, TValue>({
   const selectedIds = selectedRows.map((r) => r.original.id);
   const selectedCount = selectedIds.length;
 
+  const [targetListOpen, setTargetListOpen] = React.useState(false);
+  const [targetListName, setTargetListName] = React.useState("");
+  const [creatingList, setCreatingList] = React.useState(false);
+  const [createdListId, setCreatedListId] = React.useState<string | null>(null);
+
   const handleDelete = async () => {
     try {
       setLoading(true);
@@ -116,6 +133,30 @@ export function LeadDataTable<TData, TValue>({
     }
   };
 
+  const handleCreateTargetList = async () => {
+    if (!targetListName.trim()) {
+      toast.error("Please name the target list");
+      return;
+    }
+    setCreatingList(true);
+    const res = await createTargetListFromLeads(selectedIds, targetListName.trim());
+    setCreatingList(false);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    setCreatedListId(res.targetListId!);
+    const skippedNote = res.skippedNoEmail ? ` (${res.skippedNoEmail} skipped — no email address)` : "";
+    toast.success(`Target list created with ${res.addedCount} lead(s)${skippedNote}`);
+  };
+
+  const closeTargetListDialog = () => {
+    setTargetListOpen(false);
+    setTargetListName("");
+    setCreatedListId(null);
+    table.toggleAllRowsSelected(false);
+  };
+
   return (
     <div className="space-y-4">
       <AlertModal
@@ -124,6 +165,47 @@ export function LeadDataTable<TData, TValue>({
         onConfirm={handleDelete}
         loading={loading}
       />
+      <Dialog open={targetListOpen} onOpenChange={(open) => (open ? setTargetListOpen(true) : closeTargetListDialog())}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add {selectedCount} Lead(s) to a Target List</DialogTitle>
+            <DialogDescription>
+              Creates (or reuses) a Target record for each selected lead with an email address, grouped into a new Target List. From there, use Campaigns to build an email sequence (e.g. email 1, then email 2 a few days later) and send it to everyone on the list.
+            </DialogDescription>
+          </DialogHeader>
+          {createdListId ? (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">Target list created. Continue to Campaigns to build and schedule the email sequence for this list.</p>
+              <Link href="/campaigns/new">
+                <Button className="w-full gap-1.5">
+                  <Send className="h-4 w-4" />
+                  Create Campaign for this List
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2 py-2">
+              <Label htmlFor="targetListName" className="text-xs font-semibold">Target List Name</Label>
+              <Input
+                id="targetListName"
+                placeholder="e.g. ST Postcode New Leads — Webinar Invite"
+                value={targetListName}
+                onChange={(e) => setTargetListName(e.target.value)}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeTargetListDialog}>
+              {createdListId ? "Close" : "Cancel"}
+            </Button>
+            {!createdListId && (
+              <Button type="button" onClick={handleCreateTargetList} disabled={creatingList}>
+                {creatingList ? "Creating..." : "Create Target List"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex justify-between items-start gap-3">
         <div></div>
         <div className="flex justify-end space-x-2">
@@ -147,18 +229,29 @@ export function LeadDataTable<TData, TValue>({
         </div>
       ) : (
         <>
-          <DataTableToolbar table={table} />
-          {isAdminOrCeo && selectedCount > 0 && (
+          <DataTableToolbar table={table} leadSources={leadSources} leadStatuses={leadStatuses} />
+          {selectedCount > 0 && (
             <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2 text-sm">
               <span className="font-medium">{selectedCount} selected</span>
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
-                onClick={() => setDeleteOpen(true)}
-                disabled={loading}
+                className="gap-1.5"
+                onClick={() => setTargetListOpen(true)}
               >
-                Delete Selected
+                <Send className="h-3.5 w-3.5" />
+                Add to Target List for Campaign
               </Button>
+              {isAdminOrCeo && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={loading}
+                >
+                  Delete Selected
+                </Button>
+              )}
             </div>
           )}
           <div className="rounded-md border overflow-x-auto">

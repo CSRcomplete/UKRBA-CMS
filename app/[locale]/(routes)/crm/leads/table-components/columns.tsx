@@ -6,10 +6,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { statuses } from "../table-data/data";
 import { Lead } from "../table-data/schema";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
+import { SALES_STATUS_LABELS } from "@/lib/sales-status";
 import moment from "moment";
 
 type ConfigItem = { id: string; name: string };
@@ -158,31 +158,52 @@ export const createColumns = (
     enableHiding: true,
   },
   {
-    accessorKey: "status",
+    id: "lead_status",
+    accessorFn: (row: any) => row.lead_status_id ?? "",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = statuses.find(
-        (status) => status.value === row.getValue("status")
-      );
-
-      if (!status) {
-        return null;
-      }
-
-      return (
-        <div className="flex w-[100px] items-center">
-          {status.icon && (
-            <status.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-          )}
-          <span>{status.label}</span>
-        </div>
-      );
+      //@ts-ignore
+      const statusId = row.original.lead_status_id;
+      const status = leadStatuses.find((s) => s.id === statusId);
+      return <div className="w-[130px]">{status?.name ?? "New Lead"}</div>;
     },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id));
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
+    id: "lead_source",
+    accessorFn: (row: any) => row.lead_source_id ?? "",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Lead Source" />
+    ),
+    cell: ({ row }) => {
+      //@ts-ignore
+      const sourceId = row.original.lead_source_id;
+      const source = leadSources.find((s) => s.id === sourceId);
+      return <div className="w-[130px]">{source?.name ?? "—"}</div>;
     },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
+    id: "sales_status",
+    accessorFn: (row: any) => row.sales_status ?? "",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Sales Status" />
+    ),
+    cell: ({ row }) => {
+      //@ts-ignore
+      const value = row.original.sales_status as keyof typeof SALES_STATUS_LABELS | null;
+      if (!value) return <span className="text-muted-foreground text-xs">Not set</span>;
+      return <Badge variant="secondary">{SALES_STATUS_LABELS[value]}</Badge>;
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    enableSorting: true,
+    enableHiding: true,
   },
   {
     id: "nextAction",
