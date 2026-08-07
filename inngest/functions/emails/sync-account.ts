@@ -54,14 +54,22 @@ export const emailSyncAccount = inngest.createFunction(
       async () => {
         const pwd = decrypt(account.passwordEncrypted);
         const acc = { username: account.username, password: pwd, imapHost: account.imapHost, imapPort: account.imapPort, imapSsl: account.imapSsl };
+        // Each folder's failure (bad folder name, transient connection issue) is isolated
+        // so it can't silently abort the other folder's otherwise-successful search.
         const [inbox, sent] = await Promise.all([
           connectImap(acc).then(async (imap) => {
             try { return await searchFolder(imap, "INBOX", account.inboxLastUid ?? 0); }
             finally { imap.end(); }
+          }).catch((err) => {
+            console.error(`[EMAIL_SYNC] INBOX search failed for account ${accountId}:`, err.message);
+            return { uids: [] as number[], highestUid: account.inboxLastUid ?? 0 };
           }),
           connectImap(acc).then(async (imap) => {
             try { return await searchFolder(imap, sentFolder, account.sentLastUid ?? 0); }
             finally { imap.end(); }
+          }).catch((err) => {
+            console.error(`[EMAIL_SYNC] Sent folder ("${sentFolder}") search failed for account ${accountId}:`, err.message);
+            return { uids: [] as number[], highestUid: account.sentLastUid ?? 0 };
           }),
         ]);
         return {
@@ -96,6 +104,9 @@ export const emailSyncAccount = inngest.createFunction(
                 );
                 return fetchHeaders(imap, inboxUids);
               } finally { imap.end(); }
+            }).catch((err) => {
+              console.error(`[EMAIL_SYNC] INBOX header fetch failed for account ${accountId}:`, err.message);
+              return [] as ParsedHeader[];
             })
           : Promise.resolve([] as ParsedHeader[]),
         sentUids.length > 0
@@ -106,6 +117,9 @@ export const emailSyncAccount = inngest.createFunction(
                 );
                 return fetchHeaders(imap, sentUids);
               } finally { imap.end(); }
+            }).catch((err) => {
+              console.error(`[EMAIL_SYNC] Sent folder ("${sentFolder}") header fetch failed for account ${accountId}:`, err.message);
+              return [] as ParsedHeader[];
             })
           : Promise.resolve([] as ParsedHeader[]),
       ]);
