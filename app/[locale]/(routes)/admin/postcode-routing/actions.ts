@@ -6,21 +6,33 @@ import { revalidatePath } from "next/cache";
 
 export async function getPostcodeRoutes() {
   const actor = await requireRole(["admin", "ceo", "coo", "operations_director", "regional_director"]);
-  
-  if (actor.role === "regional_director" && actor.region_id !== null) {
+
+  const include = {
+    area_directors: {
+      include: {
+        area_director: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    },
+    regional_directors: {
+      include: {
+        regional_director: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    }
+  };
+
+  if (actor.role === "regional_director") {
     return await prismadb.nextcrm_postcode_routing.findMany({
       where: {
-        assigned_region_id: actor.region_id,
+        OR: [
+          ...(actor.region_id !== null ? [{ assigned_region_id: actor.region_id }] : []),
+          { regional_directors: { some: { regional_director_id: actor.id } } },
+        ],
       },
-      include: {
-        area_directors: {
-          include: {
-            area_director: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        }
-      },
+      include,
       orderBy: {
         postcode_area: "asc",
       },
@@ -28,15 +40,7 @@ export async function getPostcodeRoutes() {
   }
 
   return await prismadb.nextcrm_postcode_routing.findMany({
-    include: {
-      area_directors: {
-        include: {
-          area_director: {
-            select: { id: true, name: true, email: true }
-          }
-        }
-      }
-    },
+    include,
     orderBy: {
       postcode_area: "asc",
     },
@@ -49,10 +53,11 @@ export async function createPostcodeRoute(data: {
   region_country: string;
   assigned_region_id: number;
   area_director_ids?: string[];
+  regional_director_ids?: string[];
 }) {
   const actor = await requireRole(["admin", "ceo", "coo", "operations_director"]);
 
-  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids, regional_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -87,6 +92,15 @@ export async function createPostcodeRoute(data: {
       });
     }
 
+    if (regional_director_ids && regional_director_ids.length > 0) {
+      await prismadb.postcodeRoutingToRegionalDirectors.createMany({
+        data: regional_director_ids.map((rdId) => ({
+          postcode_routing_id: newRoute.id,
+          regional_director_id: rdId,
+        }))
+      });
+    }
+
     // Log to audit log
     await prismadb.sys_audit_logs.create({
       data: {
@@ -97,8 +111,16 @@ export async function createPostcodeRoute(data: {
       },
     });
 
+    const withRelations = await prismadb.nextcrm_postcode_routing.findUnique({
+      where: { id: newRoute.id },
+      include: {
+        area_directors: { include: { area_director: { select: { id: true, name: true, email: true } } } },
+        regional_directors: { include: { regional_director: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+
     revalidatePath("/[locale]/(routes)/admin/postcode-routing", "page");
-    return { success: true, route: newRoute };
+    return { success: true, route: withRelations };
   } catch (error) {
     console.error("[CREATE_POSTCODE_ROUTE_ERROR]", error);
     return { error: "Failed to create postcode routing rule" };
@@ -113,11 +135,12 @@ export async function updatePostcodeRoute(
     region_country: string;
     assigned_region_id: number;
     area_director_ids?: string[];
+    regional_director_ids?: string[];
   }
 ) {
   const actor = await requireRole(["admin", "ceo", "coo", "operations_director", "regional_director"]);
 
-  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids } = data;
+  const { postcode_area, area_name, region_country, assigned_region_id, area_director_ids, regional_director_ids } = data;
   const cleanArea = postcode_area.trim().toUpperCase();
 
   if (!cleanArea || !region_country || !assigned_region_id) {
@@ -133,9 +156,13 @@ export async function updatePostcodeRoute(
       return { error: "Postcode routing rule not found" };
     }
 
-    // Regional Directors can only edit routes within their assigned region ID
+    // Regional Directors can only edit routes they own (by assigned_region_id or as a shared regional director)
     if (actor.role === "regional_director") {
-      if (existingRoute.assigned_region_id !== actor.region_id || Number(assigned_region_id) !== actor.region_id) {
+      const isOwner = existingRoute.assigned_region_id === actor.region_id
+        || Boolean(await prismadb.postcodeRoutingToRegionalDirectors.findUnique({
+          where: { postcode_routing_id_regional_director_id: { postcode_routing_id: id, regional_director_id: actor.id } },
+        }));
+      if (!isOwner) {
         return { error: "Forbidden: You can only manage postcode routes in your own region." };
       }
     }
@@ -174,6 +201,19 @@ export async function updatePostcodeRoute(
       });
     }
 
+    await prismadb.postcodeRoutingToRegionalDirectors.deleteMany({
+      where: { postcode_routing_id: id }
+    });
+
+    if (regional_director_ids && regional_director_ids.length > 0) {
+      await prismadb.postcodeRoutingToRegionalDirectors.createMany({
+        data: regional_director_ids.map((rdId) => ({
+          postcode_routing_id: id,
+          regional_director_id: rdId,
+        }))
+      });
+    }
+
     // Log to audit log
     await prismadb.sys_audit_logs.create({
       data: {
@@ -185,8 +225,16 @@ export async function updatePostcodeRoute(
       },
     });
 
+    const withRelations = await prismadb.nextcrm_postcode_routing.findUnique({
+      where: { id },
+      include: {
+        area_directors: { include: { area_director: { select: { id: true, name: true, email: true } } } },
+        regional_directors: { include: { regional_director: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+
     revalidatePath("/[locale]/(routes)/admin/postcode-routing", "page");
-    return { success: true, route: updated };
+    return { success: true, route: withRelations };
   } catch (error) {
     console.error("[UPDATE_POSTCODE_ROUTE_ERROR]", error);
     return { error: "Failed to update postcode routing rule" };

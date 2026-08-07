@@ -299,35 +299,65 @@ export async function POST(req: Request) {
       if (routingRule) {
         const assignedRegionId = routingRule.assigned_region_id;
 
-        // Fetch many-to-many assigned Area Directors for this postcode
-        const assignedDirectors = await prismadb.postcodeRoutingToAreaDirectors.findMany({
-          where: { postcode_routing_id: routingRule.id },
-          include: { area_director: true }
-        });
+        // Fetch many-to-many assigned Area Directors and Regional Directors for this postcode
+        const [assignedDirectors, assignedRegionalDirectors] = await Promise.all([
+          prismadb.postcodeRoutingToAreaDirectors.findMany({
+            where: { postcode_routing_id: routingRule.id },
+            include: { area_director: true }
+          }),
+          prismadb.postcodeRoutingToRegionalDirectors.findMany({
+            where: { postcode_routing_id: routingRule.id },
+            include: { regional_director: true }
+          }),
+        ]);
 
-        if (assignedDirectors.length > 0) {
-          // Round-robin: find the Area Director with the least leads assigned in this postcode prefix
-          const directorCounts = await Promise.all(
-            assignedDirectors.map(async (ad) => {
+        // Round-robin: pick whichever director (of a list) has the fewest auto-routed leads for this prefix
+        const pickByRoundRobin = async <T extends { id: string }>(
+          candidates: T[],
+          countField: "assigned_area_director_id" | "assigned_regional_director_id"
+        ): Promise<T> => {
+          const counts = await Promise.all(
+            candidates.map(async (director) => {
               const count = await prismadb.crm_Leads.count({
                 where: {
-                  assigned_area_director_id: ad.area_director_id,
+                  [countField]: director.id,
                   postcode: { startsWith: prefix, mode: "insensitive" }
                 }
               });
-              return { director: ad.area_director, count };
+              return { director, count };
             })
           );
+          counts.sort((a, b) => a.count - b.count);
+          return counts[0].director;
+        };
 
-          // Sort by count ascending, pick the lowest
-          directorCounts.sort((a, b) => a.count - b.count);
-          const selected = directorCounts[0].director;
+        if (assignedDirectors.length > 0) {
+          const selected = await pickByRoundRobin(
+            assignedDirectors.map((ad) => ad.area_director),
+            "assigned_area_director_id"
+          );
 
           currentOwnerId = selected.id;
           areaDirectorId = selected.id;
-          if (selected.parentId) {
+
+          if (assignedRegionalDirectors.length > 0) {
+            const selectedRd = await pickByRoundRobin(
+              assignedRegionalDirectors.map((rd) => rd.regional_director),
+              "assigned_regional_director_id"
+            );
+            regionalDirectorId = selectedRd.id;
+          } else if (selected.parentId) {
             regionalDirectorId = selected.parentId;
           }
+        } else if (assignedRegionalDirectors.length > 0) {
+          // No area director layer for this postcode — round-robin directly between the Regional Directors sharing it
+          const selectedRd = await pickByRoundRobin(
+            assignedRegionalDirectors.map((rd) => rd.regional_director),
+            "assigned_regional_director_id"
+          );
+
+          currentOwnerId = selectedRd.id;
+          regionalDirectorId = selectedRd.id;
         } else {
           // Fallback to legacy single director assignment or region match
           let fallbackDirector = null;

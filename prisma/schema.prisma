@@ -1117,6 +1117,7 @@ model Users {
   parent    Users?  @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Users[] @relation("UserHierarchy")
   postcode_routing_assignments PostcodeRoutingToAreaDirectors[] @relation("AreaDirectorToPostcodeRouting")
+  postcode_routing_regional_assignments PostcodeRoutingToRegionalDirectors[] @relation("RegionalDirectorToPostcodeRouting")
 
   @@index([email])
   @@index([userStatus])
@@ -2074,6 +2075,7 @@ model nextcrm_postcode_routing {
   area_director_id   String?                          @db.Uuid
   createdAt          DateTime                         @default(now())
   area_directors     PostcodeRoutingToAreaDirectors[]
+  regional_directors PostcodeRoutingToRegionalDirectors[]
 }
 
 model PostcodeRoutingToAreaDirectors {
@@ -2086,6 +2088,18 @@ model PostcodeRoutingToAreaDirectors {
   @@id([postcode_routing_id, area_director_id])
   @@index([postcode_routing_id])
   @@index([area_director_id])
+}
+
+model PostcodeRoutingToRegionalDirectors {
+  postcode_routing_id  String @db.Uuid
+  regional_director_id String @db.Uuid
+
+  postcode_routing  nextcrm_postcode_routing @relation(fields: [postcode_routing_id], references: [id], onDelete: Cascade)
+  regional_director Users                    @relation("RegionalDirectorToPostcodeRouting", fields: [regional_director_id], references: [id], onDelete: Cascade)
+
+  @@id([postcode_routing_id, regional_director_id])
+  @@index([postcode_routing_id])
+  @@index([regional_director_id])
 }
 
 model sys_audit_logs {
