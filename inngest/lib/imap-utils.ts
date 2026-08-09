@@ -123,6 +123,22 @@ function embedInlineImages(html: string, attachments: Attachment[]): string {
   return result;
 }
 
+/**
+ * Rewrite remote (http/https) <img> src URLs to route through our own
+ * image proxy. Cloudflare-fronted CDNs frequently block or challenge
+ * cross-site <img> requests made from inside another site's iframe (they
+ * load fine as a direct fetch, but silently fail as an embedded image) —
+ * fetching them server-side and re-serving from our own origin sidesteps
+ * that entirely. Leaves data: URIs (already-embedded inline images) alone.
+ */
+function proxyRemoteImages(html: string): string {
+  return html.replace(
+    /(<img\b[^>]*?\bsrc\s*=\s*)(["'])(https?:\/\/[^"']+)\2/gi,
+    (_match, prefix: string, quote: string, url: string) =>
+      `${prefix}${quote}/api/emails/image-proxy?url=${encodeURIComponent(url)}${quote}`
+  );
+}
+
 /** Open a fresh IMAP connection, fetch the full body of one message by UID. */
 export async function fetchBodyByUid(
   account: ImapAccount,
@@ -152,12 +168,14 @@ export async function fetchBodyByUid(
           simpleParser(Buffer.concat(chunks))
             .then((parsed) => {
               end();
-              const html = parsed.html || undefined;
+              let html = parsed.html || undefined;
+              if (html) {
+                if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
+                html = proxyRemoteImages(html);
+              }
               resolve({
                 bodyText: parsed.text || undefined,
-                bodyHtml: html && parsed.attachments?.length
-                  ? embedInlineImages(html, parsed.attachments)
-                  : html,
+                bodyHtml: html,
               });
             })
             .catch((e) => { end(); reject(e); });
