@@ -33,6 +33,12 @@ jobs:
             npx prisma db push
             npx prisma generate
             
+            # Clean previous build output before rebuilding — an incremental
+            # build on top of a differently-produced .next directory (e.g.
+            # from a manual deploy) can silently omit required manifest
+            # files and crash every page in production.
+            rm -rf .next
+
             # Build Next.js application
             npm run build
 
@@ -41,5 +47,6 @@ jobs:
             mkdir -p .next/standalone/.next
             cp -r .next/static .next/standalone/.next/
 
-            # Restart PM2 process using ecosystem config
-            pm2 start ecosystem.config.js
+            # Restart PM2 process using ecosystem config (falls back to start
+            # if the process isn't already running)
+            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
