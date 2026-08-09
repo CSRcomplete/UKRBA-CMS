@@ -1,5 +1,5 @@
 import Imap from "imap";
-import { simpleParser } from "mailparser";
+import { simpleParser, type Attachment } from "mailparser";
 
 export type ImapAccount = {
   username: string;
@@ -102,6 +102,27 @@ export function fetchHeaders(
   });
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * mailparser leaves inline/embedded images as `<img src="cid:...">` in the
+ * parsed HTML and returns their actual bytes separately in `attachments`
+ * (keyed by `cid`) — it does not re-embed them itself. Without this step
+ * every email with an inline image/logo/signature renders a broken image.
+ */
+function embedInlineImages(html: string, attachments: Attachment[]): string {
+  let result = html;
+  for (const att of attachments) {
+    if (!att.cid) continue;
+    const dataUri = `data:${att.contentType};base64,${att.content.toString("base64")}`;
+    const pattern = new RegExp(`cid:${escapeRegExp(att.cid)}`, "gi");
+    result = result.replace(pattern, dataUri);
+  }
+  return result;
+}
+
 /** Open a fresh IMAP connection, fetch the full body of one message by UID. */
 export async function fetchBodyByUid(
   account: ImapAccount,
@@ -131,9 +152,12 @@ export async function fetchBodyByUid(
           simpleParser(Buffer.concat(chunks))
             .then((parsed) => {
               end();
+              const html = parsed.html || undefined;
               resolve({
                 bodyText: parsed.text || undefined,
-                bodyHtml: parsed.html || undefined,
+                bodyHtml: html && parsed.attachments?.length
+                  ? embedInlineImages(html, parsed.attachments)
+                  : html,
               });
             })
             .catch((e) => { end(); reject(e); });
