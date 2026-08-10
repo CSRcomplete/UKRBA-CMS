@@ -131,7 +131,7 @@ function AutoResizingIframe({ html }: { html: string }) {
     <iframe
       ref={iframeRef}
       srcDoc={html}
-      sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+      sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-downloads"
       referrerPolicy="no-referrer"
       className="w-full border-0 min-h-[150px] block"
       style={{ height: "auto", overflow: "hidden" }}
