@@ -6,6 +6,8 @@ import { decrypt } from "@/lib/email-crypto";
 import { serializeDecimals, serializeDecimalsList } from "@/lib/serialize-decimals";
 import nodemailer from "nodemailer";
 import { EmailFolder } from "@prisma/client";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 
 const PAGE_SIZE = 50;
 const MAX_COUNT = 10_000;
@@ -295,9 +297,13 @@ export async function deleteEmail(id: string) {
 
 export type AttachmentInput = {
   filename: string;
-  content: string; // base64 string
   contentType: string;
   size?: number;
+  // Object key of the file already uploaded to MinIO via a presigned URL
+  // (see /api/upload/presigned-url) — attachments are uploaded directly to
+  // storage from the browser rather than inlined into this Server Action's
+  // request body, since Cloudflare rejects request bodies much above ~1MB.
+  storageKey: string;
 };
 
 export type SendInput = {
@@ -374,12 +380,23 @@ export async function sendEmail(input: SendInput) {
     },
   });
 
-  // Prepare Nodemailer attachments
-  const mailAttachments = input.attachments?.map((att) => ({
-    filename: att.filename,
-    content: Buffer.from(att.content, "base64"),
-    contentType: att.contentType,
-  }));
+  // Prepare Nodemailer attachments — fetch bytes from MinIO server-side
+  // (the file was uploaded there directly by the browser via a presigned URL)
+  const mailAttachments = input.attachments?.length
+    ? await Promise.all(
+        input.attachments.map(async (att) => {
+          const obj = await minioClient.send(
+            new GetObjectCommand({ Bucket: MINIO_BUCKET, Key: att.storageKey })
+          );
+          const bytes = await obj.Body!.transformToByteArray();
+          return {
+            filename: att.filename,
+            content: Buffer.from(bytes),
+            contentType: att.contentType,
+          };
+        })
+      )
+    : undefined;
 
   const fromHeader = account.label && account.label !== account.username
     ? `"${account.label}" <${account.username}>`
@@ -452,8 +469,8 @@ export async function sendEmail(input: SendInput) {
         emailId: created.id,
         filename: att.filename,
         mimeType: att.contentType || "application/octet-stream",
-        size: att.size || Buffer.from(att.content, "base64").byteLength,
-        storageUrl: `data:${att.contentType || "application/octet-stream"};base64,${att.content}`,
+        size: att.size || 0,
+        storageUrl: `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${att.storageKey}`,
       })),
     });
   }

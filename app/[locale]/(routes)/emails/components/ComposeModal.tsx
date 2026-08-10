@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sendEmail, saveDraft, getEmailTemplates, type EmailTemplate } from "@/actions/emails/messages";
+import { uploadEmailAttachment } from "@/lib/client/upload-email-attachment";
 import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { Paperclip, Save, FileText, X } from "lucide-react";
@@ -49,6 +50,7 @@ export function ComposeModal({
     }
   }, [openModal]);
   const [sending, setSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<string>("");
   const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,27 +164,17 @@ export function ComposeModal({
     setSending(true);
     setError(null);
     try {
-      // Convert attached files to base64
+      // Upload attachments directly to storage first — sending them inline
+      // as base64 would blow past Cloudflare's request size limit for
+      // anything but tiny files.
+      if (attachments.length > 0) {
+        setSendStatus(`Uploading ${attachments.length} attachment(s)...`);
+      }
       const attachmentPayload = await Promise.all(
-        attachments.map(async (file) => {
-          return new Promise<{ filename: string; content: string; contentType: string; size: number }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const res = reader.result as string;
-              const base64 = res.split(",")[1] || "";
-              resolve({
-                filename: file.name,
-                content: base64,
-                contentType: file.type || "application/octet-stream",
-                size: file.size,
-              });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        })
+        attachments.map((file) => uploadEmailAttachment(file))
       );
 
+      setSendStatus("Sending...");
       await sendEmail({
         accountId,
         to: to.split(",").map((e) => e.trim()).filter(Boolean),
@@ -199,6 +191,7 @@ export function ComposeModal({
       setError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(false);
+      setSendStatus("");
     }
   }
 
@@ -316,7 +309,7 @@ export function ComposeModal({
             </Button>
 
             <Button onClick={handleSend} disabled={sending || savingDraft} size="sm" className="ml-auto px-6">
-              {sending ? "Sending…" : "Send"}
+              {sending ? (sendStatus || "Sending…") : "Send"}
             </Button>
           </div>
         </div>

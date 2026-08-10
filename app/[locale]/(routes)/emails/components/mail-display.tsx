@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
+import { uploadEmailAttachment } from "@/lib/client/upload-email-attachment";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { getUKRBASignature, getUKRBASignatureEditorHtml } from "@/lib/email-signature";
@@ -212,23 +213,7 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       const replySubject = rawSub.toLowerCase().startsWith("re:") ? rawSub : `Re: ${rawSub}`;
 
       const attachmentPayload = await Promise.all(
-        replyAttachments.map(async (file) => {
-          return new Promise<{ filename: string; content: string; contentType: string; size: number }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const res = reader.result as string;
-              const base64 = res.split(",")[1] || "";
-              resolve({
-                filename: file.name,
-                content: base64,
-                contentType: file.type || "application/octet-stream",
-                size: file.size,
-              });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        })
+        replyAttachments.map((file) => uploadEmailAttachment(file))
       );
 
       const newMsg = await sendEmail({
