@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { getEmailThread, deleteEmail, sendEmail } from "@/actions/emails/messages";
-import { uploadEmailAttachment } from "@/lib/client/upload-email-attachment";
+import { prepareEmailAttachments, appendDownloadLinksToBody, LINK_THRESHOLD_BYTES } from "@/lib/client/prepare-email-attachments";
 import { ComposeModal } from "@/app/[locale]/(routes)/emails/components/ComposeModal";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { getUKRBASignature, getUKRBASignatureEditorHtml } from "@/lib/email-signature";
@@ -212,15 +212,14 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       const rawSub = latestEmail.subject ?? mail?.subject ?? "No Subject";
       const replySubject = rawSub.toLowerCase().startsWith("re:") ? rawSub : `Re: ${rawSub}`;
 
-      const attachmentPayload = await Promise.all(
-        replyAttachments.map((file) => uploadEmailAttachment(file))
-      );
+      const { attachmentPayload, linkedFiles } = await prepareEmailAttachments(replyAttachments);
+      const finalBody = appendDownloadLinksToBody(replyText, linkedFiles);
 
       const newMsg = await sendEmail({
         accountId: activeAccountId,
         to: [replyTargetEmail],
         subject: replySubject,
-        body: replyText,
+        body: finalBody,
         inReplyTo: latestEmail.rfcMessageId,
         references: latestEmail.rfcMessageId,
         attachments: attachmentPayload,
@@ -592,6 +591,9 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
                 {replyAttachments.map((file, idx) => (
                   <span key={idx} className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-[11px]">
                     <span className="truncate max-w-[120px]">{file.name}</span>
+                    {file.size > LINK_THRESHOLD_BYTES && (
+                      <span className="text-muted-foreground">(sent as link)</span>
+                    )}
                     <button
                       type="button"
                       onClick={() => setReplyAttachments((prev) => prev.filter((_, i) => i !== idx))}

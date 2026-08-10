@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sendEmail, saveDraft, getEmailTemplates, type EmailTemplate } from "@/actions/emails/messages";
-import { uploadEmailAttachment } from "@/lib/client/upload-email-attachment";
+import { prepareEmailAttachments, appendDownloadLinksToBody, LINK_THRESHOLD_BYTES } from "@/lib/client/prepare-email-attachments";
 import { useRouter } from "next/navigation";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { Paperclip, Save, FileText, X } from "lucide-react";
@@ -166,13 +166,14 @@ export function ComposeModal({
     try {
       // Upload attachments directly to storage first — sending them inline
       // as base64 would blow past Cloudflare's request size limit for
-      // anything but tiny files.
+      // anything but tiny files. Large files are turned into a download
+      // link instead of a raw attachment, since mail providers reject
+      // messages past their own size limit.
       if (attachments.length > 0) {
         setSendStatus(`Uploading ${attachments.length} attachment(s)...`);
       }
-      const attachmentPayload = await Promise.all(
-        attachments.map((file) => uploadEmailAttachment(file))
-      );
+      const { attachmentPayload, linkedFiles } = await prepareEmailAttachments(attachments);
+      const finalBody = appendDownloadLinksToBody(body, linkedFiles);
 
       setSendStatus("Sending...");
       const result = await sendEmail({
@@ -180,7 +181,7 @@ export function ComposeModal({
         to: to.split(",").map((e) => e.trim()).filter(Boolean),
         cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
         subject,
-        body,
+        body: finalBody,
         inReplyTo: mode === "reply" ? replyTo?.rfcMessageId : undefined,
         references: mode === "reply" ? replyTo?.rfcMessageId : undefined,
         attachments: attachmentPayload,
@@ -288,6 +289,9 @@ export function ComposeModal({
                 {attachments.map((file, idx) => (
                   <span key={idx} className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-0.5 text-[11px]">
                     <span className="truncate max-w-[140px]">{file.name}</span>
+                    {file.size > LINK_THRESHOLD_BYTES && (
+                      <span className="text-muted-foreground">(sent as link)</span>
+                    )}
                     <button type="button" onClick={() => removeAttachment(idx)} className="text-muted-foreground hover:text-foreground">
                       <X className="h-3 w-3" />
                     </button>

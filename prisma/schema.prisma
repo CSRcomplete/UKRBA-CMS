@@ -1600,6 +1600,23 @@ model EmailAttachment {
   @@index([emailId])
 }
 
+// Public, tokenized download links for files too large to email as
+// attachments (e.g. Hostinger's SMTP size limit). The token is unguessable
+// and the /api/dl/[token] route serves the file directly with no auth and
+// no CRM page — just an immediate file download for external recipients.
+model SharedFileLink {
+  id            String    @id @default(uuid()) @db.Uuid
+  token         String    @unique
+  storageKey    String
+  filename      String
+  contentType   String
+  size          Int
+  createdById   String?   @db.Uuid
+  downloadCount Int       @default(0)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+}
+
 model Email {
   id             String      @id @default(uuid()) @db.Uuid
   emailAccountId String      @db.Uuid
