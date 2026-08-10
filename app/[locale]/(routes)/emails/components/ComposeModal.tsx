@@ -175,7 +175,7 @@ export function ComposeModal({
       );
 
       setSendStatus("Sending...");
-      await sendEmail({
+      const result = await sendEmail({
         accountId,
         to: to.split(",").map((e) => e.trim()).filter(Boolean),
         cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
@@ -185,6 +185,10 @@ export function ComposeModal({
         references: mode === "reply" ? replyTo?.rfcMessageId : undefined,
         attachments: attachmentPayload,
       });
+      if (result && "error" in result) {
+        setError(result.error);
+        return;
+      }
       setOpen(false);
       router.refresh();
     } catch (err) {

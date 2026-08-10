@@ -321,6 +321,23 @@ export type SendInput = {
 import { getUKRBASignature, getUKRBASignatureHtml, parseMarkdownToEmailHtml, stripExistingSignature } from "@/lib/email-signature";
 
 export async function sendEmail(input: SendInput) {
+  try {
+    return await sendEmailInternal(input);
+  } catch (err: any) {
+    // Next.js redacts thrown Server Action errors in production ("An error
+    // occurred in the Server Components render...") — returning an error
+    // value instead is the only way the real message reaches the client.
+    console.error("[SEND_EMAIL_ERROR]", err);
+    const raw = err instanceof Error ? err.message : "Failed to send email";
+    const isTooLarge = err?.responseCode === 552 || /message (file )?too big|size limit|exceed/i.test(raw);
+    const message = isTooLarge
+      ? `Your mail server rejected this message because it's too large to send. Attachments are transmitted as one combined message, which inflates their size by roughly a third — try compressing the file(s) or sending a smaller one. (Server said: ${raw})`
+      : raw;
+    return { error: message };
+  }
+}
+
+async function sendEmailInternal(input: SendInput) {
   const userId = await requireSession();
 
   let account = await prismadb.emailAccount.findFirst({

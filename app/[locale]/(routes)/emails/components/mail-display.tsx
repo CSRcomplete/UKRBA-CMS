@@ -226,6 +226,11 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
         attachments: attachmentPayload,
       });
 
+      if (newMsg && "error" in newMsg) {
+        setSendError(newMsg.error);
+        return;
+      }
+
       setReplyText("");
       setReplyAttachments([]);
       if (newMsg) {
