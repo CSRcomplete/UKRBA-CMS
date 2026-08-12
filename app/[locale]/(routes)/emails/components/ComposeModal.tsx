@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmailChipInput } from "@/components/ui/EmailChipInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sendEmail, saveDraft, getEmailTemplates, type EmailTemplate } from "@/actions/emails/messages";
@@ -54,8 +55,8 @@ export function ComposeModal({
   const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
+  const [to, setTo] = useState<string[]>([]);
+  const [cc, setCc] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -80,18 +81,18 @@ export function ComposeModal({
 
       if (mode === "draft" && initialDraft) {
         const toRecs = Array.isArray(initialDraft.toRecipients)
-          ? initialDraft.toRecipients.map((r) => r.email).join(", ")
-          : "";
+          ? initialDraft.toRecipients.map((r) => r.email).filter(Boolean)
+          : [];
         const ccRecs = Array.isArray(initialDraft.ccRecipients)
-          ? initialDraft.ccRecipients.map((r) => r.email).join(", ")
-          : "";
+          ? initialDraft.ccRecipients.map((r) => r.email).filter(Boolean)
+          : [];
         setTo(toRecs);
         setCc(ccRecs);
         setSubject(initialDraft.subject || "");
         setBody(initialDraft.bodyHtml || initialDraft.bodyText || "");
       } else {
-        setTo(mode === "reply" ? replyTo?.fromEmail ?? "" : "");
-        setCc("");
+        setTo(mode === "reply" && replyTo?.fromEmail ? [replyTo.fromEmail] : []);
+        setCc([]);
         const cleanSub = replyTo?.subject ?? "";
         if (mode === "reply") {
           setSubject(cleanSub.toLowerCase().startsWith("re:") ? cleanSub : `Re: ${cleanSub}`);
@@ -146,8 +147,8 @@ export function ComposeModal({
       await saveDraft({
         accountId,
         draftId: initialDraft?.id,
-        to: to.split(",").map((e) => e.trim()).filter(Boolean),
-        cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
+        to,
+        cc,
         subject,
         body,
       });
@@ -178,8 +179,8 @@ export function ComposeModal({
       setSendStatus("Sending...");
       const result = await sendEmail({
         accountId,
-        to: to.split(",").map((e) => e.trim()).filter(Boolean),
-        cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
+        to,
+        cc,
         subject,
         body: finalBody,
         inReplyTo: mode === "reply" ? replyTo?.rfcMessageId : undefined,
@@ -236,11 +237,11 @@ export function ComposeModal({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="recipient@example.com" className="h-8 text-xs" />
+              <EmailChipInput value={to} onChange={setTo} placeholder="recipient@example.com" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">CC</Label>
-              <Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="cc@example.com" className="h-8 text-xs" />
+              <EmailChipInput value={cc} onChange={setCc} placeholder="cc@example.com" />
             </div>
           </div>
 
