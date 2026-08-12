@@ -61,8 +61,11 @@ export const emailLinkCrm = inngest.createFunction(
       return contactLinks.length + accountLinks.length;
     });
 
-    // Only fetch body + embed for emails that are CRM-relevant
-    if (linked > 0 && email.imapUid) {
+    // Body is fetched for every synced email regardless of CRM linkage —
+    // staff correspondence with no matching Contact/Account still needs to
+    // be readable in the inbox. Only the (OpenAI-billed) embedding step
+    // stays gated to CRM-relevant emails.
+    if (email.imapUid) {
       const emailAccount = await prismadb.emailAccount.findUnique({
         where: { id: email.emailAccountId },
         select: {
@@ -109,10 +112,12 @@ export const emailLinkCrm = inngest.createFunction(
           }
         });
 
-        await step.sendEvent("trigger-embed", {
-          name: "email/embed-email",
-          data: { emailId },
-        });
+        if (linked > 0) {
+          await step.sendEvent("trigger-embed", {
+            name: "email/embed-email",
+            data: { emailId },
+          });
+        }
       } else {
         console.warn(
           `[link-crm] EmailAccount ${email.emailAccountId} not found for email ${emailId} — skipping body fetch`
