@@ -285,6 +285,7 @@
     "fullName": "Повне ім'я",
     "username": "Ім'я користувача",
     "company": "Компанія",
+    "phone": "Номер телефону",
     "updateButton": "Оновити профіль",
     "photoUpdated": "Фото оновлено",
     "photoUpdatedDescription": "Ваше фото профілю було оновлено.",

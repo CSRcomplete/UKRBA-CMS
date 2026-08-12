@@ -30,11 +30,23 @@ export const UKRBA_LOGO_URL = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/images/ukrba-logo.png`
   : "https://crm.ukrba.org/images/ukrba-logo.png";
 
-export function getUKRBASignature(user?: { name?: string | null; role?: string | null }): string {
+type SignatureUser = { name?: string | null; role?: string | null; phone?: string | null };
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function getUKRBASignature(user?: SignatureUser): string {
   const name = user?.name?.trim() || "Kevin Turner";
   const jobTitle = user?.role ? formatJobTitle(user?.role) : "Chief Executive Officer";
+  const phone = user?.phone?.trim();
+  const phoneLine = phone ? `\n${phone}` : "";
 
-  return `\n\n\n--\n${name}\n${jobTitle}\nUK SME Responsible Business Association\nSupporting SMEs to evidence responsible business, CSR and ESG commitment\nwww.ukrba.org\n\nThe UK SME Responsible Business Association supports small and medium sized businesses in demonstrating responsible business, CSR and ESG activity through practical tools, accreditation and community engagement.\n\nConfidentiality Notice: This email and any attachments are confidential and may be legally privileged. If you are not the intended recipient, please notify the sender immediately and delete this email from your system. Any unauthorised use, disclosure or copying is prohibited.\n\nPlease consider the environment before printing this email.`;
+  return `\n\n\n--\n${name}\n${jobTitle}${phoneLine}\nUK SME Responsible Business Association\nSupporting SMEs to evidence responsible business, CSR and ESG commitment\nwww.ukrba.org\n\nThe UK SME Responsible Business Association supports small and medium sized businesses in demonstrating responsible business, CSR and ESG activity through practical tools, accreditation and community engagement.\n\nConfidentiality Notice: This email and any attachments are confidential and may be legally privileged. If you are not the intended recipient, please notify the sender immediately and delete this email from your system. Any unauthorised use, disclosure or copying is prohibited.\n\nPlease consider the environment before printing this email.`;
 }
 
 export function stripExistingSignature(body: string): string {
@@ -47,16 +59,20 @@ export function stripExistingSignature(body: string): string {
     .trim();
 }
 
-export function getUKRBASignatureEditorHtml(user?: { name?: string | null; role?: string | null }): string {
+export function getUKRBASignatureEditorHtml(user?: SignatureUser): string {
   return "";
 }
 
 export function getUKRBASignatureHtml(
-  user?: { name?: string | null; role?: string | null },
+  user?: SignatureUser,
   logoUrl: string = UKRBA_LOGO_URL
 ): string {
-  const name = user?.name?.trim() || "Kevin Turner";
-  const jobTitle = user?.role ? formatJobTitle(user?.role) : "Chief Executive Officer";
+  const name = escapeHtml(user?.name?.trim() || "Kevin Turner");
+  const jobTitle = escapeHtml(user?.role ? formatJobTitle(user?.role) : "Chief Executive Officer");
+  const phone = user?.phone?.trim();
+  const phoneRow = phone
+    ? `<p style="margin: 0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #475569; line-height: 1.3;">${escapeHtml(phone)}</p>`
+    : "";
 
   return `
 <br/><br/>
@@ -70,6 +86,7 @@ export function getUKRBASignatureHtml(
         <td style="padding-left: 20px; vertical-align: middle;">
           <p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; color: #1e293b; line-height: 1.2;">${name}</p>
           <p style="margin: 0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 700; color: #388e3c; line-height: 1.3;">${jobTitle}</p>
+          ${phoneRow}
           <p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.3;">UK SME Responsible Business Association</p>
           <p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #475569; line-height: 1.4;">Supporting SMEs to evidence responsible business, CSR and ESG commitment</p>
           <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 600;"><a href="https://www.ukrba.org" target="_blank" style="color: #1e3a8a; text-decoration: none;">www.ukrba.org</a></p>

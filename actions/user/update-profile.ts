@@ -8,11 +8,12 @@ export const updateProfile = async (data: {
   name: string;
   username: string;
   account_name: string;
+  phone?: string;
 }) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  const { userId, name, username, account_name } = data;
+  const { userId, name, username, account_name, phone } = data;
 
   if (!userId) return { error: "userId is required" };
 
@@ -23,7 +24,7 @@ export const updateProfile = async (data: {
 
   try {
     const user = await prismadb.users.update({
-      data: { name, username, account_name },
+      data: { name, username, account_name, phone: phone?.trim() || null },
       where: { id: userId },
     });
     revalidatePath("/[locale]/(routes)/profile", "page");

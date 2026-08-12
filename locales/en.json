@@ -306,6 +306,7 @@
     "fullName": "Full name",
     "username": "Username",
     "company": "Company",
+    "phone": "Phone number",
     "updateButton": "Update profile",
     "photoUpdated": "Photo updated",
     "photoUpdatedDescription": "Your profile photo has been updated.",

@@ -37,6 +37,7 @@ const FormSchema = z.object({
   name: z.string().min(3).max(50),
   username: z.string().min(2).max(50),
   account_name: z.string().min(2).max(50),
+  phone: z.string().max(30).optional().or(z.literal("")),
 });
 
 export function ProfileForm({ data }: ProfileFormProps) {
@@ -49,11 +50,12 @@ export function ProfileForm({ data }: ProfileFormProps) {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: data
-      ? { ...data }
+      ? { ...data, phone: data.phone ?? "" }
       : {
           name: "",
           username: "",
           account_name: "",
+          phone: "",
         },
   });
 
@@ -65,6 +67,7 @@ export function ProfileForm({ data }: ProfileFormProps) {
         name: data.name,
         username: data.username,
         account_name: data.account_name,
+        phone: data.phone,
       });
 
       if (result.error) {
@@ -85,13 +88,13 @@ export function ProfileForm({ data }: ProfileFormProps) {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex space-x-5 w-full p-5 items-end"
+        className="flex flex-wrap gap-5 w-full p-5 items-end"
       >
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem className="w-1/3">
+            <FormItem className="w-[calc(25%-1.25rem)] min-w-[160px]">
               <FormLabel>{t("fullName")}</FormLabel>
               <FormControl>
                 <Input disabled={isLoading} placeholder="John Doe" {...field} />
@@ -104,7 +107,7 @@ export function ProfileForm({ data }: ProfileFormProps) {
           control={form.control}
           name="username"
           render={({ field }) => (
-            <FormItem className="w-1/3">
+            <FormItem className="w-[calc(25%-1.25rem)] min-w-[160px]">
               <FormLabel>{t("username")}</FormLabel>
               <FormControl>
                 <Input disabled={isLoading} placeholder="jdoe" {...field} />
@@ -117,7 +120,7 @@ export function ProfileForm({ data }: ProfileFormProps) {
           control={form.control}
           name="account_name"
           render={({ field }) => (
-            <FormItem className="w-1/3">
+            <FormItem className="w-[calc(25%-1.25rem)] min-w-[160px]">
               <FormLabel>{t("company")}</FormLabel>
               <FormControl>
                 <Input
@@ -125,6 +128,19 @@ export function ProfileForm({ data }: ProfileFormProps) {
                   placeholder="Tesla Inc.,"
                   {...field}
                 />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem className="w-[calc(25%-1.25rem)] min-w-[160px]">
+              <FormLabel>{t("phone")}</FormLabel>
+              <FormControl>
+                <Input disabled={isLoading} placeholder="+44 7700 900000" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

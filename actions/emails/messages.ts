@@ -364,7 +364,7 @@ async function sendEmailInternal(input: SendInput) {
 
   const user = await prismadb.users.findUnique({
     where: { id: userId },
-    select: { name: true, role: true },
+    select: { name: true, role: true, phone: true },
   });
 
   // Strip any pre-existing/duplicate signature lines from input body
@@ -372,11 +372,11 @@ async function sendEmailInternal(input: SendInput) {
 
   // Prepare text body (strip HTML tags if body contains HTML)
   let cleanBodyText = cleanedBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role });
+  cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role, phone: user?.phone });
 
   // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)
   const htmlContentLines = parseMarkdownToEmailHtml(cleanedBody);
-  const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role })}`;
+  const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role, phone: user?.phone })}`;
 
   let password = "";
   try {
