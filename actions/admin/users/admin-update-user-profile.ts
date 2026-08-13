@@ -11,6 +11,7 @@ export async function adminUpdateUserProfile(
     name?: string;
     avatar?: string;
     password?: string;
+    phone?: string;
   }
 ) {
   const session = await getSession();
@@ -46,6 +47,10 @@ export async function adminUpdateUserProfile(
       const avatarUrl = data.avatar.trim();
       updateData.avatar = avatarUrl || null;
       updateData.image = avatarUrl || null;
+    }
+
+    if (data.phone !== undefined) {
+      updateData.phone = data.phone.trim() || null;
     }
 
     if (data.password && data.password.trim().length > 0) {

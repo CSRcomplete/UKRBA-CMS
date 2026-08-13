@@ -54,6 +54,7 @@ interface UserManageFormProps {
     email: string;
     avatar?: string | null;
     image?: string | null;
+    phone?: string | null;
     role: AppRole;
     parentId: string | null;
     postcode_routing_assignments: { postcode_routing_id: string }[];
@@ -89,6 +90,7 @@ export default function UserManageForm({
   // User Profile & Credential states
   const [name, setName] = useState<string>(user.name || "");
   const [avatar, setAvatar] = useState<string>(user.avatar || user.image || "");
+  const [phone, setPhone] = useState<string>(user.phone || "");
   const [newPassword, setNewPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
@@ -162,6 +164,7 @@ export default function UserManageForm({
       const res = await adminUpdateUserProfile(user.id, {
         name,
         avatar,
+        phone,
         password: newPassword || undefined,
       });
 
@@ -407,6 +410,18 @@ export default function UserManageForm({
                     value={avatar}
                     onChange={(e) => setAvatar(e.target.value)}
                     placeholder="https://example.com/avatar.jpg"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="userPhone" className="text-xs font-semibold">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="userPhone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+44 7700 900000"
                   />
                 </div>
               </div>
