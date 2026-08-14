@@ -217,19 +217,22 @@ export async function getEmail(id: string) {
       });
 
       if (account) {
-        const { fetchBodyByUid } = await import("@/inngest/lib/imap-utils");
+        const { fetchBodyByMessageId, fetchBodyByUid } = await import("@/inngest/lib/imap-utils");
         const folderName = email.folder === "SENT" ? (account.sentFolderName || "Sent") : "INBOX";
-        const body = await fetchBodyByUid(
-          {
-            username: account.username,
-            password: decrypt(account.passwordEncrypted),
-            imapHost: account.imapHost,
-            imapPort: account.imapPort,
-            imapSsl: account.imapSsl,
-          },
-          folderName,
-          email.imapUid
-        );
+        const creds = {
+          username: account.username,
+          password: decrypt(account.passwordEncrypted),
+          imapHost: account.imapHost,
+          imapPort: account.imapPort,
+          imapSsl: account.imapSsl,
+        };
+        // Message-ID is stable even if the mailbox's UIDs get renumbered
+        // server-side — falling back to the stored UID only when we have no
+        // real Message-ID to search with (see imap-utils.ts).
+        const isRealMessageId = !email.rfcMessageId.endsWith("-header@local");
+        const body = isRealMessageId
+          ? await fetchBodyByMessageId(creds, folderName, email.rfcMessageId)
+          : await fetchBodyByUid(creds, folderName, email.imapUid);
 
         if (body.bodyText || body.bodyHtml) {
           await prismadb.email.update({

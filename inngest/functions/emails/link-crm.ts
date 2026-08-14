@@ -1,7 +1,7 @@
 import { inngest } from "@/inngest/client";
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
-import { fetchBodyByUid } from "@/inngest/lib/imap-utils";
+import { fetchBodyByMessageId, fetchBodyByUid } from "@/inngest/lib/imap-utils";
 
 export const emailLinkCrm = inngest.createFunction(
   {
@@ -19,6 +19,7 @@ export const emailLinkCrm = inngest.createFunction(
         toRecipients: true,
         ccRecipients: true,
         imapUid: true,
+        rfcMessageId: true,
         folder: true,
         emailAccountId: true,
       },
@@ -87,17 +88,28 @@ export const emailLinkCrm = inngest.createFunction(
         // Wrap body fetch in step.run for idempotent retry behaviour
         await step.run("fetch-and-save-body", async () => {
           try {
-            const body = await fetchBodyByUid(
-              {
-                username: emailAccount.username,
-                password: decrypt(emailAccount.passwordEncrypted),
-                imapHost: emailAccount.imapHost,
-                imapPort: emailAccount.imapPort,
-                imapSsl: emailAccount.imapSsl,
-              },
-              folderName,
-              email.imapUid!
-            );
+            const creds = {
+              username: emailAccount.username,
+              password: decrypt(emailAccount.passwordEncrypted),
+              imapHost: emailAccount.imapHost,
+              imapPort: emailAccount.imapPort,
+              imapSsl: emailAccount.imapSsl,
+            };
+
+            // Our own synthetic fallback IDs (used when a header had no real
+            // Message-ID) never appear on the server, so a Message-ID search
+            // can't find them — UID is the only option in that case. When a
+            // *real* Message-ID search comes up empty, the message is most
+            // likely gone from that folder — falling back to the stored UID
+            // there would risk fetching a different message that has since
+            // taken over that UID, so we deliberately don't.
+            const isRealMessageId = !email.rfcMessageId.endsWith("-header@local");
+
+            const body = isRealMessageId
+              ? await fetchBodyByMessageId(creds, folderName, email.rfcMessageId)
+              : email.imapUid
+                ? await fetchBodyByUid(creds, folderName, email.imapUid)
+                : {};
 
             await prismadb.email.update({
               where: { id: emailId },

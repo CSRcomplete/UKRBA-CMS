@@ -139,7 +139,132 @@ function proxyRemoteImages(html: string): string {
   );
 }
 
-/** Open a fresh IMAP connection, fetch the full body of one message by UID. */
+/**
+ * Fetches and parses the body of the message at `uid` in the currently-open
+ * `box` on an already-connected `imap` client. Caller owns the connection
+ * and box lifecycle — this only runs one FETCH.
+ */
+function fetchBodyOnOpenBox(
+  imap: Imap,
+  uid: number
+): Promise<{ bodyText?: string; bodyHtml?: string }> {
+  return new Promise((resolve, reject) => {
+    const fetch = imap.fetch([uid], { bodies: "" });
+    const chunks: Buffer[] = [];
+    let found = false;
+
+    fetch.on("message", (msg) => {
+      found = true;
+      msg.on("body", (stream) => {
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      });
+      msg.on("end", () => {
+        simpleParser(Buffer.concat(chunks))
+          .then((parsed) => {
+            let html = parsed.html || undefined;
+            if (html) {
+              if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
+              html = proxyRemoteImages(html);
+            }
+            resolve({ bodyText: parsed.text || undefined, bodyHtml: html });
+          })
+          .catch(reject);
+      });
+    });
+
+    fetch.on("error", reject);
+    fetch.on("end", () => {
+      if (!found) resolve({});
+    });
+  });
+}
+
+function searchByMessageId(imap: Imap, messageId: string): Promise<number[]> {
+  return new Promise((resolve, reject) => {
+    imap.search([["HEADER", "MESSAGE-ID", messageId]], (err, uids) => {
+      if (err) return reject(err);
+      resolve(uids ?? []);
+    });
+  });
+}
+
+/**
+ * Looks up and fetches multiple messages by Message-ID over a single IMAP
+ * connection/box — for bulk re-fetching, opening a fresh TLS connection per
+ * message is the dominant cost by far. Returns a map keyed by messageId;
+ * entries are omitted for IDs that weren't found (synthetic/local IDs or
+ * messages no longer present in this folder).
+ */
+export async function fetchBodiesByMessageIds(
+  account: ImapAccount,
+  folderName: string,
+  messageIds: string[]
+): Promise<Map<string, { bodyText?: string; bodyHtml?: string }>> {
+  const results = new Map<string, { bodyText?: string; bodyHtml?: string }>();
+  const imap = await connectImap(account);
+
+  await new Promise<void>((resolve, reject) => {
+    imap.openBox(folderName, true, (err) => (err ? reject(err) : resolve()));
+  });
+
+  try {
+    for (const messageId of messageIds) {
+      try {
+        const uids = await searchByMessageId(imap, messageId);
+        if (uids.length === 0) continue;
+        const body = await fetchBodyOnOpenBox(imap, uids[uids.length - 1]);
+        results.set(messageId, body);
+      } catch (e) {
+        console.warn(`[imap-utils] Failed to fetch message ${messageId} in ${folderName}:`, e);
+      }
+    }
+  } finally {
+    imap.end();
+  }
+
+  return results;
+}
+
+/**
+ * Open a fresh IMAP connection, find the message by its stable Message-ID
+ * header, then fetch its body. UIDs are only guaranteed to point at the
+ * same message within a single UIDVALIDITY session — if the mailbox is
+ * ever reindexed server-side (observed to happen on this account's
+ * provider), a UID stored during the initial sync can silently start
+ * pointing at a *different* message, pulling the wrong content into the
+ * wrong CRM record. Message-ID is permanent for the life of the message,
+ * so looking it up fresh every time avoids that class of corruption
+ * entirely — this is the only body-fetch path that should be used.
+ */
+export async function fetchBodyByMessageId(
+  account: ImapAccount,
+  folderName: string,
+  messageId: string
+): Promise<{ bodyText?: string; bodyHtml?: string }> {
+  const imap = await connectImap(account);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      imap.openBox(folderName, true, (err) => (err ? reject(err) : resolve()));
+    });
+
+    const uids = await searchByMessageId(imap, messageId);
+    if (uids.length === 0) return {};
+
+    // If somehow more than one message shares this Message-ID, prefer the
+    // most recently added one.
+    return await fetchBodyOnOpenBox(imap, uids[uids.length - 1]);
+  } finally {
+    imap.end();
+  }
+}
+
+/** Open a fresh IMAP connection, fetch the full body of one message by UID.
+ * @deprecated UIDs can go stale if the mailbox is reindexed server-side,
+ * silently attributing one message's body to a different message's row.
+ * Use `fetchBodyByMessageId` instead — kept only for the incremental-sync
+ * watermark path where a stale UID just means a message gets re-checked,
+ * not corrupted. */
 export async function fetchBodyByUid(
   account: ImapAccount,
   folderName: string,
@@ -155,37 +280,9 @@ export async function fetchBodyByUid(
     imap.openBox(folderName, true, (err) => {
       if (err) { end(); return reject(err); }
 
-      const fetch = imap.fetch([uid], { bodies: "" });
-      const chunks: Buffer[] = [];
-      let found = false;
-
-      fetch.on("message", (msg) => {
-        found = true;
-        msg.on("body", (stream) => {
-          stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-        });
-        msg.on("end", () => {
-          simpleParser(Buffer.concat(chunks))
-            .then((parsed) => {
-              end();
-              let html = parsed.html || undefined;
-              if (html) {
-                if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
-                html = proxyRemoteImages(html);
-              }
-              resolve({
-                bodyText: parsed.text || undefined,
-                bodyHtml: html,
-              });
-            })
-            .catch((e) => { end(); reject(e); });
-        });
-      });
-
-      fetch.on("error", (e) => { end(); reject(e); });
-      fetch.on("end", () => {
-        if (!found) { end(); resolve({}); }
-      });
+      fetchBodyOnOpenBox(imap, uid)
+        .then((result) => { end(); resolve(result); })
+        .catch((e) => { end(); reject(e); });
     });
   });
 }
