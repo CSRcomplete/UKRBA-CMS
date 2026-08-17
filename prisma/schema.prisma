@@ -2161,6 +2161,11 @@ model crm_Members {
   partner_commission_rate Decimal? @db.Decimal(5, 2)
   override_structure_id   Int?
 
+  // Which /fsl/[slug] link the sale was attributed to at checkout (e.g. a
+  // coupon code carrying an RD's or marketing channel's slug) — kept as the
+  // raw string for audit/traceability alongside the resolved owner fields.
+  referral_source String?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

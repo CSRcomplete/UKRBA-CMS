@@ -1,5 +1,6 @@
 import { prismadb } from "@/lib/prisma";
 import { convertLeadToMember } from "@/actions/crm/leads/convert-lead-to-member";
+import { resolveReferralOwner, referralOwnerToMemberFields } from "@/lib/referral-attribution";
 import { SalesStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -84,6 +85,19 @@ export async function POST(req: Request) {
     const businessName = (body.business_name || body.company || body.Company || "").trim();
     const telephone = (body.telephone || body.phone || body.mobile || "").trim();
     const postcode = (body.postcode || body.postCode || "").trim();
+
+    // /fsl/[slug] attribution — carried through Wix checkout as a coupon
+    // code (simplest, no custom Wix code needed) or a custom field, so we
+    // check several likely names for compatibility with however it's wired
+    // up on the Wix side.
+    const referralSlug = (
+      body.couponCode ||
+      body.coupon_code ||
+      body.coupon?.code ||
+      body.referral_slug ||
+      body.referralSlug ||
+      ""
+    ).trim();
 
     if (!email && !contactName && !businessName) {
       return NextResponse.json({ message: "Missing buyer identification (email or name required)" }, { status: 400 });
@@ -170,6 +184,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: result.error }, { status: 500 });
     }
 
+    // 5. Attribute the sale to whichever /fsl/[slug] link drove it, if any —
+    // this can point the sale at a different owner than the lead's existing
+    // postcode-based routing (e.g. an RD's own campaign link converting a
+    // lead originally routed to a different Area Director).
+    let attributedTo: string | null = null;
+    if (referralSlug && result.member?.id) {
+      try {
+        const owner = await resolveReferralOwner(referralSlug);
+        if (owner) {
+          await prismadb.crm_Members.update({
+            where: { id: result.member.id },
+            data: {
+              referral_source: referralSlug,
+              ...referralOwnerToMemberFields(owner),
+            },
+          });
+          attributedTo = owner.label;
+        }
+      } catch (attributionError) {
+        console.error("WIX PURCHASE ATTRIBUTION ERROR:", attributionError);
+        // Sale/conversion already succeeded above — attribution failure
+        // shouldn't fail the whole webhook.
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -178,6 +217,7 @@ export async function POST(req: Request) {
         contact_id: result.contact?.id,
         member_id: result.member?.id,
         status: result.statusName,
+        attributed_to: attributedTo,
       },
       { status: 200 }
     );

@@ -16,11 +16,12 @@ import { useRouter } from "next/navigation";
 import { updateMember } from "@/actions/crm/members";
 import { UserSearchCombobox } from "@/components/ui/user-search-combobox";
 import { Badge } from "@/components/ui/badge";
-import { Building, Mail, Phone, Calendar, Shield, Award, Users } from "lucide-react";
+import { Building, Mail, Phone, Calendar, Shield, Award, Users, Link2, Percent } from "lucide-react";
 import moment from "moment";
 
 interface MemberDetailFormProps {
   member: any;
+  viewerIsAdmin: boolean;
 }
 
 const LIFECYCLE_STATUSES = [
@@ -35,7 +36,7 @@ const LIFECYCLE_STATUSES = [
   "Retention"
 ];
 
-export function MemberDetailForm({ member }: MemberDetailFormProps) {
+export function MemberDetailForm({ member, viewerIsAdmin }: MemberDetailFormProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,11 @@ export function MemberDetailForm({ member }: MemberDetailFormProps) {
   const [channelPartnerId, setChannelPartnerId] = useState(member.assigned_channel_partner_id || "");
   const [areaDirectorId, setAreaDirectorId] = useState(member.assigned_area_director_id || "");
   const [regionalDirectorId, setRegionalDirectorId] = useState(member.assigned_regional_director_id || "");
+
+  const [commissionRate, setCommissionRate] = useState(
+    member.partner_commission_rate != null ? String(member.partner_commission_rate) : ""
+  );
+  const [savingCommission, setSavingCommission] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +83,30 @@ export function MemberDetailForm({ member }: MemberDetailFormProps) {
       toast.error("Failed to update member");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveCommission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingCommission(true);
+    try {
+      const parsed = commissionRate.trim() === "" ? null : Number(commissionRate);
+      if (parsed !== null && (Number.isNaN(parsed) || parsed < 0 || parsed > 100)) {
+        toast.error("Commission rate must be a number between 0 and 100");
+        return;
+      }
+      const result = await updateMember({ id: member.id, partner_commission_rate: parsed });
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Commission rate updated");
+        router.refresh();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update commission rate");
+    } finally {
+      setSavingCommission(false);
     }
   };
 
@@ -235,9 +265,58 @@ export function MemberDetailForm({ member }: MemberDetailFormProps) {
                       {member.assigned_regional_director_id ? "Assigned" : "None"}
                     </span>
                   </div>
+
+                  <div className="flex items-center gap-2 text-sm">
+                    <Link2 className="h-4 w-4 text-indigo-500" />
+                    <span>Attributed Via: </span>
+                    <span className="font-semibold">{member.referral_source || "None"}</span>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Commission / Payment Card */}
+      <Card className="shadow-sm border-muted">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Percent className="h-5 w-5 text-primary" />
+            Commission
+          </CardTitle>
+          <CardDescription>
+            {viewerIsAdmin
+              ? "Set the partner commission rate for this sale."
+              : "Your commission rate for this sale, set by CEO, COO or Admin."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {viewerIsAdmin ? (
+            <form onSubmit={handleSaveCommission} className="flex items-end gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground">Commission Rate (%)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="w-32"
+                />
+              </div>
+              <Button type="submit" disabled={savingCommission}>
+                {savingCommission ? "Saving..." : "Save Commission"}
+              </Button>
+            </form>
+          ) : member.partner_commission_rate != null ? (
+            <p className="text-2xl font-bold text-primary">{member.partner_commission_rate}%</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Not yet set — your commission for this sale will show here once CEO, COO or Admin sets it.
+            </p>
           )}
         </CardContent>
       </Card>

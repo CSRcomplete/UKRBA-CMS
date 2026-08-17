@@ -5,6 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serializeDecimals, serializeDecimalsList } from "@/lib/serialize-decimals";
 import { writeAuditLog } from "@/lib/audit-log";
+import { requireAuthenticated, isAdmin } from "@/lib/authz";
 
 // Helper to check user roles and build member filters
 async function memberScopeWhere(user: any) {
@@ -121,6 +122,15 @@ export const updateMember = async (data: {
     recurring_revenue_tier,
     partner_commission_rate,
   } = data;
+
+  // Commission/payout figures are set by CEO, COO or Admin only — an RD or
+  // channel partner should never be able to set their own commission rate.
+  if (partner_commission_rate !== undefined) {
+    const user = await requireAuthenticated();
+    if (!isAdmin(user)) {
+      return { error: "Only CEO, COO and Admin can set the partner commission rate." };
+    }
+  }
 
   try {
     const before = await prismadb.crm_Members.findUnique({ where: { id } });

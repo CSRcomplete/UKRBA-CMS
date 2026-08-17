@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { DirectMeetingScheduler } from "@/components/crm/meetings/DirectMeetingScheduler";
+import { requireAuthenticated, isAdmin } from "@/lib/authz";
 
 interface MemberDetailPageProps {
   params: Promise<{
@@ -18,7 +19,8 @@ interface MemberDetailPageProps {
 export default async function MemberDetailPage(props: MemberDetailPageProps) {
   const params = await props.params;
   const { memberId } = params;
-  const member = await getMember(memberId);
+  const [member, viewer] = await Promise.all([getMember(memberId), requireAuthenticated()]);
+  const viewerIsAdmin = isAdmin(viewer);
 
   if (!member) {
     return (
@@ -54,7 +56,7 @@ export default async function MemberDetailPage(props: MemberDetailPageProps) {
           <TabsTrigger value="meetings">Schedule Meeting</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
-          <MemberDetailForm member={member} />
+          <MemberDetailForm member={member} viewerIsAdmin={viewerIsAdmin} />
         </TabsContent>
         <TabsContent value="tasks">
           <EntityTasks entityId={memberId} entityType="member" />

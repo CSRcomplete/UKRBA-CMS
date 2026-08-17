@@ -8,9 +8,11 @@ import Link from "next/link";
 import moment from "moment";
 import { Badge } from "@/components/ui/badge";
 import { getTranslations } from "next-intl/server";
+import { requireAuthenticated, isAdmin } from "@/lib/authz";
 
 export default async function MembersPage() {
-  const members = await getMembers();
+  const [members, viewer] = await Promise.all([getMembers(), requireAuthenticated()]);
+  const viewerIsAdmin = isAdmin(viewer);
 
   // Fetch all active tasks to resolve next actions for members in-memory
   const activeTasks = await prismadb.tasks.findMany({
@@ -91,9 +93,11 @@ export default async function MembersPage() {
                     <TableHead>Business Name</TableHead>
                     <TableHead>Lifecycle Status</TableHead>
                     <TableHead>Responsible Owner</TableHead>
+                    <TableHead>Attributed Via</TableHead>
                     <TableHead>Contact Info</TableHead>
                     <TableHead>Converted Date</TableHead>
                     <TableHead>Next Action</TableHead>
+                    <TableHead>Commission</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -105,6 +109,9 @@ export default async function MembersPage() {
                       <TableCell>{member.business_name}</TableCell>
                       <TableCell>{getStatusBadge(member.lifecycle_status)}</TableCell>
                       <TableCell className="text-sm font-medium">{member.ownerName}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {member.referral_source || "—"}
+                      </TableCell>
                       <TableCell className="text-xs space-y-1">
                         <div>{member.email}</div>
                         <div className="text-muted-foreground">{member.telephone}</div>
@@ -125,6 +132,13 @@ export default async function MembersPage() {
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {member.partner_commission_rate != null
+                          ? `${member.partner_commission_rate}%`
+                          : viewerIsAdmin
+                            ? "Not set"
+                            : "Pending"}
                       </TableCell>
                     </TableRow>
                   ))}
