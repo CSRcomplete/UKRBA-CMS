@@ -27,7 +27,7 @@ async function getSubordinateUserIds(userId: string): Promise<string[]> {
 }
 
 // Helper to determine the list of user IDs a user is allowed to access
-async function getAccessibleUserIds(user: AuthzUser): Promise<string[]> {
+export async function getAccessibleUserIds(user: AuthzUser): Promise<string[]> {
   const accessible = [user.id];
   if (user.role === "regional_director" || user.role === "area_director") {
     const subs = await getSubordinateUserIds(user.id);
