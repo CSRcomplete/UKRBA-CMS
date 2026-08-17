@@ -1,6 +1,6 @@
 import { prismadb } from "@/lib/prisma";
 import { convertLeadToMember } from "@/actions/crm/leads/convert-lead-to-member";
-import { resolveReferralOwner, referralOwnerToMemberFields } from "@/lib/referral-attribution";
+import { resolveReferralOwner, referralOwnerToMemberFields, referralOwnerToLeadFields } from "@/lib/referral-attribution";
 import { SalesStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -193,13 +193,28 @@ export async function POST(req: Request) {
       try {
         const owner = await resolveReferralOwner(referralSlug);
         if (owner) {
-          await prismadb.crm_Members.update({
-            where: { id: result.member.id },
-            data: {
-              referral_source: referralSlug,
-              ...referralOwnerToMemberFields(owner),
-            },
-          });
+          await Promise.all([
+            prismadb.crm_Members.update({
+              where: { id: result.member.id },
+              data: {
+                referral_source: referralSlug,
+                ...referralOwnerToMemberFields(owner),
+              },
+            }),
+            // Also reflect the attribution on the Lead and Contact records —
+            // the Leads table's "Assigned to" column and the Contact's own
+            // owner both read from these, independently of crm_Members.
+            prismadb.crm_Leads.update({
+              where: { id: matchingLead.id },
+              data: referralOwnerToLeadFields(owner),
+            }),
+            result.contact?.id
+              ? prismadb.crm_Contacts.update({
+                  where: { id: result.contact.id },
+                  data: { assigned_to: owner.userId },
+                })
+              : Promise.resolve(),
+          ]);
           attributedTo = owner.label;
         }
       } catch (attributionError) {

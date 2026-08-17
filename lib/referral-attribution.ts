@@ -78,3 +78,20 @@ export function referralOwnerToMemberFields(owner: ReferralOwner) {
   }
   return { assigned_channel_partner_id: owner.userId };
 }
+
+/**
+ * Builds the crm_Leads attribution field update for a resolved referral
+ * owner. assigned_to is the field the Leads table's "Assigned to" column
+ * reads from, so it's always set regardless of role, alongside the
+ * matching role-specific column.
+ */
+export function referralOwnerToLeadFields(owner: ReferralOwner) {
+  const base = { assigned_to: owner.userId };
+  if (owner.role === "regional_director") {
+    return { ...base, assigned_regional_director_id: owner.userId };
+  }
+  if (owner.role === "area_director") {
+    return { ...base, assigned_area_director_id: owner.userId };
+  }
+  return { ...base, assigned_partner_id: owner.userId };
+}
