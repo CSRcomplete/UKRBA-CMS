@@ -18,7 +18,19 @@ export type ParsedHeader = {
   to: { name?: string; email: string }[];
   cc: { name?: string; email: string }[];
   sentAt?: Date;
+  inReplyTo?: string;
+  references: string[];
 };
+
+/** mailparser returns `references` as a string, string[], or undefined
+ * depending on how many References headers/values were present — normalise
+ * to a clean array either way. */
+function normalizeReferences(references: unknown): string[] {
+  if (!references) return [];
+  if (Array.isArray(references)) return references.filter(Boolean);
+  if (typeof references === "string") return references.split(/\s+/).filter(Boolean);
+  return [];
+}
 
 /** Open a connection and resolve when ready. Caller is responsible for imap.end(). */
 export function connectImap(account: ImapAccount): Promise<Imap> {
@@ -85,6 +97,8 @@ export function fetchHeaders(
                   email: a.address ?? "",
                 })),
                 sentAt: parsed.date || undefined,
+                inReplyTo: parsed.inReplyTo || undefined,
+                references: normalizeReferences(parsed.references),
               });
             } catch (e) {
               console.warn(`[imap-utils] Failed to parse header for UID ${uid}:`, e);
@@ -139,6 +153,13 @@ function proxyRemoteImages(html: string): string {
   );
 }
 
+export type FetchedBody = {
+  bodyText?: string;
+  bodyHtml?: string;
+  inReplyTo?: string;
+  references?: string[];
+};
+
 /**
  * Fetches and parses the body of the message at `uid` in the currently-open
  * `box` on an already-connected `imap` client. Caller owns the connection
@@ -147,7 +168,7 @@ function proxyRemoteImages(html: string): string {
 function fetchBodyOnOpenBox(
   imap: Imap,
   uid: number
-): Promise<{ bodyText?: string; bodyHtml?: string }> {
+): Promise<FetchedBody> {
   return new Promise((resolve, reject) => {
     const fetch = imap.fetch([uid], { bodies: "" });
     const chunks: Buffer[] = [];
@@ -166,7 +187,12 @@ function fetchBodyOnOpenBox(
               if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
               html = proxyRemoteImages(html);
             }
-            resolve({ bodyText: parsed.text || undefined, bodyHtml: html });
+            resolve({
+              bodyText: parsed.text || undefined,
+              bodyHtml: html,
+              inReplyTo: parsed.inReplyTo || undefined,
+              references: normalizeReferences(parsed.references),
+            });
           })
           .catch(reject);
       });
@@ -199,8 +225,8 @@ export async function fetchBodiesByMessageIds(
   account: ImapAccount,
   folderName: string,
   messageIds: string[]
-): Promise<Map<string, { bodyText?: string; bodyHtml?: string }>> {
-  const results = new Map<string, { bodyText?: string; bodyHtml?: string }>();
+): Promise<Map<string, FetchedBody>> {
+  const results = new Map<string, FetchedBody>();
   const imap = await connectImap(account);
 
   await new Promise<void>((resolve, reject) => {
@@ -240,7 +266,7 @@ export async function fetchBodyByMessageId(
   account: ImapAccount,
   folderName: string,
   messageId: string
-): Promise<{ bodyText?: string; bodyHtml?: string }> {
+): Promise<FetchedBody> {
   const imap = await connectImap(account);
 
   try {
@@ -269,7 +295,7 @@ export async function fetchBodyByUid(
   account: ImapAccount,
   folderName: string,
   uid: number
-): Promise<{ bodyText?: string; bodyHtml?: string }> {
+): Promise<FetchedBody> {
   const imap = await connectImap(account);
 
   return new Promise((resolve, reject) => {

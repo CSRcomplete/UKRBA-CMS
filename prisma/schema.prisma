@@ -1626,6 +1626,12 @@ model Email {
   imapUid        Int?
   folder         EmailFolder
   subject        String?
+  // Standard RFC 5322 threading headers — the reliable way to group a
+  // conversation, unlike matching on subject text (which false-positives
+  // whenever two unrelated conversations share a generic subject like
+  // "Re: Catch-up meeting").
+  inReplyTo      String?
+  references     String[]    @default([])
   fromName       String?
   fromEmail      String?
   toRecipients   Json        @default("[]")

@@ -170,6 +170,8 @@ export const emailSyncAccount = inngest.createFunction(
             toRecipients: msg.to,
             ccRecipients: msg.cc,
             sentAt: msg.sentAt,
+            inReplyTo: msg.inReplyTo,
+            references: msg.references,
           })),
           skipDuplicates: true,
         });

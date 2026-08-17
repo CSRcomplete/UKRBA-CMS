@@ -237,7 +237,12 @@ export async function getEmail(id: string) {
         if (body.bodyText || body.bodyHtml) {
           await prismadb.email.update({
             where: { id },
-            data: { bodyText: body.bodyText ?? null, bodyHtml: body.bodyHtml ?? null },
+            data: {
+              bodyText: body.bodyText ?? null,
+              bodyHtml: body.bodyHtml ?? null,
+              inReplyTo: body.inReplyTo ?? undefined,
+              references: body.references ?? undefined,
+            },
           });
           // Patch in-memory so caller gets the body immediately (before any send that may throw)
           email.bodyText = body.bodyText ?? null;
@@ -268,19 +273,25 @@ export async function getEmailThread(id: string) {
   const targetEmail = await getEmail(id);
   if (!targetEmail) return [];
 
-  // Normalize subject by stripping Re: and Fwd: prefixes
-  const cleanSubject = targetEmail.subject
-    ? targetEmail.subject.replace(/^(re|fwd|fw|re:\s*|fwd:\s*)+/gi, "").trim()
-    : "";
-
-  if (!cleanSubject) return [targetEmail];
+  // Thread by the standard RFC 5322 References/In-Reply-To chain, the same
+  // mechanism Gmail/Outlook use — grouping by subject text alone
+  // false-positives whenever two unrelated conversations happen to share a
+  // generic subject (e.g. "Re: Catch-up meeting" reused across totally
+  // different people).
+  const references = Array.isArray(targetEmail.references) ? (targetEmail.references as string[]) : [];
+  const rootMessageId = references[0] || targetEmail.inReplyTo || targetEmail.rfcMessageId;
 
   const thread = await prismadb.email.findMany({
     where: {
       userId,
       emailAccountId: targetEmail.emailAccountId,
       isDeleted: false,
-      subject: { contains: cleanSubject, mode: "insensitive" },
+      OR: [
+        { id: targetEmail.id },
+        { rfcMessageId: rootMessageId },
+        { references: { has: rootMessageId } },
+        { inReplyTo: rootMessageId },
+      ],
     },
     orderBy: { sentAt: "asc" },
     include: {

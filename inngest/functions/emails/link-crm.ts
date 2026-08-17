@@ -116,6 +116,8 @@ export const emailLinkCrm = inngest.createFunction(
               data: {
                 bodyText: body.bodyText ?? null,
                 bodyHtml: body.bodyHtml ?? null,
+                inReplyTo: body.inReplyTo ?? undefined,
+                references: body.references ?? undefined,
               },
             });
           } catch (e) {
