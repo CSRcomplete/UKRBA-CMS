@@ -268,38 +268,75 @@ export async function getEmail(id: string) {
   return serializeDecimals(email);
 }
 
+/** A message's direct parent: its In-Reply-To, or — if that's missing — the
+ * *last* entry in References. RFC convention lists References oldest to
+ * newest, so the last entry is the immediate parent. Using the first entry
+ * (the thread's original root) instead over-merges: any later branch that
+ * happens to trace back through the same distant ancestor gets pulled into
+ * every other branch, even ones that only share that root by coincidence
+ * (e.g. someone hitting "Reply" on an old thread to start a conversation
+ * with a different, unrelated person). */
+function directParentOf(e: { inReplyTo: string | null; references: unknown }): string | null {
+  if (e.inReplyTo) return e.inReplyTo;
+  const refs = Array.isArray(e.references) ? (e.references as string[]) : [];
+  return refs.length > 0 ? refs[refs.length - 1] : null;
+}
+
 export async function getEmailThread(id: string) {
   const userId = await requireSession();
   const targetEmail = await getEmail(id);
   if (!targetEmail) return [];
 
-  // Thread by the standard RFC 5322 References/In-Reply-To chain, the same
-  // mechanism Gmail/Outlook use — grouping by subject text alone
-  // false-positives whenever two unrelated conversations happen to share a
-  // generic subject (e.g. "Re: Catch-up meeting" reused across totally
-  // different people).
-  const references = Array.isArray(targetEmail.references) ? (targetEmail.references as string[]) : [];
-  const rootMessageId = references[0] || targetEmail.inReplyTo || targetEmail.rfcMessageId;
+  // Candidate pool to search within — subject match is just a cheap way to
+  // bound the query; actual thread membership is decided below via direct
+  // parent/child/sibling edges, not subject text.
+  const cleanSubject = targetEmail.subject
+    ? targetEmail.subject.replace(/^(re|fwd|fw)(\[\d+\])?:\s*/gi, "").trim()
+    : null;
 
-  const thread = await prismadb.email.findMany({
+  const candidates = await prismadb.email.findMany({
     where: {
       userId,
       emailAccountId: targetEmail.emailAccountId,
       isDeleted: false,
       OR: [
         { id: targetEmail.id },
-        { rfcMessageId: rootMessageId },
-        { references: { has: rootMessageId } },
-        { inReplyTo: rootMessageId },
+        ...(cleanSubject ? [{ subject: { contains: cleanSubject, mode: "insensitive" as const } }] : []),
       ],
     },
     orderBy: { sentAt: "asc" },
-    include: {
-      attachments: true,
-    },
+    include: { attachments: true },
   });
 
-  return serializeDecimalsList(thread);
+  const byId = new Map(candidates.map((e) => [e.id, e]));
+  const included = new Set<string>([targetEmail.id]);
+  let frontier = [targetEmail.id];
+
+  // Expand outward level by level: a candidate joins the thread only if
+  // it's a direct child, direct sibling (same immediate parent), or direct
+  // parent of something already included — never merely a distant relative.
+  while (frontier.length > 0) {
+    const frontierParents = new Set(
+      frontier.map((fid) => directParentOf(byId.get(fid)!)).filter((p): p is string => !!p)
+    );
+    const next: string[] = [];
+
+    for (const e of candidates) {
+      if (included.has(e.id)) continue;
+      const parent = directParentOf(e);
+      const isChildOfFrontier = frontier.some((fid) => byId.get(fid)!.rfcMessageId === parent);
+      const isSiblingOfFrontier = parent !== null && frontierParents.has(parent);
+      const isParentOfFrontier = frontier.some((fid) => directParentOf(byId.get(fid)!) === e.rfcMessageId);
+      if (isChildOfFrontier || isSiblingOfFrontier || isParentOfFrontier) {
+        included.add(e.id);
+        next.push(e.id);
+      }
+    }
+    frontier = next;
+  }
+
+  const thread = candidates.filter((e) => included.has(e.id));
+  return serializeDecimalsList(thread.length > 0 ? thread : [targetEmail]);
 }
 
 export async function deleteEmail(id: string) {
