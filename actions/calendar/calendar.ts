@@ -48,7 +48,11 @@ export async function getCalendarEvents(
   });
 
   const role = (dbUser?.role || user.role || "").toLowerCase();
-  const isLeadership = ["admin", "ceo", "coo", "operations_director", "regional_director", "area_director", "manager"].includes(role);
+  // Only true org-wide roles see everyone's calendar unfiltered — matching
+  // the same scope used on the main dashboard's org-wide activity feed.
+  // Operations/Regional/Area Directors and Managers are staff members with
+  // their own diary, not blanket visibility into everyone else's.
+  const isLeadership = ["admin", "ceo", "coo"].includes(role);
 
   let startDate: Date;
   let endDate: Date;
