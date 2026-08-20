@@ -1,6 +1,9 @@
 import { getTask } from "@/actions/projects/get-task";
 import React from "react";
 import moment from "moment";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 import { getDocuments } from "@/actions/documents/get-documents";
 import { getTaskComments } from "@/actions/projects/get-task-comments";
@@ -57,7 +60,14 @@ const TaskPage = async (props: TaskPageProps) => {
   //console.log(taskDocuments, "taskDocuments");
 
   return (
-    <div className="flex flex-col md:flex-row w-full px-2 space-x-2 ">
+    <div className="flex flex-col w-full px-2">
+      <Button variant="ghost" size="sm" className="mb-2 w-fit gap-1.5 text-muted-foreground" asChild>
+        <Link href="/projects/tasks">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Tasks
+        </Link>
+      </Button>
+      <div className="flex flex-col md:flex-row w-full space-x-2 ">
       <div className="flex flex-col w-full md:w-2/3">
         <div className="w-full border rounded-lg mb-5">
           {/*           <pre>
@@ -176,6 +186,7 @@ const TaskPage = async (props: TaskPageProps) => {
 
       <div className="w-full md:w-1/3">
         <TeamConversations data={comments as any} taskId={task.id} />
+      </div>
       </div>
     </div>
   );
