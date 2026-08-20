@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -38,6 +39,7 @@ export function TasksDataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter();
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -122,9 +124,16 @@ export function TasksDataTable<TData, TValue>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() =>
+                        router.push(`/projects/tasks/viewtask/${(row.original as { id: string }).id}`)
+                      }
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell
+                          key={cell.id}
+                          onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()
