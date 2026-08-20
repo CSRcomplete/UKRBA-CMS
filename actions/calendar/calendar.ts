@@ -48,11 +48,6 @@ export async function getCalendarEvents(
   });
 
   const role = (dbUser?.role || user.role || "").toLowerCase();
-  // Only true org-wide roles see everyone's calendar unfiltered — matching
-  // the same scope used on the main dashboard's org-wide activity feed.
-  // Operations/Regional/Area Directors and Managers are staff members with
-  // their own diary, not blanket visibility into everyone else's.
-  const isLeadership = ["admin", "ceo", "coo"].includes(role);
 
   let startDate: Date;
   let endDate: Date;
@@ -71,16 +66,14 @@ export async function getCalendarEvents(
     endDate.setDate(endDate.getDate() + 60);
   }
 
-  // 1. Query Appointments (Overlapping date range)
+  // 1. Query Appointments (Overlapping date range) — every role sees only
+  // their own diary here, with no leadership bypass.
   const appointmentWhere: any = {
     deletedAt: null,
     startTime: { lte: endDate },
     endTime: { gte: startDate },
+    userId,
   };
-
-  if (!isLeadership) {
-    appointmentWhere.userId = userId;
-  }
 
   const appointments = await prismadb.crm_Appointments.findMany({
     where: appointmentWhere,
@@ -91,11 +84,8 @@ export async function getCalendarEvents(
   const activityWhere: any = {
     deletedAt: null,
     date: { gte: startDate, lte: endDate },
+    createdBy: userId,
   };
-
-  if (!isLeadership) {
-    activityWhere.createdBy = userId;
-  }
 
   const activities = await prismadb.crm_Activities.findMany({
     where: activityWhere,
@@ -114,16 +104,15 @@ export async function getCalendarEvents(
     allowedGroupTargets.push("ALL_CHANNEL_PARTNERS", GROUP_TARGET_UUIDS.ALL_CHANNEL_PARTNERS);
   }
 
+  // Every role sees only tasks assigned directly to them, or broadcast to a
+  // role-group they belong to — never another individual's own tasks.
   const taskWhere: any = {
     dueDateAt: { gte: startDate, lte: endDate },
-  };
-
-  if (!isLeadership) {
-    taskWhere.OR = [
+    OR: [
       { user: userId },
       { user: { in: allowedGroupTargets } },
-    ];
-  }
+    ],
+  };
 
   const tasks = await prismadb.tasks.findMany({
     where: taskWhere,
