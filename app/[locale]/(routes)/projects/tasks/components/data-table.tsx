@@ -132,7 +132,11 @@ export function TasksDataTable<TData, TValue>({
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
+                          onClick={
+                            cell.column.id === "actions" || cell.column.id === "taskStatus"
+                              ? (e) => e.stopPropagation()
+                              : undefined
+                          }
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

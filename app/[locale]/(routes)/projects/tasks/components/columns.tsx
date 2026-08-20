@@ -9,6 +9,7 @@ import { labels, priorities, statuses } from "../data/data";
 import { Task } from "../data/schema";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
+import { TaskStatusSelect } from "./TaskStatusSelect";
 import moment from "moment";
 import { GROUP_ASSIGNMENTS } from "@/lib/constants/group-assignments";
 
@@ -93,21 +94,12 @@ export const columns: ColumnDef<Task>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = statuses.find(
-        (status) => status.value === row.getValue("taskStatus")
-      );
-
-      if (!status) {
-        return null;
-      }
-
+      const currentStatus = (row.getValue("taskStatus") as string) || "ACTIVE";
       return (
-        <div className="flex w-[100px] items-center">
-          {status.icon && (
-            <status.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-          )}
-          <span>{status.label}</span>
-        </div>
+        <TaskStatusSelect
+          taskId={row.original.id}
+          status={currentStatus as "PENDING" | "ACTIVE" | "COMPLETE"}
+        />
       );
     },
     filterFn: (row, id, value) => {

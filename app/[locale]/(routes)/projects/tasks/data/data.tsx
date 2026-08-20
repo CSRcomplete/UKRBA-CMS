@@ -26,14 +26,14 @@ export const labels = [
 
 export const statuses = [
   {
-    value: "ACTIVE",
-    label: "Active",
-    icon: QuestionMarkCircledIcon,
+    value: "PENDING",
+    label: "Assigned",
+    icon: CircleIcon,
   },
   {
-    value: "PENDING",
-    label: "Pending",
-    icon: CircleIcon,
+    value: "ACTIVE",
+    label: "In Progress",
+    icon: QuestionMarkCircledIcon,
   },
   {
     value: "COMPLETE",
