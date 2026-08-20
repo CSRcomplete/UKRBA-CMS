@@ -91,6 +91,21 @@ export function CalendarClient() {
 
   useEffect(() => {
     fetchEvents();
+
+    // Meetings/tasks are often created on a different page (e.g. Video
+    // Meetings), which has no way to tell this component to refetch —
+    // catch up automatically whenever the user returns to this tab/page
+    // instead of requiring a manual reload.
+    const handleFocus = () => fetchEvents();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchEvents();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [currentDate, viewMode]);
 
   const fetchEvents = async () => {
