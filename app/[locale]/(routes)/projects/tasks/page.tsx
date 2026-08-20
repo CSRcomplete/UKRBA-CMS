@@ -3,8 +3,7 @@ import Container from "../../components/ui/Container";
 import { getTasks } from "@/actions/projects/get-tasks";
 import { getBoards } from "@/actions/projects/get-boards";
 import NewTaskDialog from "../dialogs/NewTask";
-import { TasksDataTable } from "./components/data-table";
-import { columns } from "./components/columns";
+import { TasksTabs } from "./components/TasksTabs";
 
 import { getTranslations } from "next-intl/server";
 
@@ -22,7 +21,7 @@ const TasksPage = async () => {
         <NewTaskDialog boards={boards} />
       </div>
       <div>
-        <TasksDataTable data={tasks} columns={columns} />
+        <TasksTabs tasks={tasks} />
       </div>
     </Container>
   );
