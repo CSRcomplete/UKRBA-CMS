@@ -92,16 +92,19 @@ export async function getCalendarEvents(
     orderBy: { date: "asc" },
   });
 
-  // 3. Query Assigned Tasks (Tasks)
-  const allowedGroupTargets: string[] = ["ALL_USERS", GROUP_TARGET_UUIDS.ALL_USERS];
+  // 3. Query Assigned Tasks (Tasks) — Tasks.user is a strict uuid column, so
+  // only the real GROUP_TARGET_UUIDS values can ever match; the legacy
+  // plain-string keys (e.g. "ALL_USERS") predate that column being a uuid
+  // and can never actually be stored there, only ever break the query.
+  const allowedGroupTargets: string[] = [GROUP_TARGET_UUIDS.ALL_USERS];
   if (role === "regional_director" || role === "admin" || role === "ceo" || role === "coo") {
-    allowedGroupTargets.push("ALL_REGIONAL_DIRECTORS", GROUP_TARGET_UUIDS.ALL_REGIONAL_DIRECTORS);
+    allowedGroupTargets.push(GROUP_TARGET_UUIDS.ALL_REGIONAL_DIRECTORS);
   }
   if (role === "area_director" || role === "operations_director" || role === "admin" || role === "ceo" || role === "coo") {
-    allowedGroupTargets.push("ALL_AREA_DIRECTORS", GROUP_TARGET_UUIDS.ALL_AREA_DIRECTORS);
+    allowedGroupTargets.push(GROUP_TARGET_UUIDS.ALL_AREA_DIRECTORS);
   }
   if (role === "channel_partner" || role === "admin" || role === "ceo" || role === "coo") {
-    allowedGroupTargets.push("ALL_CHANNEL_PARTNERS", GROUP_TARGET_UUIDS.ALL_CHANNEL_PARTNERS);
+    allowedGroupTargets.push(GROUP_TARGET_UUIDS.ALL_CHANNEL_PARTNERS);
   }
 
   // Every role sees only tasks assigned directly to them, or broadcast to a
