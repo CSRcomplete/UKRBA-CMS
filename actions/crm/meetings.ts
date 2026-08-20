@@ -24,10 +24,15 @@ export const getMeetings = async () => {
 
   const userId = session.user.id;
 
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
   const activities = await prismadb.crm_Activities.findMany({
     where: {
       type: "meeting",
       deletedAt: null,
+      date: { gte: windowStart, lte: windowEnd },
       OR: [
         { createdBy: userId },
         {
