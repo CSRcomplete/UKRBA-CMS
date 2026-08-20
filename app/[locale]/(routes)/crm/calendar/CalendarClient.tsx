@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,8 +112,16 @@ export function CalendarClient() {
 
       const fetched = await getCalendarEvents(rangeStart.toISOString(), rangeEnd.toISOString());
       setEvents(fetched);
-    } catch {
-      // Ignore
+    } catch (err) {
+      // A deploy since this tab was opened invalidates the server action ID
+      // baked into the loaded bundle — silently failing here just looks like
+      // an empty diary, so surface it instead of swallowing it.
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("Failed to find Server Action")) {
+        toast.error("This page is out of date — please refresh to see your diary.");
+      } else {
+        toast.error("Failed to load your diary. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
