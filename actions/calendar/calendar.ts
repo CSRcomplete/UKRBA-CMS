@@ -80,11 +80,17 @@ export async function getCalendarEvents(
     orderBy: { startTime: "asc" },
   });
 
-  // 2. Query CRM Meetings/Activities (crm_Activities)
+  // 2. Query CRM Meetings/Activities (crm_Activities) — include meetings the
+  // user organized as well as ones they were invited to, matching the
+  // scope already used on the Video Meetings page. Without the invitee
+  // check, a meeting only ever showed up in its organizer's own diary.
   const activityWhere: any = {
     deletedAt: null,
     date: { gte: startDate, lte: endDate },
-    createdBy: userId,
+    OR: [
+      { createdBy: userId },
+      { links: { some: { entityType: "user", entityId: userId } } },
+    ],
   };
 
   const activities = await prismadb.crm_Activities.findMany({
