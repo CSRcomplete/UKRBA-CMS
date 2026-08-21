@@ -120,3 +120,47 @@ export async function createZoomMeeting(opts: {
     password: data.password,
   };
 }
+
+/** Update an existing Zoom meeting's details (only the fields provided). */
+export async function updateZoomMeeting(
+  meetingId: number,
+  opts: { topic?: string; startTime?: Date; durationMinutes?: number; agenda?: string }
+): Promise<void> {
+  const token = await getZoomAccessToken();
+
+  const body: Record<string, any> = {};
+  if (opts.topic) body.topic = opts.topic.slice(0, 200);
+  if (opts.durationMinutes) body.duration = opts.durationMinutes;
+  if (opts.agenda !== undefined) body.agenda = opts.agenda.slice(0, 2000);
+  if (opts.startTime) {
+    body.start_time = opts.startTime.toISOString();
+    body.timezone = "Europe/London";
+  }
+
+  const res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`Zoom meeting update failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+/** Delete a Zoom meeting. Treats "already gone" (404) as success. */
+export async function deleteZoomMeeting(meetingId: number): Promise<void> {
+  const token = await getZoomAccessToken();
+
+  const res = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok && res.status !== 204 && res.status !== 404) {
+    throw new Error(`Zoom meeting deletion failed: ${res.status} ${await res.text()}`);
+  }
+}

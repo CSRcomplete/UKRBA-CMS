@@ -5,7 +5,7 @@ import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { leadReadScopeWhere } from "@/lib/authz";
 import resendHelper from "@/lib/resend";
-import { createZoomMeeting, isZoomConfigured } from "@/lib/zoom";
+import { createZoomMeeting, isZoomConfigured, updateZoomMeeting, deleteZoomMeeting } from "@/lib/zoom";
 
 const ROLE_DESIGNATIONS: Record<string, string> = {
   ceo: "CEO - UKRBA SME",
@@ -418,4 +418,202 @@ export const createInstantMeeting = async (title?: string) => {
     console.error("[INSTANT_MEETING_ERROR]", error);
     return { error: "Failed to create instant meeting" };
   }
+};
+
+/** Resolves every invitee's email + display name for a meeting, for
+ * cancellation/update notifications. */
+async function resolveInviteeEmailTargets(activityId: string, excludeUserId: string) {
+  const links = await prismadb.crm_ActivityLinks.findMany({ where: { activityId } });
+  const emailTargets: { email: string; name?: string }[] = [];
+
+  for (const link of links) {
+    if (link.entityType === "user") {
+      if (link.entityId === excludeUserId) continue;
+      const user = await prismadb.users.findUnique({
+        where: { id: link.entityId },
+        select: { email: true, name: true },
+      });
+      if (user?.email) emailTargets.push({ email: user.email, name: user.name || undefined });
+    } else if (link.entityType === "lead") {
+      const lead = await prismadb.crm_Leads.findUnique({
+        where: { id: link.entityId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (lead?.email) emailTargets.push({ email: lead.email, name: `${lead.firstName || ""} ${lead.lastName || ""}`.trim() || undefined });
+    }
+  }
+
+  return emailTargets;
+}
+
+/**
+ * Cancels a meeting: soft-deletes it, best-effort removes the underlying
+ * Zoom meeting, and notifies invitees. Only the meeting's host may cancel.
+ */
+export const cancelMeeting = async (activityId: string) => {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  const activity = await prismadb.crm_Activities.findUnique({
+    where: { id: activityId },
+  });
+  if (!activity || activity.deletedAt) return { error: "Meeting not found" };
+  if (activity.createdBy !== session.user.id) {
+    return { error: "Only the meeting's host can cancel it" };
+  }
+
+  const meta = activity.metadata as Record<string, any> | null;
+
+  if (meta?.zoomMeetingId) {
+    try {
+      await deleteZoomMeeting(meta.zoomMeetingId);
+    } catch (zoomError) {
+      console.error("[CANCEL_MEETING_ZOOM_ERROR]", zoomError);
+      // Continue — the CRM record should still be cancelled even if the
+      // Zoom API call fails (e.g. already deleted on Zoom's side).
+    }
+  }
+
+  await prismadb.crm_Activities.update({
+    where: { id: activityId },
+    data: {
+      status: "cancelled",
+      deletedAt: new Date(),
+      deletedBy: session.user.id,
+      updatedBy: session.user.id,
+    },
+  });
+
+  try {
+    const emailTargets = await resolveInviteeEmailTargets(activityId, session.user.id);
+    if (emailTargets.length > 0) {
+      let resend;
+      try { resend = await resendHelper(); } catch { resend = null; }
+      if (resend) {
+        const hostName = session.user.name || session.user.email;
+        const dateFormatted = new Date(activity.date).toLocaleString("en-US", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+        });
+        await Promise.allSettled(
+          emailTargets.map((target) =>
+            resend.emails.send({
+              from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
+              to: target.email,
+              subject: `Cancelled: ${activity.title}`,
+              text: `Hello,\n\nThe meeting "${activity.title}" with ${hostName}, originally scheduled for ${dateFormatted}, has been cancelled.\n\nBest regards,\nUKRBA Team`,
+              html: `<div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #b91c1c; margin-top: 0;">❌ Meeting Cancelled</h2>
+                <p>Hello,</p>
+                <p>The meeting <strong>"${activity.title}"</strong> with ${hostName}, originally scheduled for <strong>${dateFormatted}</strong>, has been cancelled.</p>
+                <p style="font-size: 0.875rem; color: #718096;">Best regards,<br />UKRBA Team</p>
+              </div>`,
+            })
+          )
+        );
+      }
+    }
+  } catch (emailError) {
+    console.error("[CANCEL_MEETING_EMAIL_ERROR]", emailError);
+  }
+
+  revalidatePath("/[locale]/(routes)/crm/meetings", "page");
+  return { success: true };
+};
+
+/**
+ * Updates a meeting's basic details. Only the meeting's host may edit it.
+ * Best-effort syncs the change to the underlying Zoom meeting and notifies
+ * invitees.
+ */
+export const updateMeeting = async (
+  activityId: string,
+  data: {
+    title: string;
+    description?: string;
+    date: Date;
+    duration?: number;
+    location?: string;
+  }
+) => {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  const activity = await prismadb.crm_Activities.findUnique({
+    where: { id: activityId },
+  });
+  if (!activity || activity.deletedAt) return { error: "Meeting not found" };
+  if (activity.createdBy !== session.user.id) {
+    return { error: "Only the meeting's host can edit it" };
+  }
+  if (!data.title || !data.date) return { error: "Missing required fields" };
+
+  const meta = (activity.metadata as Record<string, any>) || {};
+
+  if (meta.zoomMeetingId) {
+    try {
+      await updateZoomMeeting(meta.zoomMeetingId, {
+        topic: data.title,
+        startTime: new Date(data.date),
+        durationMinutes: data.duration,
+        agenda: data.description,
+      });
+    } catch (zoomError) {
+      console.error("[UPDATE_MEETING_ZOOM_ERROR]", zoomError);
+      return { error: "Failed to update the Zoom meeting. Please try again." };
+    }
+  }
+
+  await prismadb.crm_Activities.update({
+    where: { id: activityId },
+    data: {
+      title: data.title,
+      description: data.description,
+      date: new Date(data.date),
+      duration: data.duration || null,
+      updatedBy: session.user.id,
+      metadata: {
+        ...meta,
+        location: data.location ?? meta.location ?? null,
+      },
+    },
+  });
+
+  try {
+    const emailTargets = await resolveInviteeEmailTargets(activityId, session.user.id);
+    if (emailTargets.length > 0) {
+      let resend;
+      try { resend = await resendHelper(); } catch { resend = null; }
+      if (resend) {
+        const hostName = session.user.name || session.user.email;
+        const dateFormatted = new Date(data.date).toLocaleString("en-US", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+        });
+        await Promise.allSettled(
+          emailTargets.map((target) =>
+            resend.emails.send({
+              from: `${process.env.NEXT_PUBLIC_APP_NAME || "UKRBA CMS"} <${process.env.EMAIL_FROM || "noreply@ukrba.org"}>`,
+              to: target.email,
+              subject: `Updated: ${data.title}`,
+              text: `Hello,\n\nThe meeting "${data.title}" with ${hostName} has been updated.\n\nNew date & time: ${dateFormatted}\nDuration: ${data.duration || 30} minutes\n\nBest regards,\nUKRBA Team`,
+              html: `<div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #b45309; margin-top: 0;">✏️ Meeting Updated</h2>
+                <p>Hello,</p>
+                <p>The meeting <strong>"${data.title}"</strong> with ${hostName} has been updated.</p>
+                <ul>
+                  <li><strong>New date &amp; time:</strong> ${dateFormatted}</li>
+                  <li><strong>Duration:</strong> ${data.duration || 30} minutes</li>
+                </ul>
+                <p style="font-size: 0.875rem; color: #718096;">Best regards,<br />UKRBA Team</p>
+              </div>`,
+            })
+          )
+        );
+      }
+    }
+  } catch (emailError) {
+    console.error("[UPDATE_MEETING_EMAIL_ERROR]", emailError);
+  }
+
+  revalidatePath("/[locale]/(routes)/crm/meetings", "page");
+  return { success: true };
 };
