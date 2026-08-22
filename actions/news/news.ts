@@ -112,7 +112,7 @@ export type CreateAnnouncementInput = {
   targetUserIds?: string[];
   attachment?: {
     name: string;
-    content: string; // base64 string
+    url: string; // MinIO storage URL, uploaded client-side via a presigned URL
     contentType?: string;
     size?: number;
   };
@@ -138,8 +138,8 @@ export async function createAnnouncement(input: CreateAnnouncementInput) {
 
   if (input.attachment) {
     attachmentName = input.attachment.name;
-    attachmentSize = input.attachment.size || Buffer.from(input.attachment.content, "base64").byteLength;
-    attachmentUrl = `data:${input.attachment.contentType || "application/octet-stream"};base64,${input.attachment.content}`;
+    attachmentSize = input.attachment.size;
+    attachmentUrl = input.attachment.url;
   }
 
   const created = await prismadb.crm_Announcements.create({
@@ -184,8 +184,8 @@ export async function updateAnnouncement(id: string, input: Partial<CreateAnnoun
 
   if (input.attachment) {
     data.attachmentName = input.attachment.name;
-    data.attachmentSize = input.attachment.size || Buffer.from(input.attachment.content, "base64").byteLength;
-    data.attachmentUrl = `data:${input.attachment.contentType || "application/octet-stream"};base64,${input.attachment.content}`;
+    data.attachmentSize = input.attachment.size;
+    data.attachmentUrl = input.attachment.url;
   }
 
   const updated = await prismadb.crm_Announcements.update({

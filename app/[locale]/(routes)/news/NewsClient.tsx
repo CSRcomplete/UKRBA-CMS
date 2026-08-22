@@ -51,6 +51,49 @@ import {
 import { searchUsers } from "@/actions/user/search-users";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
+async function uploadAnnouncementAttachment(file: File): Promise<{
+  name: string;
+  url: string;
+  contentType: string;
+  size: number;
+}> {
+  const presignRes = await fetch("/api/upload/presigned-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type,
+      folder: "documents",
+    }),
+  });
+
+  if (!presignRes.ok) {
+    const errJson = await presignRes.json().catch(() => ({}));
+    throw new Error(errJson.error || `Failed to prepare upload for "${file.name}"`);
+  }
+
+  const { presignedUrl, fileUrl } = await presignRes.json();
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", presignedUrl);
+    if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload of "${file.name}" was rejected by storage (status ${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error(`Network error uploading "${file.name}"`));
+    xhr.send(file);
+  });
+
+  return {
+    name: file.name,
+    url: fileUrl,
+    contentType: file.type || "application/octet-stream",
+    size: file.size,
+  };
+}
+
 const CATEGORIES = [
   "All",
   "Company News",
@@ -181,22 +224,7 @@ export function NewsClient() {
       let attachmentPayload = undefined;
 
       if (attachedFile) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const res = reader.result as string;
-            resolve(res.split(",")[1] || "");
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(attachedFile);
-        });
-
-        attachmentPayload = {
-          name: attachedFile.name,
-          content: base64,
-          contentType: attachedFile.type || "application/octet-stream",
-          size: attachedFile.size,
-        };
+        attachmentPayload = await uploadAnnouncementAttachment(attachedFile);
       }
 
       if (editingId) {
