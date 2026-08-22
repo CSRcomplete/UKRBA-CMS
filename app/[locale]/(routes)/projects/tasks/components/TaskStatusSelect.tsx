@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,10 @@ export function TaskStatusSelect({
   const router = useRouter();
   const [value, setValue] = useState<TaskStatusValue>(status);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setValue(status);
+  }, [status]);
 
   const handleChange = (next: string) => {
     const previous = value;

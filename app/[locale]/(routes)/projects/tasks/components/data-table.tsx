@@ -59,6 +59,7 @@ export function TasksDataTable<TData, TValue>({
       rowSelection,
       columnFilters,
     },
+    getRowId: (row) => (row as { id: string }).id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
