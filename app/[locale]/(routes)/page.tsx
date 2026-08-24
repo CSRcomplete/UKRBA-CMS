@@ -20,6 +20,7 @@ import {
   Briefcase,
   ArrowRight,
   CreditCard,
+  Bot,
 } from "lucide-react";
 
 const DashboardPage = async () => {
@@ -591,6 +592,27 @@ const DashboardPage = async () => {
 
           {/* 10. Campaigns */}
           <CampaignsQuickLaunchTile />
+
+          {/* 11. Automations */}
+          <Link
+            href="/automations"
+            className="group relative overflow-hidden rounded-xl border border-fuchsia-200 dark:border-fuchsia-900/40 bg-gradient-to-br from-fuchsia-500/10 via-background to-fuchsia-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-fuchsia-500/60"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-600 text-white shadow-md transition-transform group-hover:scale-110">
+                <Bot className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-fuchsia-600" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-fuchsia-600 transition-colors">
+                Automations
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                Automated workflows, including the £5 Assessment upsell email flow.
+              </p>
+            </div>
+          </Link>
         </div>
 
         {/* 10. Recruitment Centre — Admin/CEO only */}
@@ -605,7 +627,7 @@ const DashboardPage = async () => {
                 <Briefcase className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">11. Recruitment Centre</h3>
+                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">12. Recruitment Centre</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Full candidate pipeline — CVs, interviews, offers &amp; signed contracts.</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />

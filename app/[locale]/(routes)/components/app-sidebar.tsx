@@ -22,6 +22,7 @@ import getRepositoryMenuItem from "./menu-items/Repository";
 import getInvoicesMenuItem from "./menu-items/Invoices";
 import getAdministrationMenuItem from "./menu-items/Administration";
 import getCampaignsMenuItem from "./menu-items/Campaigns";
+import getAutomationsMenuItem from "./menu-items/Automations";
 import getNewsMenuItem from "./menu-items/News";
 import getDiaryMenuItem from "./menu-items/Diary";
 import getRecruitmentMenuItem from "./menu-items/Recruitment";
@@ -105,6 +106,7 @@ export function AppSidebar({
         targetLists: "Target Lists",
       },
     }),
+    getAutomationsMenuItem({ title: "Automations" }),
     getProjectsMenuItem({ title: dict?.projects || "Projects" }),
     getEmailsMenuItem({ title: dict?.emails || "Emails" }),
     getReportsMenuItem({ title: dict?.reports || "Reports" }),
