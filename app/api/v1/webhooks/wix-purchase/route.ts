@@ -184,6 +184,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: result.error }, { status: 500 });
     }
 
+    // Stop any in-progress £5 Assessment upsell email sequence for this lead
+    // now that they've actually purchased — the background job checks this
+    // status before sending each remaining step.
+    await prismadb.crm_LeadEmailFlow.updateMany({
+      where: { lead_id: matchingLead.id, status: "in_progress" },
+      data: { status: "customer_bought" },
+    });
+
     // 5. Attribute the sale to whichever /fsl/[slug] link drove it, if any —
     // this can point the sale at a different owner than the lead's existing
     // postcode-based routing (e.g. an RD's own campaign link converting a

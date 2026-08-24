@@ -11,6 +11,8 @@ import { getOwnershipHistory } from "@/lib/ownership";
 import { OwnershipHistoryTimeline } from "@/components/crm/leads/OwnershipHistoryTimeline";
 import { EntityTasks } from "@/components/crm/tasks/EntityTasks";
 import { DirectMeetingScheduler } from "@/components/crm/meetings/DirectMeetingScheduler";
+import { getLeadEmailFlow } from "@/actions/crm/leads/get-lead-email-flow";
+import { EmailFlowPanel } from "./components/EmailFlowPanel";
 
 interface LeadDetailPageProps {
   params: Promise<{
@@ -27,6 +29,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
 
   const rawOwnershipHistory = await getOwnershipHistory("lead", leadId);
   const ownershipHistory = JSON.parse(JSON.stringify(rawOwnershipHistory));
+  const emailFlow = await getLeadEmailFlow(leadId);
 
   return (
     <Container
@@ -40,6 +43,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
           <TabsTrigger value="meetings">Schedule Meeting</TabsTrigger>
           <TabsTrigger value="ownership">Ownership Trail</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
+          {emailFlow && <TabsTrigger value="email-flow">Email Flow</TabsTrigger>}
         </TabsList>
         <TabsContent value="overview">
           <div className="space-y-5">
@@ -67,6 +71,11 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
         <TabsContent value="history">
           <HistoryTab leadId={leadId} />
         </TabsContent>
+        {emailFlow && (
+          <TabsContent value="email-flow">
+            <EmailFlowPanel flow={emailFlow} />
+          </TabsContent>
+        )}
       </Tabs>
     </Container>
   );

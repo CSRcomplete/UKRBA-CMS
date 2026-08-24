@@ -104,6 +104,7 @@ model crm_Leads {
   assigned_accounts             crm_Accounts?         @relation(fields: [accountsIDs], references: [id])
   documents                     DocumentsToLeads[]
   embedding                     crm_Embeddings_Leads?
+  email_flows                   crm_LeadEmailFlow[]
   deletedAt                     DateTime?
   deletedBy                     String?               @db.Uuid
 
@@ -119,6 +120,41 @@ model crm_Leads {
   @@index([assigned_partner_id])
   @@index([assigned_area_director_id])
   @@index([assigned_regional_director_id])
+}
+
+enum crm_LeadEmailFlowStatus {
+  in_progress
+  customer_bought
+  completed_no_purchase
+}
+
+model crm_LeadEmailFlow {
+  id         String                  @id @default(uuid()) @db.Uuid
+  lead_id    String                  @db.Uuid
+  status     crm_LeadEmailFlowStatus @default(in_progress)
+  created_at DateTime                @default(now())
+  updated_at DateTime                @updatedAt
+
+  lead  crm_Leads               @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  steps crm_LeadEmailFlowStep[]
+
+  @@index([lead_id])
+  @@index([status])
+}
+
+model crm_LeadEmailFlowStep {
+  id           String    @id @default(uuid()) @db.Uuid
+  flow_id      String    @db.Uuid
+  step_number  Int
+  subject      String
+  body         String
+  generated_at DateTime  @default(now())
+  sent_at      DateTime?
+
+  flow crm_LeadEmailFlow @relation(fields: [flow_id], references: [id], onDelete: Cascade)
+
+  @@unique([flow_id, step_number])
+  @@index([flow_id])
 }
 
 model crm_Contact_Enrichment {
