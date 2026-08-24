@@ -115,16 +115,16 @@ export function TaskChecklistSection({
         {items.map((item) => (
           <div
             key={item.id}
-            className="group flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-accent/50"
+            className="group flex items-start justify-between rounded-lg p-2 transition-colors hover:bg-accent/50"
           >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <Checkbox
                 checked={item.isCompleted}
                 onCheckedChange={() => handleToggle(item.id)}
-                className="h-4.5 w-4.5 rounded border-muted-foreground/40 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                className="h-4.5 w-4.5 mt-0.5 shrink-0 rounded border-muted-foreground/40 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
               />
               <span
-                className={`text-sm truncate select-none transition-all ${
+                className={`text-sm whitespace-normal break-words select-none transition-all ${
                   item.isCompleted
                     ? "line-through text-muted-foreground/70"
                     : "text-foreground font-medium"
@@ -139,7 +139,7 @@ export function TaskChecklistSection({
               variant="ghost"
               size="icon"
               onClick={() => handleDeleteItem(item.id)}
-              className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-opacity"
+              className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-opacity"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
