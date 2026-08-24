@@ -24,6 +24,36 @@ export const roles = [
     icon: PlayIcon,
   },
   {
+    value: "ceo",
+    label: "CEO",
+    icon: PlayIcon,
+  },
+  {
+    value: "coo",
+    label: "COO",
+    icon: PlayIcon,
+  },
+  {
+    value: "operations_director",
+    label: "Operations Director",
+    icon: PlayIcon,
+  },
+  {
+    value: "regional_director",
+    label: "Regional Director",
+    icon: PauseIcon,
+  },
+  {
+    value: "area_director",
+    label: "Area Director",
+    icon: PauseIcon,
+  },
+  {
+    value: "channel_partner",
+    label: "Channel Partner",
+    icon: PauseIcon,
+  },
+  {
     value: "manager",
     label: "Manager",
     icon: PauseIcon,
