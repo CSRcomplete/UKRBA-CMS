@@ -82,12 +82,19 @@ export default function UploadLeadsClient({ currentUser }: UploadLeadsClientProp
       const rawHeaders = lines[0].split(",").map((h) => h.replace(/^["']|["']$/g, "").trim().toLowerCase());
 
       // Helper to find column index by name candidates
-      const findHeaderIndex = (candidates: string[]) => {
-        return rawHeaders.findIndex((h) => candidates.some((c) => h.includes(c)));
+      const findHeaderIndex = (candidates: string[], excludeIndex?: number) => {
+        return rawHeaders.findIndex(
+          (h, idx) => idx !== excludeIndex && candidates.some((c) => h.includes(c))
+        );
       };
 
       const idxFirstName = findHeaderIndex(["first name", "firstname", "first_name", "fname"]);
-      const idxLastName = findHeaderIndex(["last name", "lastname", "last_name", "lname", "surname", "name"]);
+      // Exclude the first-name column so the generic "name" fallback below
+      // doesn't match "first name" again via substring and duplicate it.
+      const idxLastName = findHeaderIndex(
+        ["last name", "lastname", "last_name", "lname", "surname", "name"],
+        idxFirstName
+      );
       const idxEmail = findHeaderIndex(["email", "e-mail", "mail"]);
       const idxPhone = findHeaderIndex(["phone", "mobile", "telephone", "tel", "number"]);
       const idxCompany = findHeaderIndex(["company", "organization", "organisation", "business"]);
