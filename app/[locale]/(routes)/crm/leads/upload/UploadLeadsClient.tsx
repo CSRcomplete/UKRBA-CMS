@@ -97,7 +97,7 @@ export default function UploadLeadsClient({ currentUser }: UploadLeadsClientProp
 
       for (let i = 1; i < lines.length; i++) {
         // Parse CSV row with simple quote handling
-        const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(",");
+        const row = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || lines[i].split(",");
         const cleanRow = row.map((cell) => cell.replace(/^["']|["']$/g, "").trim());
 
         const fName = idxFirstName !== -1 ? cleanRow[idxFirstName] || "" : "";
