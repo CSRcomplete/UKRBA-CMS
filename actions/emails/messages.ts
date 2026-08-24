@@ -6,8 +6,9 @@ import { decrypt } from "@/lib/email-crypto";
 import { serializeDecimals, serializeDecimalsList } from "@/lib/serialize-decimals";
 import nodemailer from "nodemailer";
 import { EmailFolder } from "@prisma/client";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
+import { randomUUID } from "crypto";
 
 const PAGE_SIZE = 50;
 const MAX_COUNT = 10_000;
@@ -247,6 +248,42 @@ export async function getEmail(id: string) {
           // Patch in-memory so caller gets the body immediately (before any send that may throw)
           email.bodyText = body.bodyText ?? null;
           email.bodyHtml = body.bodyHtml ?? null;
+
+          // Upload any real (non-inline) attachments to storage and record
+          // them — inline images were already embedded into bodyHtml above.
+          if (body.attachments && body.attachments.length > 0) {
+            try {
+              const createdAttachments = await Promise.all(
+                body.attachments.map(async (att) => {
+                  const ext = att.filename.includes(".") ? att.filename.split(".").pop()!.trim() || "bin" : "bin";
+                  const key = `uploads/${randomUUID()}.${ext}`;
+                  await minioClient.send(
+                    new PutObjectCommand({
+                      Bucket: MINIO_BUCKET,
+                      Key: key,
+                      ContentType: att.contentType || "application/octet-stream",
+                      ContentLength: att.content.length,
+                      Body: att.content,
+                    })
+                  );
+                  return prismadb.emailAttachment.create({
+                    data: {
+                      emailId: id,
+                      filename: att.filename,
+                      mimeType: att.contentType || "application/octet-stream",
+                      size: att.content.length,
+                      storageUrl: `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${key}`,
+                      contentId: att.contentId,
+                    },
+                  });
+                })
+              );
+              email.attachments = [...email.attachments, ...createdAttachments];
+            } catch (attachmentError) {
+              console.error("[GET_EMAIL_ATTACHMENT_UPLOAD]", attachmentError);
+            }
+          }
+
           // Trigger embed only if already CRM-linked (avoids embedding unrelated emails)
           const isLinked = email.contacts.length > 0 || email.accounts.length > 0;
           if (isLinked) {

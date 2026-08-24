@@ -153,11 +153,20 @@ function proxyRemoteImages(html: string): string {
   );
 }
 
+export type FetchedAttachment = {
+  filename: string;
+  contentType: string;
+  size: number;
+  content: Buffer;
+  contentId?: string;
+};
+
 export type FetchedBody = {
   bodyText?: string;
   bodyHtml?: string;
   inReplyTo?: string;
   references?: string[];
+  attachments?: FetchedAttachment[];
 };
 
 /**
@@ -187,11 +196,24 @@ function fetchBodyOnOpenBox(
               if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
               html = proxyRemoteImages(html);
             }
+            // Real file attachments — anything not embedded inline via a
+            // cid: reference in the HTML body (those were already consumed
+            // above by embedInlineImages).
+            const realAttachments = (parsed.attachments || [])
+              .filter((att) => att.contentDisposition !== "inline")
+              .map((att) => ({
+                filename: att.filename || "attachment",
+                contentType: att.contentType,
+                size: att.size,
+                content: att.content,
+                contentId: att.cid,
+              }));
             resolve({
               bodyText: parsed.text || undefined,
               bodyHtml: html,
               inReplyTo: parsed.inReplyTo || undefined,
               references: normalizeReferences(parsed.references),
+              attachments: realAttachments.length > 0 ? realAttachments : undefined,
             });
           })
           .catch(reject);
