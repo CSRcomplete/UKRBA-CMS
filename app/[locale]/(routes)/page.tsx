@@ -7,6 +7,7 @@ import Link from "next/link";
 import moment from "moment";
 import { getEscalationAlerts } from "@/lib/task-escalation";
 import { getUnreadAnnouncementsCount } from "@/actions/news/news";
+import { CampaignsQuickLaunchTile } from "./components/CampaignsQuickLaunchTile";
 import {
   Mail,
   FolderOpen,
@@ -587,6 +588,9 @@ const DashboardPage = async () => {
               </p>
             </div>
           </Link>
+
+          {/* 10. Campaigns */}
+          <CampaignsQuickLaunchTile />
         </div>
 
         {/* 10. Recruitment Centre — Admin/CEO only */}
@@ -601,7 +605,7 @@ const DashboardPage = async () => {
                 <Briefcase className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">10. Recruitment Centre</h3>
+                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">11. Recruitment Centre</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Full candidate pipeline — CVs, interviews, offers &amp; signed contracts.</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />
