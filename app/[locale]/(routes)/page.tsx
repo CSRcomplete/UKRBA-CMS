@@ -394,10 +394,10 @@ const DashboardPage = async () => {
           {/* 1. Emails */}
           <Link
             href="/emails"
-            className="group relative overflow-hidden rounded-xl border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-500/10 via-background to-blue-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-blue-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 shadow-none transition-transform group-hover:scale-110">
                 <Mail className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
@@ -415,10 +415,10 @@ const DashboardPage = async () => {
           {/* 2. Resources */}
           <Link
             href="/repository"
-            className="group relative overflow-hidden rounded-xl border border-amber-200 dark:border-amber-900/40 bg-gradient-to-br from-amber-500/10 via-background to-amber-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-amber-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 shadow-none transition-transform group-hover:scale-110">
                 <FolderOpen className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-amber-600" />
@@ -436,10 +436,10 @@ const DashboardPage = async () => {
           {/* 3. Diary */}
           <Link
             href="/crm/calendar"
-            className="group relative overflow-hidden rounded-xl border border-purple-200 dark:border-purple-900/40 bg-gradient-to-br from-purple-500/10 via-background to-purple-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-purple-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 shadow-none transition-transform group-hover:scale-110">
                 <Calendar className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-purple-600" />
@@ -457,10 +457,10 @@ const DashboardPage = async () => {
           {/* 4. Tasks */}
           <Link
             href="/projects/tasks"
-            className="group relative overflow-hidden rounded-xl border border-cyan-200 dark:border-cyan-900/40 bg-gradient-to-br from-cyan-500/10 via-background to-cyan-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-cyan-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 shadow-none transition-transform group-hover:scale-110">
                 <CheckSquare className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-cyan-600" />
@@ -478,10 +478,10 @@ const DashboardPage = async () => {
           {/* 5. CRM (Leads etc) */}
           <Link
             href="/crm"
-            className="group relative overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-500/10 via-background to-emerald-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-emerald-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 shadow-none transition-transform group-hover:scale-110">
                 <Users className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-emerald-600" />
@@ -499,10 +499,10 @@ const DashboardPage = async () => {
           {/* 6. Video Meetings */}
           <Link
             href="/crm/meetings"
-            className="group relative overflow-hidden rounded-xl border border-rose-200 dark:border-rose-900/40 bg-gradient-to-br from-rose-500/10 via-background to-rose-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-rose-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 shadow-none transition-transform group-hover:scale-110">
                 <Video className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-rose-600" />
@@ -523,7 +523,7 @@ const DashboardPage = async () => {
             className={`group relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
               unreadAnnouncementsCount > 0
                 ? "border-violet-500 ring-2 ring-violet-500/50 bg-gradient-to-br from-violet-500/20 via-background to-violet-500/10 shadow-violet-500/20 shadow-md"
-                : "border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 hover:border-violet-500/60"
+                : "border-border bg-card hover:border-foreground/25"
             }`}
           >
             {unreadAnnouncementsCount > 0 && (
@@ -533,7 +533,7 @@ const DashboardPage = async () => {
               </div>
             )}
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 shadow-none transition-transform group-hover:scale-110">
                 <Megaphone className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-violet-600" />
@@ -551,10 +551,10 @@ const DashboardPage = async () => {
           {/* 8. Upload Leads */}
           <Link
             href="/crm/leads/upload"
-            className="group relative overflow-hidden rounded-xl border border-teal-200 dark:border-teal-900/40 bg-gradient-to-br from-teal-500/10 via-background to-teal-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-teal-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 shadow-none transition-transform group-hover:scale-110">
                 <Upload className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-teal-600" />
@@ -572,10 +572,10 @@ const DashboardPage = async () => {
           {/* 9. Accounts & Payments */}
           <Link
             href="/accounts-payments"
-            className="group relative overflow-hidden rounded-xl border border-green-200 dark:border-green-900/40 bg-gradient-to-br from-green-500/10 via-background to-green-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-green-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 shadow-none transition-transform group-hover:scale-110">
                 <CreditCard className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-green-600" />
@@ -596,10 +596,10 @@ const DashboardPage = async () => {
           {/* 11. Automations */}
           <Link
             href="/automations"
-            className="group relative overflow-hidden rounded-xl border border-fuchsia-200 dark:border-fuchsia-900/40 bg-gradient-to-br from-fuchsia-500/10 via-background to-fuchsia-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-fuchsia-500/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-50 dark:bg-fuchsia-950/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-none transition-transform group-hover:scale-110">
                 <Bot className="h-6 w-6" />
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-fuchsia-600" />
@@ -621,9 +621,9 @@ const DashboardPage = async () => {
             <h2 className="text-base font-semibold text-muted-foreground mb-3">Administration Only</h2>
             <Link
               href="/recruitment"
-              className="group relative overflow-hidden rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-500/10 via-background to-indigo-500/5 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/60 flex items-center gap-5 max-w-md"
+              className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25 flex items-center gap-5 max-w-md"
             >
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-md transition-transform group-hover:scale-110">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 shadow-none transition-transform group-hover:scale-110">
                 <Briefcase className="h-7 w-7" />
               </div>
               <div className="flex-1">
