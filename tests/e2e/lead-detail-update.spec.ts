@@ -27,7 +27,7 @@ test.describe("Update Lead from detail page", () => {
     await expect(leadsTable).toBeVisible({ timeout: 10000 });
 
     // Navigate to the first lead's detail page
-    await leadsTable.getByTestId("lead-row-name").first().click();
+    await leadsTable.getByTestId("lead-row-last-name").first().click();
 
     await page.waitForURL(/crm\/leads\/.+/, { timeout: 10000 });
     await page.waitForLoadState("networkidle", { timeout: 15000 });

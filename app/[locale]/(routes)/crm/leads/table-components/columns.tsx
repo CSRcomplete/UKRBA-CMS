@@ -94,14 +94,26 @@ export const createColumns = (
   {
     accessorKey: "firstName",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Name" />
+      <DataTableColumnHeader column={column} title="First Name" />
     ),
 
     cell: ({ row }) => (
-      <Link href={`/crm/leads/${row.original.id}`} className="font-semibold text-primary hover:underline" data-testid="lead-row-name">
-        <div>
-          {[row.original.firstName, row.original.lastName].filter(Boolean).join(" ") || "Unnamed Lead"}
-        </div>
+      <Link href={`/crm/leads/${row.original.id}`} className="font-semibold text-primary hover:underline" data-testid="lead-row-first-name">
+        <div>{row.original.firstName || "-"}</div>
+      </Link>
+    ),
+    enableSorting: false,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "lastName",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Last Name" />
+    ),
+
+    cell: ({ row }) => (
+      <Link href={`/crm/leads/${row.original.id}`} className="font-semibold text-primary hover:underline" data-testid="lead-row-last-name">
+        <div>{row.original.lastName || "-"}</div>
       </Link>
     ),
     enableSorting: false,

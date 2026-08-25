@@ -465,7 +465,8 @@ export default function UploadLeadsClient({ currentUser }: UploadLeadsClientProp
                     <thead className="sticky top-0 bg-muted border-b text-muted-foreground font-semibold uppercase tracking-wider">
                       <tr>
                         <th className="p-3">#</th>
-                        <th className="p-3">Name</th>
+                        <th className="p-3">First Name</th>
+                        <th className="p-3">Last Name</th>
                         <th className="p-3">E-mail</th>
                         <th className="p-3">Phone</th>
                         <th className="p-3">Company</th>
@@ -478,9 +479,8 @@ export default function UploadLeadsClient({ currentUser }: UploadLeadsClientProp
                       {parsedLeads.map((lead, idx) => (
                         <tr key={idx} className="hover:bg-muted/30 transition-colors">
                           <td className="p-3 text-muted-foreground">{idx + 1}</td>
-                          <td className="p-3 font-semibold text-foreground">
-                            {lead.firstName ? `${lead.firstName} ${lead.lastName}` : lead.lastName}
-                          </td>
+                          <td className="p-3 font-semibold text-foreground">{lead.firstName || "-"}</td>
+                          <td className="p-3 font-semibold text-foreground">{lead.lastName || "-"}</td>
                           <td className="p-3 text-muted-foreground">{lead.email || "-"}</td>
                           <td className="p-3 text-muted-foreground">{lead.phone || "-"}</td>
                           <td className="p-3 text-foreground font-medium">{lead.company || "-"}</td>

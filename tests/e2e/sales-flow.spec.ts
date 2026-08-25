@@ -178,7 +178,7 @@ test.describe.serial("Sales Flow", () => {
       page.getByTestId("leads-table").getByText("PlaywrightLead").first()
     ).toBeVisible({ timeout: 15000 });
 
-    await page.getByTestId("lead-row-name").filter({ hasText: "PlaywrightLead" }).first().click();
+    await page.getByTestId("lead-row-last-name").filter({ hasText: "PlaywrightLead" }).first().click();
     await page.waitForURL(/crm\/leads\/.+/, { timeout: 10000 });
 
     const url = page.url();
