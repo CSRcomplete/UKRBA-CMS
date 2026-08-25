@@ -60,6 +60,12 @@ export function ComposeModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
+  // Attachments carried over from the original message when forwarding —
+  // already sitting in storage, so they're sent by reference rather than
+  // re-uploaded.
+  const [carriedAttachments, setCarriedAttachments] = useState<
+    { filename: string; contentType: string; size: number; storageUrl: string }[]
+  >([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
@@ -78,6 +84,18 @@ export function ComposeModal({
       setError(null);
       setAttachments([]);
       setSelectedTemplateId("");
+      setCarriedAttachments(
+        mode === "forward"
+          ? (replyTo?.attachments || [])
+              .filter((a) => !!a.storageUrl)
+              .map((a) => ({
+                filename: a.filename,
+                contentType: a.mimeType,
+                size: a.size,
+                storageUrl: a.storageUrl!,
+              }))
+          : []
+      );
 
       if (mode === "draft" && initialDraft) {
         const toRecs = Array.isArray(initialDraft.toRecipients)
@@ -129,6 +147,10 @@ export function ComposeModal({
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeCarriedAttachment = (index: number) => {
+    setCarriedAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const insertFormat = (prefix: string, suffix: string = "", defaultText: string = "text") => {
@@ -185,7 +207,7 @@ export function ComposeModal({
         body: finalBody,
         inReplyTo: mode === "reply" ? replyTo?.rfcMessageId : undefined,
         references: mode === "reply" ? replyTo?.rfcMessageId : undefined,
-        attachments: attachmentPayload,
+        attachments: [...attachmentPayload, ...carriedAttachments],
       });
       if (result && "error" in result) {
         setError(result.error);
@@ -266,7 +288,7 @@ export function ComposeModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label className="text-xs flex items-center gap-1">
-                <Paperclip className="h-3.5 w-3.5" /> Attachments ({attachments.length})
+                <Paperclip className="h-3.5 w-3.5" /> Attachments ({attachments.length + carriedAttachments.length})
               </Label>
               <input
                 ref={fileInputRef}
@@ -285,8 +307,16 @@ export function ComposeModal({
                 <Paperclip className="h-3 w-3" /> Attach Files
               </Button>
             </div>
-            {attachments.length > 0 && (
+            {(carriedAttachments.length > 0 || attachments.length > 0) && (
               <div className="flex flex-wrap gap-1.5 pt-1">
+                {carriedAttachments.map((att, idx) => (
+                  <span key={`carried-${idx}`} className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-0.5 text-[11px]">
+                    <span className="truncate max-w-[140px]">{att.filename}</span>
+                    <button type="button" onClick={() => removeCarriedAttachment(idx)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
                 {attachments.map((file, idx) => (
                   <span key={idx} className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-0.5 text-[11px]">
                     <span className="truncate max-w-[140px]">{file.name}</span>

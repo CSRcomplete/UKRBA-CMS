@@ -17,6 +17,13 @@ export type Mail = {
   ccRecipients?: EmailRecipient[];
   bodyText?: string | null;
   bodyHtml?: string | null;
+  attachments?: {
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    storageUrl: string | null;
+  }[];
 };
 
 export type ConnectedAccount = {

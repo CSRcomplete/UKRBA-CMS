@@ -387,12 +387,24 @@ export type AttachmentInput = {
   filename: string;
   contentType: string;
   size?: number;
-  // Object key of the file already uploaded to MinIO via a presigned URL
+  // Object key of a file already uploaded to MinIO via a presigned URL
   // (see /api/upload/presigned-url) — attachments are uploaded directly to
   // storage from the browser rather than inlined into this Server Action's
   // request body, since Cloudflare rejects request bodies much above ~1MB.
-  storageKey: string;
+  // Provide either this or storageUrl (used for forwarding an attachment
+  // that's already sitting in storage, e.g. from the original message).
+  storageKey?: string;
+  storageUrl?: string;
 };
+
+function resolveAttachmentStorageKey(att: AttachmentInput): string {
+  if (att.storageKey) return att.storageKey;
+  if (att.storageUrl) {
+    const prefix = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/`;
+    if (att.storageUrl.startsWith(prefix)) return att.storageUrl.slice(prefix.length);
+  }
+  throw new Error(`Cannot resolve storage location for attachment "${att.filename}"`);
+}
 
 export type SendInput = {
   accountId: string;
@@ -491,7 +503,7 @@ async function sendEmailInternal(input: SendInput) {
     ? await Promise.all(
         input.attachments.map(async (att) => {
           const obj = await minioClient.send(
-            new GetObjectCommand({ Bucket: MINIO_BUCKET, Key: att.storageKey })
+            new GetObjectCommand({ Bucket: MINIO_BUCKET, Key: resolveAttachmentStorageKey(att) })
           );
           const bytes = await obj.Body!.transformToByteArray();
           return {
@@ -575,7 +587,7 @@ async function sendEmailInternal(input: SendInput) {
         filename: att.filename,
         mimeType: att.contentType || "application/octet-stream",
         size: att.size || 0,
-        storageUrl: `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${att.storageKey}`,
+        storageUrl: att.storageUrl || `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${resolveAttachmentStorageKey(att)}`,
       })),
     });
   }
