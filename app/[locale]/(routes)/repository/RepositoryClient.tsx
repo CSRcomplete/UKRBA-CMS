@@ -124,6 +124,7 @@ export const REPOSITORY_STRUCTURE: FolderConfig[] = [
       "Sales Guides",
       "Sales Scripts",
       "Sales Presentations",
+      "Sales Prospectus",
       "Price Lists",
       "Membership Information",
       "White Label",
