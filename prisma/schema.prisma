@@ -1688,7 +1688,7 @@ model Email {
   accounts    EmailsToAccounts[]
   attachments EmailAttachment[]
 
-  @@unique([emailAccountId, rfcMessageId])
+  @@unique([emailAccountId, folder, rfcMessageId])
   @@index([userId])
   @@index([emailAccountId])
   @@index([folder])

@@ -143,19 +143,23 @@ export const emailSyncAccount = inngest.createFunction(
         return [];
       }
 
-      // 1. Find which rfcMessageIds already exist (one query)
+      // 1. Find which (folder, rfcMessageId) pairs already exist (one query).
+      //    Keyed by folder as well as rfcMessageId — sending a message to
+      //    yourself delivers the identical Message-ID into both this
+      //    account's Sent AND Inbox folders, and both copies need their own
+      //    row so the Inbox one is actually visible/downloadable in the CRM.
       const rfcIds = allMessages.map((m) => m.rfcMessageId);
       const existing = await prismadb.email.findMany({
         where: { emailAccountId: accountId, rfcMessageId: { in: rfcIds } },
-        select: { rfcMessageId: true },
+        select: { rfcMessageId: true, folder: true },
       });
-      const existingSet = new Set(existing.map((e) => e.rfcMessageId));
+      const existingSet = new Set(existing.map((e) => `${e.folder}:${e.rfcMessageId}`));
 
       // 2. Filter to truly new messages
-      const newMessages = allMessages.filter((m) => !existingSet.has(m.rfcMessageId));
+      const newMessages = allMessages.filter((m) => !existingSet.has(`${m.folder}:${m.rfcMessageId}`));
 
       // 3. Bulk-insert new messages (one query); skipDuplicates is safe because of
-      //    @@unique([emailAccountId, rfcMessageId]) on the Email model.
+      //    @@unique([emailAccountId, folder, rfcMessageId]) on the Email model.
       if (newMessages.length > 0) {
         await prismadb.email.createMany({
           data: newMessages.map((msg) => ({
