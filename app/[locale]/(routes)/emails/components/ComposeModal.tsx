@@ -122,7 +122,7 @@ export function ComposeModal({
 
         setBody(
           mode === "reply" || mode === "forward"
-            ? `<div><br></div><div><br></div><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div>`
+            ? `<div><br></div><div><br></div><blockquote class="ukrba-quote"><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div></blockquote>`
             : ""
         );
       }

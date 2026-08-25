@@ -99,8 +99,48 @@ function AutoResizingIframe({ html }: { html: string }) {
     const timer2 = setTimeout(adjustHeight, 600);
     const timer3 = setTimeout(adjustHeight, 1500);
 
+    // Gmail-style "quoted text" collapsing — most mail clients wrap earlier
+    // messages in a <blockquote> or a class containing "quote" (Gmail's own
+    // .gmail_quote, this account's .hmail-quote-container, etc). Collapse
+    // the outermost one behind a toggle so long reply chains aren't shown
+    // in full by default. Done from the parent frame (not a script injected
+    // into the iframe's own HTML) so untrusted email content never needs
+    // allow-scripts in the sandbox.
+    const collapseQuotedContent = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc || !doc.body || doc.body.dataset.quoteCollapsed) return;
+        doc.body.dataset.quoteCollapsed = "1";
+
+        const candidates = Array.from(doc.querySelectorAll('blockquote, [class*="quote"]')) as HTMLElement[];
+        if (candidates.length === 0) return;
+
+        const target =
+          candidates.find((el) => !candidates.some((other) => other !== el && other.contains(el))) ??
+          candidates[0];
+
+        target.style.display = "none";
+
+        const btn = doc.createElement("button");
+        btn.type = "button";
+        btn.textContent = "•••";
+        btn.setAttribute("aria-label", "Show quoted text");
+        btn.style.cssText =
+          "display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:22px;padding:0 8px;margin:8px 0;border:1px solid #cbd5e1;border-radius:9999px;background:#f1f5f9;color:#475569;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;";
+        btn.addEventListener("click", () => {
+          target.style.display = target.style.display === "none" ? "" : "none";
+          adjustHeight();
+        });
+        target.parentNode?.insertBefore(btn, target);
+        adjustHeight();
+      } catch {
+        // Ignore
+      }
+    };
+
     const handleLoad = () => {
       adjustHeight();
+      collapseQuotedContent();
       try {
         const doc = iframe.contentDocument || iframe.contentWindow?.document;
         if (doc) {
