@@ -2,6 +2,7 @@ import { inngest } from "@/inngest/client";
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
 import { fetchBodyByMessageId, fetchBodyByUid } from "@/inngest/lib/imap-utils";
+import { storeFetchedAttachments } from "@/lib/email-attachment-storage";
 
 export const emailLinkCrm = inngest.createFunction(
   {
@@ -120,6 +121,12 @@ export const emailLinkCrm = inngest.createFunction(
                 references: body.references ?? undefined,
               },
             });
+
+            // This eager fetch runs for every synced email regardless of
+            // whether/when a user opens it in the CRM, so it — not
+            // getEmail()'s lazy fetch — is almost always the one that
+            // actually sees body.attachments first in practice.
+            await storeFetchedAttachments(emailId, body.attachments);
           } catch (e) {
             console.warn(`[link-crm] Body fetch failed for email ${emailId}:`, e);
             // embed will still fire with subject-only text
