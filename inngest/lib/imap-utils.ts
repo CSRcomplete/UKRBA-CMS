@@ -126,15 +126,18 @@ function escapeRegExp(value: string): string {
  * (keyed by `cid`) — it does not re-embed them itself. Without this step
  * every email with an inline image/logo/signature renders a broken image.
  */
-function embedInlineImages(html: string, attachments: Attachment[]): string {
+function embedInlineImages(html: string, attachments: Attachment[]): { html: string; consumedCids: Set<string> } {
   let result = html;
+  const consumedCids = new Set<string>();
   for (const att of attachments) {
     if (!att.cid) continue;
-    const dataUri = `data:${att.contentType};base64,${att.content.toString("base64")}`;
     const pattern = new RegExp(`cid:${escapeRegExp(att.cid)}`, "gi");
+    if (!pattern.test(html)) continue;
+    const dataUri = `data:${att.contentType};base64,${att.content.toString("base64")}`;
     result = result.replace(pattern, dataUri);
+    consumedCids.add(att.cid);
   }
-  return result;
+  return { html: result, consumedCids };
 }
 
 /**
@@ -192,15 +195,24 @@ function fetchBodyOnOpenBox(
         simpleParser(Buffer.concat(chunks))
           .then((parsed) => {
             let html = parsed.html || undefined;
+            let consumedCids = new Set<string>();
             if (html) {
-              if (parsed.attachments?.length) html = embedInlineImages(html, parsed.attachments);
+              if (parsed.attachments?.length) {
+                const embedded = embedInlineImages(html, parsed.attachments);
+                html = embedded.html;
+                consumedCids = embedded.consumedCids;
+              }
               html = proxyRemoteImages(html);
             }
-            // Real file attachments — anything not embedded inline via a
-            // cid: reference in the HTML body (those were already consumed
-            // above by embedInlineImages).
+            // Real file attachments — anything that wasn't actually embedded
+            // inline via a cid: reference found in the HTML body. Some
+            // providers (e.g. Gmail) mark ordinary file attachments as
+            // "inline" in their Content-Disposition header even though they
+            // aren't referenced anywhere in the body, so contentDisposition
+            // alone isn't a reliable signal — whether the cid was actually
+            // consumed above is.
             const realAttachments = (parsed.attachments || [])
-              .filter((att) => att.contentDisposition !== "inline")
+              .filter((att) => !att.cid || !consumedCids.has(att.cid))
               .map((att) => ({
                 filename: att.filename || "attachment",
                 contentType: att.contentType,
