@@ -9,6 +9,23 @@ import { EmailFolder } from "@prisma/client";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
+
+// Embed the signature logo as a data URI rather than linking to it remotely —
+// a remote <img src> depends on the recipient's mail client fetching it (many
+// block remote images by default, and it renders as a broken box if blocked
+// or if the app's own URL ever changes), so embedding the actual bytes makes
+// the signature render reliably everywhere.
+const UKRBA_LOGO_DATA_URI: string | undefined = (() => {
+  try {
+    const logoPath = path.join(process.cwd(), "public", "images", "ukrba-logo.png");
+    const buffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+})();
 
 const PAGE_SIZE = 50;
 const MAX_COUNT = 10_000;
@@ -476,7 +493,7 @@ async function sendEmailInternal(input: SendInput) {
 
   // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)
   const htmlContentLines = parseMarkdownToEmailHtml(cleanedBody);
-  const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role, phone: user?.phone })}`;
+  const bodyHtml = `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">${htmlContentLines}</div>${getUKRBASignatureHtml({ name: user?.name, role: user?.role, phone: user?.phone }, UKRBA_LOGO_DATA_URI)}`;
 
   let password = "";
   try {
