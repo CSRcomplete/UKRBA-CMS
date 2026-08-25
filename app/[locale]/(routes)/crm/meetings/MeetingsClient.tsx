@@ -66,7 +66,7 @@ export function MeetingsClient({ meetings, userDisplayName, userEmail, eligibleT
         toast.error(result.error);
       } else if (result.zoomJoinUrl) {
         toast.success("Instant Zoom meeting created! Opening now...");
-        window.open(result.zoomStartUrl || result.zoomJoinUrl, "_blank", "noopener,noreferrer");
+        window.open(result.zoomJoinUrl, "_blank", "noopener,noreferrer");
         router.refresh();
       }
     });
@@ -277,14 +277,20 @@ function MeetingCard({
       <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
         {meetingType === "video" && meeting.zoomJoinUrl && (
           <>
-            {/* Join / Start via Zoom */}
-            <a href={meeting.isHost && meeting.zoomStartUrl ? meeting.zoomStartUrl : meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
+            {/* Always use the plain join link, even for the CRM-side "host" —
+                Zoom's own start link signs whoever clicks it in as the one
+                shared Zoom account (staff don't have individual licenses),
+                which showed everyone's name as that account's owner
+                regardless of who was actually joining. The meeting already
+                allows join_before_host, so nothing requires the real start
+                link. */}
+            <a href={meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
               <Button
                 size="sm"
                 className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium"
               >
                 <Video className="h-4 w-4" />
-                {meeting.isHost ? "Start Meeting" : "Join Now"}
+                Join Now
               </Button>
             </a>
 
