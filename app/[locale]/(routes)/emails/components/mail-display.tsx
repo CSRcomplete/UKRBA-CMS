@@ -78,6 +78,14 @@ function AutoResizingIframe({ html }: { html: string }) {
           doc.body.style.padding = "0";
           doc.body.style.overflow = "hidden";
 
+          // Some email HTML sets height:100% (or similar) on html/body, which
+          // measures relative to the iframe's *current* box — once the
+          // iframe grows tall, that inflates scrollHeight right back to the
+          // same tall value, so it never shrinks again (e.g. after
+          // collapsing quoted text). Collapsing the iframe first forces the
+          // content to reflow to its real natural height before measuring.
+          iframe.style.height = "0px";
+
           const height = Math.max(
             doc.body.scrollHeight,
             doc.body.offsetHeight,
