@@ -13,6 +13,12 @@ export const minioClient = new S3Client({
     secretAccessKey: secretKey,
   },
   forcePathStyle: true, // REQUIRED for MinIO — without this, SDK uses virtual-hosted-style which breaks
+  // AWS SDK v3 defaults to auto-adding a checksum header/trailer to PutObject
+  // requests, which this MinIO version signs/validates incorrectly and
+  // rejects with "SignatureDoesNotMatch". Presigned-URL uploads elsewhere
+  // dodge this (the browser does the raw PUT itself, outside the SDK's
+  // request pipeline) — direct server-side PutObjectCommand calls don't.
+  requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
 export const MINIO_BUCKET = bucket;
@@ -28,4 +34,5 @@ export const minioPublicClient = new S3Client({
     secretAccessKey: secretKey,
   },
   forcePathStyle: true,
+  requestChecksumCalculation: "WHEN_REQUIRED",
 });
