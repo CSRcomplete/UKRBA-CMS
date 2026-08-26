@@ -192,7 +192,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
     }
 
-    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', '5GBP purchase'];
+    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', '5GBP purchase', '5GBP Free Assessment'];
     if (!validLeadTypes.includes(lead_type)) {
       return NextResponse.json({ message: "Invalid lead_type parameter" }, { status: 400 });
     }
@@ -254,8 +254,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // Clear postcode for 5GBP purchase leads to avoid postcode saving and routing
-    if (lead_type === "5GBP purchase") {
+    // Clear postcode for 5GBP purchase/free-assessment leads to avoid postcode saving and routing
+    if (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") {
       postcode = null;
     }
 
