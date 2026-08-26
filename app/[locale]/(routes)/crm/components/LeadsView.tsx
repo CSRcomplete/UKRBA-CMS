@@ -33,11 +33,13 @@ interface LeadsViewProps {
   data: any[];
   crmData: CrmData;
   postcodeOptions?: PostcodeOption[];
+  title?: string;
+  backHref?: string;
 }
 
 import { Upload } from "lucide-react";
 
-const LeadsView = ({ data, crmData, postcodeOptions = [] }: LeadsViewProps) => {
+const LeadsView = ({ data, crmData, postcodeOptions = [], title, backHref }: LeadsViewProps) => {
   const { accounts, leadSources, leadStatuses, leadTypes } = crmData;
   const [open, setOpen] = useState(false);
   const t = useTranslations("CrmPage");
@@ -48,8 +50,8 @@ const LeadsView = ({ data, crmData, postcodeOptions = [] }: LeadsViewProps) => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>
-              <Link href="/crm/leads" className="hover:underline">
-                {t("leads.viewTitle")}
+              <Link href={backHref ?? "/crm/leads"} className="hover:underline">
+                {title ?? t("leads.viewTitle")}
               </Link>
             </CardTitle>
           </div>

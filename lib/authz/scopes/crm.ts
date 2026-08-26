@@ -10,7 +10,7 @@ type TargetWhere = NonNullable<
 >["where"];
 
 // Recursive helper to get all direct and indirect subordinates for a user
-async function getSubordinateUserIds(userId: string): Promise<string[]> {
+export async function getSubordinateUserIds(userId: string): Promise<string[]> {
   const subordinates: string[] = [];
   const queue = [userId];
   while (queue.length > 0) {
