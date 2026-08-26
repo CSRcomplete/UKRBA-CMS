@@ -204,7 +204,14 @@ export default function UploadLeadsClient({ currentUser }: UploadLeadsClientProp
     if (res.error) {
       setSubmitError(res.error);
     } else {
-      setSuccessMessage(`Successfully uploaded ${res.count} leads to the CRM!`);
+      const parts: string[] = [];
+      if (res.created) parts.push(`${res.created} new`);
+      if (res.updated) parts.push(`${res.updated} updated (matched existing leads)`);
+      setSuccessMessage(
+        parts.length > 0
+          ? `Done — ${parts.join(", ")}.`
+          : `Successfully uploaded ${res.count} leads to the CRM!`
+      );
       setParsedLeads([]);
       setCsvFileName(null);
     }
