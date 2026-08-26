@@ -256,8 +256,12 @@ export async function POST(req: Request) {
 
     // 5GBP purchase/free-assessment leads: postcode is stored for reference but must
     // NEVER drive routing — these leads are only ever assigned via the RD's referral
-    // link (referred_by_rd), never by postcode-area lookup.
-    const isFivePoundLead = lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment";
+    // link (referred_by_rd), never by postcode-area lookup. Exception: Meta ads leads
+    // (referred_by_rd === "meta") have no individual referring RD, so they fall through
+    // to normal postcode-area routing like any other lead — lead_source ("Meta Ads")
+    // is what records where they actually came from.
+    const isMetaAdsLead = typeof referrerRdId === "string" && referrerRdId.toLowerCase() === "meta";
+    const isFivePoundLead = (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") && !isMetaAdsLead;
 
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
