@@ -254,10 +254,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // Clear postcode for 5GBP purchase/free-assessment leads to avoid postcode saving and routing
-    if (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") {
-      postcode = null;
-    }
+    // 5GBP purchase/free-assessment leads: postcode is stored for reference but must
+    // NEVER drive routing — these leads are only ever assigned via the RD's referral
+    // link (referred_by_rd), never by postcode-area lookup.
+    const isFivePoundLead = lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment";
 
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
@@ -287,6 +287,10 @@ export async function POST(req: Request) {
     } else if (referredRdUser) {
       currentOwnerId = referredRdUser.id;
       regionalDirectorId = referredRdUser.id;
+    } else if (isFivePoundLead) {
+      // No matching RD for the referral link — fall back to unassigned/Ops rather
+      // than ever routing a 5GBP lead by postcode.
+      currentOwnerId = opsDirectorId;
     } else if (postcode) {
       // Regular postcode allocation routing
       const prefix = extractPostcodeArea(postcode);
