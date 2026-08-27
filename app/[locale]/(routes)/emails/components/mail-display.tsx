@@ -208,6 +208,11 @@ export function MailDisplay({ mail, activeAccountId, currentUser }: MailDisplayP
       return;
     }
     let cancelled = false;
+    // Clear the previous email's thread immediately — otherwise, while the
+    // new thread is loading, the panel keeps showing the last-viewed
+    // email's messages under the new email's header (looks like the wrong
+    // content "leaked" into the newly opened email).
+    setThread([]);
     setLoadingThread(true);
     setReplyText("");
     getEmailThread(mail.id)
