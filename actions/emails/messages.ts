@@ -459,8 +459,19 @@ async function sendEmailInternal(input: SendInput) {
   // Strip any pre-existing/duplicate signature lines from input body
   const cleanedBody = stripExistingSignature(input.body);
 
-  // Prepare text body (strip HTML tags if body contains HTML)
-  let cleanBodyText = cleanedBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  // Prepare text body (strip HTML tags, then decode entities — the editor's
+  // contenteditable innerHTML can contain "&nbsp;" etc. even with no tags at
+  // all, which would otherwise show up as literal text in the plain-text part)
+  let cleanBodyText = cleanedBody
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
   cleanBodyText += getUKRBASignature({ name: user?.name, role: user?.role, phone: user?.phone });
 
   // Prepare HTML body with embedded logo signature & markdown parsing (bold, italic, lists, links)

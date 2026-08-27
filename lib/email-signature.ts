@@ -109,8 +109,13 @@ export function getUKRBASignatureHtml(
 export function parseMarkdownToEmailHtml(text: string): string {
   if (!text) return "";
 
-  // If text is already HTML from visual editor, return directly
-  if (/<[a-z][\s\S]*>/i.test(text)) {
+  // If text is already HTML from the visual editor, return directly. The
+  // editor's contenteditable innerHTML can contain entities (e.g. "&nbsp;"
+  // for a double space) with no surrounding tags at all for a short
+  // single-line message, so an entity alone is also treated as "already
+  // HTML" — otherwise the escape step below turns "&nbsp;" into
+  // "&amp;nbsp;", which renders as the literal text "&nbsp;".
+  if (/<[a-z][\s\S]*>/i.test(text) || /&[a-zA-Z]+;|&#\d+;/.test(text)) {
     return text;
   }
 
