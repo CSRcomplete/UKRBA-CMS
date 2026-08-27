@@ -396,17 +396,61 @@ export async function POST(req: Request) {
       currentOwnerId = opsDirectorId; // Fallback if no postcode provided
     }
 
-    // Check for a recently created duplicate lead (within last 15 minutes) with the same email
+    // 5GBP assessment links are also sent to leads ALREADY in the CRM (RDs/ADs using
+    // them to try to close an existing lead) — for those, match by email regardless
+    // of age, since the original lead could be weeks old. Every other lead type keeps
+    // the original "recently created duplicate" 15-minute window.
     const existingLead = await prismadb.crm_Leads.findFirst({
       where: {
-        email: email,
-        createdAt: {
-          gte: new Date(Date.now() - 15 * 60 * 1000)
-        }
-      }
+        email: { equals: email, mode: "insensitive" },
+        deletedAt: null,
+        ...(isFivePoundLead ? {} : { createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } }),
+      },
+      orderBy: { updatedAt: "desc" },
     });
 
+    const assessmentDateField = lead_type === "5GBP Free Assessment"
+      ? "freeAssessmentAt"
+      : lead_type === "5GBP purchase"
+        ? "fivePoundAssessmentAt"
+        : null;
+
     if (existingLead) {
+      // For 5GBP leads matched against an EXISTING lead, this is a close-the-deal
+      // submission, not a new lead — ownership must never change. Only record that
+      // the assessment was completed.
+      if (isFivePoundLead) {
+        const updatedLead = await prismadb.crm_Leads.update({
+          where: { id: existingLead.id },
+          data: {
+            ...(assessmentDateField ? { [assessmentDateField]: new Date() } : {}),
+            description: existingLead.description
+              ? `${existingLead.description} | ${lead_type} completed via ${lead_source}`
+              : `${lead_type} completed via ${lead_source}`,
+            // Deliberately untouched: assigned_to, assigned_partner_id,
+            // assigned_area_director_id, assigned_regional_director_id, refered_by,
+            // lead_type_id — this must never reassign the lead.
+          }
+        });
+
+        await prismadb.sys_audit_logs.create({
+          data: {
+            entity_type: "crm_Leads",
+            entity_id: updatedLead.id,
+            field_mutated: assessmentDateField || "ASSESSMENT_COMPLETED",
+            new_value: JSON.stringify({ id: updatedLead.id, lead_type, assessmentDateField })
+          }
+        });
+
+        return NextResponse.json({
+          message: "Assessment recorded on existing lead — ownership unchanged",
+          lead_id: updatedLead.id,
+          lead_type,
+          lead_source,
+          assigned_owner_id: updatedLead.assigned_to
+        }, { status: 200 });
+      }
+
       // Merge/update details (only overwrite if the incoming data is non-empty)
       const updatedLead = await prismadb.crm_Leads.update({
         where: { id: existingLead.id },
@@ -466,7 +510,8 @@ export async function POST(req: Request) {
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
         refered_by: referrerRdId || null,
-        description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`
+        description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`,
+        ...(assessmentDateField ? { [assessmentDateField]: new Date() } : {}),
       }
     });
 
