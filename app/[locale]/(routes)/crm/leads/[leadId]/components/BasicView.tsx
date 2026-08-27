@@ -249,6 +249,32 @@ export async function BasicView({ data }: OppsViewProps) {
                   </p>
                 </div>
               </div>
+              <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                <ClipboardList className="mt-px h-5 w-5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    £5 Assessment
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.fivePoundAssessmentAt
+                      ? moment(data.fivePoundAssessmentAt).format("MMM DD YYYY")
+                      : "Not completed"}
+                  </p>
+                </div>
+              </div>
+              <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
+                <ClipboardList className="mt-px h-5 w-5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Free Assessment
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.freeAssessmentAt
+                      ? moment(data.freeAssessmentAt).format("MMM DD YYYY")
+                      : "Not completed"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

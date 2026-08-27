@@ -107,6 +107,8 @@ model crm_Leads {
   email_flows                   crm_LeadEmailFlow[]
   deletedAt                     DateTime?
   deletedBy                     String?               @db.Uuid
+  fivePoundAssessmentAt         DateTime?
+  freeAssessmentAt              DateTime?
 
   @@index([assigned_to])
   @@index([accountsIDs])
