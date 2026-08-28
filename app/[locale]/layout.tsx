@@ -5,6 +5,7 @@ import { getTranslations, getMessages } from "next-intl/server";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
+import { AutofillBlocker } from "@/components/AutofillBlocker";
 
 // Font optimization disabled to prevent build errors in offline environments.
 const inter = { className: "font-sans" };
@@ -64,6 +65,7 @@ export default async function RootLayout(props: Props) {
         </NextIntlClientProvider>
         <Toaster />
         <SonnerToaster />
+        <AutofillBlocker />
       </body>
     </html>
   );
