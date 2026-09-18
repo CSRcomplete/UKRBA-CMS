@@ -75,6 +75,8 @@ export function LeadDataTable<TData, TValue>({
 
   const { data: session } = useSession();
   const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
+  const isSupervisor = session?.user?.role === "regional_director" || session?.user?.role === "area_director";
+  const canBulkDelete = isAdminOrCeo || isSupervisor;
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -245,7 +247,7 @@ export function LeadDataTable<TData, TValue>({
                 <Send className="h-3.5 w-3.5" />
                 Add to Target List for Campaign
               </Button>
-              {isAdminOrCeo && (
+              {canBulkDelete && (
                 <Button
                   variant="destructive"
                   size="sm"

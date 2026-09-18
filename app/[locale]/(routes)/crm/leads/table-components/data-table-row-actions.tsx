@@ -54,6 +54,9 @@ export function DataTableRowActions<TData>({
 
   const { data: session } = useSession();
   const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
+  const isSupervisor = session?.user?.role === "regional_director" || session?.user?.role === "area_director";
+  const ownsLead = !!session?.user?.id && (row.original as { assigned_to?: string | null }).assigned_to === session.user.id;
+  const canDelete = isAdminOrCeo || (isSupervisor && ownsLead);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -122,7 +125,7 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem onClick={() => setUpdateOpen(true)}>
             Update
           </DropdownMenuItem>
-          {isAdminOrCeo && (
+          {canDelete && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setOpen(true)}>

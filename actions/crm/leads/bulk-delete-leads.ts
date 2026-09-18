@@ -5,15 +5,32 @@ import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit-log";
 
+const ADMIN_ROLES = ["admin", "ceo", "coo"];
+const SUPERVISOR_ROLES = ["regional_director", "area_director"];
+
 export const bulkDeleteLeads = async (leadIds: string[]) => {
   const session = await getSession();
   if (!session) return { error: "Unauthorized" };
 
-  if (session.user.role !== "admin" && session.user.role !== "ceo" && session.user.role !== "coo") {
+  if (!leadIds || leadIds.length === 0) return { error: "leadIds are required" };
+
+  const isAdmin = ADMIN_ROLES.includes(session.user.role);
+  const isSupervisor = SUPERVISOR_ROLES.includes(session.user.role);
+
+  if (!isAdmin && !isSupervisor) {
     return { error: "Forbidden" };
   }
 
-  if (!leadIds || leadIds.length === 0) return { error: "leadIds are required" };
+  if (isSupervisor && !isAdmin) {
+    const leads = await prismadb.crm_Leads.findMany({
+      where: { id: { in: leadIds } },
+      select: { id: true, assigned_to: true },
+    });
+    const unowned = leads.some((l) => l.assigned_to !== session.user.id);
+    if (unowned || leads.length !== leadIds.length) {
+      return { error: "Forbidden" };
+    }
+  }
 
   try {
     await prismadb.crm_Leads.updateMany({
