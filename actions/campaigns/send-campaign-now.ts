@@ -11,7 +11,7 @@ import {
 export const sendCampaignNow = async (id: string) => {
   let user;
   try {
-    user = await requireRole(["manager", "admin"]);
+    user = await requireRole(["manager", "admin", "email_partner"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { error: "Forbidden" };

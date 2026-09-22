@@ -54,6 +54,11 @@ export const roles = [
     icon: PauseIcon,
   },
   {
+    value: "email_partner",
+    label: "Email Partner",
+    icon: PauseIcon,
+  },
+  {
     value: "manager",
     label: "Manager",
     icon: PauseIcon,

@@ -14,6 +14,7 @@ const ROLE_DESIGNATIONS: Record<string, string> = {
   regional_director: "Regional Director",
   area_director: "Area Director",
   channel_partner: "Channel Partner",
+  email_partner: "Email Partner",
   admin: "Admin",
   user: "Staff",
 };

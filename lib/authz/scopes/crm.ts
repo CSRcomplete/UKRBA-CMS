@@ -438,7 +438,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
     };
   }
 
-  if (user.role === "channel_partner") {
+  if (user.role === "channel_partner" || user.role === "email_partner") {
     return {
       deletedAt: null,
       OR: [
@@ -814,6 +814,7 @@ export async function boardReadScopeWhere(user: AuthzUser) {
     user.role === "regional_director" ||
     user.role === "area_director" ||
     user.role === "channel_partner" ||
+    user.role === "email_partner" ||
     user.role === "manager" ||
     user.role === "user"
   ) {
@@ -840,6 +841,7 @@ export async function boardWriteScopeWhere(user: AuthzUser) {
     user.role === "regional_director" ||
     user.role === "area_director" ||
     user.role === "channel_partner" ||
+    user.role === "email_partner" ||
     user.role === "manager" ||
     user.role === "user"
   ) {

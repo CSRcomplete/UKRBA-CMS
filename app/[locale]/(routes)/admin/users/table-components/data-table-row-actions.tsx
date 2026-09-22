@@ -247,6 +247,9 @@ export function DataTableRowActions<TData>({
               <DropdownMenuItem onClick={() => onSetRole("channel_partner")}>
                 Channel Partner
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSetRole("email_partner")}>
+                Email Partner
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSetRole("manager")}>
                 Manager
               </DropdownMenuItem>

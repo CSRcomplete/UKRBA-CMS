@@ -7,7 +7,8 @@ export type AppRole =
   | "operations_director"
   | "regional_director"
   | "area_director"
-  | "channel_partner";
+  | "channel_partner"
+  | "email_partner";
 
 export const APP_ROLES: readonly AppRole[] = [
   "user",
@@ -19,6 +20,7 @@ export const APP_ROLES: readonly AppRole[] = [
   "regional_director",
   "area_director",
   "channel_partner",
+  "email_partner",
 ] as const;
 
 const APP_ROLE_SET = new Set<string>(APP_ROLES);
@@ -40,6 +42,7 @@ const LEGACY_MAP: Record<string, AppRole> = {
   regional_director: "regional_director",
   area_director: "area_director",
   channel_partner: "channel_partner",
+  email_partner: "email_partner",
 };
 
 export function mapLegacyRole(value: unknown): AppRole {

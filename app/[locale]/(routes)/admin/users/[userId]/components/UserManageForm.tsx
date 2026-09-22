@@ -754,6 +754,7 @@ export default function UserManageForm({
                   <SelectItem value="regional_director">Regional Director</SelectItem>
                   <SelectItem value="area_director">Area Director</SelectItem>
                   <SelectItem value="channel_partner">Channel Partner</SelectItem>
+                  <SelectItem value="email_partner">Email Partner</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                 </SelectContent>

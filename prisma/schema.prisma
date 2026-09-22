@@ -1083,6 +1083,7 @@ enum AppRole {
   regional_director
   area_director
   channel_partner
+  email_partner
 }
 
 // Membership tier sold on a closed deal — kept separate from the lead's
