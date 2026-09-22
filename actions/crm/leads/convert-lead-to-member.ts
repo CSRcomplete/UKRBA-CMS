@@ -124,6 +124,7 @@ export async function convertLeadToMember({ leadId, planName, salesStatus, chang
           telephone: lead.phone || "N/A",
           email: lead.email || "N/A",
           assigned_channel_partner_id: lead.assigned_partner_id || lead.assigned_to || null,
+          assigned_email_partner_id: lead.assigned_email_partner_id || null,
           assigned_area_director_id: lead.assigned_area_director_id || null,
           assigned_regional_director_id: lead.assigned_regional_director_id || null,
           lifecycle_status: "Membership",

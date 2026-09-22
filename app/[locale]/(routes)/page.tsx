@@ -372,6 +372,48 @@ const DashboardPage = async () => {
     });
   }
 
+  // 7. Email Partner Leads & Commissions
+  let epLeadsList: any[] = [];
+  let epCommissions: any[] = [];
+  if (userRole === "email_partner") {
+    const leadScope = await leadReadScopeWhere({
+      id: userId,
+      role: userRole,
+      region_id: currentUser?.region_id,
+      area_id: currentUser?.area_id,
+    });
+    epLeadsList = await prismadb.crm_Leads.findMany({
+      where: leadScope,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        company: true,
+        postcode: true,
+        sales_status: true,
+        lead_status: { select: { name: true } },
+        assigned_to_user: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    const allocations = await prismadb.crm_Payment_Allocations.findMany({
+      where: { partner_user_id: userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    epCommissions = allocations.map((a) => ({
+      id: a.id,
+      customer_name: a.customer_name,
+      sale_amount: Number(a.sale_amount || 0),
+      partner_percentage: Number(a.partner_percentage || 0),
+      partner_amount: Number(a.partner_amount || 0),
+      status: a.status,
+      sale_date: a.sale_date,
+    }));
+  }
+
   return (
     <Container
       title={dict("containerTitle")}
@@ -710,7 +752,7 @@ const DashboardPage = async () => {
       )}
 
       {/* Standard Welcome Message for roles without custom tables */}
-      {!["ceo", "coo", "admin", "operations_director", "regional_director", "area_director", "channel_partner"].includes(userRole) && (
+      {!["ceo", "coo", "admin", "operations_director", "regional_director", "area_director", "channel_partner", "email_partner"].includes(userRole) && (
         <div className="rounded-md border bg-card p-6 shadow-sm">
           <p className="text-muted-foreground text-center">
             Welcome to UKRBA CRM. Please select a module from the sidebar navigation to get started.
@@ -1340,6 +1382,105 @@ const DashboardPage = async () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Partner Dashboard */}
+      {userRole === "email_partner" && (
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">Leads From Your Link</h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Lead Name</th>
+                        <th className="pb-3 font-medium">Company</th>
+                        <th className="pb-3 font-medium">Postcode</th>
+                        <th className="pb-3 font-medium">Assigned Director</th>
+                        <th className="pb-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {epLeadsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-muted-foreground">No leads from your link yet.</td>
+                        </tr>
+                      ) : (
+                        epLeadsList.map((lead) => (
+                          <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">
+                              <Link href={`/crm/leads/${lead.id}`} className="font-medium text-primary hover:underline">
+                                {lead.firstName} {lead.lastName}
+                              </Link>
+                            </td>
+                            <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
+                            <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
+                            <td className="py-3 text-muted-foreground">{lead.assigned_to_user?.name || "Unassigned"}</td>
+                            <td className="py-3">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                                {lead.lead_status?.name || "New"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight">My Commissions</h2>
+            <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-muted">
+                        <th className="pb-3 font-medium">Customer</th>
+                        <th className="pb-3 font-medium">Sale Amount</th>
+                        <th className="pb-3 font-medium">Your Share</th>
+                        <th className="pb-3 font-medium">Commission</th>
+                        <th className="pb-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted">
+                      {epCommissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-muted-foreground">No closed deals yet.</td>
+                        </tr>
+                      ) : (
+                        epCommissions.map((c) => (
+                          <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="py-3 font-medium">{c.customer_name}</td>
+                            <td className="py-3 font-mono">£{c.sale_amount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</td>
+                            <td className="py-3 font-mono">{c.partner_percentage}%</td>
+                            <td className="py-3 font-mono font-semibold text-purple-600 dark:text-purple-400">
+                              £{c.partner_amount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                c.status === "approved"
+                                  ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400"
+                                  : "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400"
+                              }`}>
+                                {c.status === "approved" ? "Approved" : "Pending"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

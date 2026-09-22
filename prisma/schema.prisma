@@ -98,6 +98,7 @@ model crm_Leads {
   assigned_to_user              Users?                @relation("LeadAssignedTo", fields: [assigned_to], references: [id])
   postcode                      String?
   assigned_partner_id           String?               @db.Uuid
+  assigned_email_partner_id     String?               @db.Uuid
   assigned_area_director_id     String?               @db.Uuid
   assigned_regional_director_id String?               @db.Uuid
   accountsIDs                   String?               @db.Uuid
@@ -120,6 +121,7 @@ model crm_Leads {
   @@index([createdAt])
   @@index([deletedAt])
   @@index([assigned_partner_id])
+  @@index([assigned_email_partner_id])
   @@index([assigned_area_director_id])
   @@index([assigned_regional_director_id])
 }
@@ -2197,6 +2199,7 @@ model crm_Members {
   telephone                     String
   email                         String
   assigned_channel_partner_id   String? @db.Uuid
+  assigned_email_partner_id     String? @db.Uuid
   assigned_area_director_id     String? @db.Uuid
   assigned_regional_director_id String? @db.Uuid
   lifecycle_status              String  @default("Membership")
@@ -2265,6 +2268,7 @@ model crm_Payment_Allocations {
   team_allocations Json     @default("[]")
 
   partner_name       String?
+  partner_user_id    String?  @db.Uuid
   partner_percentage Decimal? @default(0) @db.Decimal(5, 2)
   partner_amount     Decimal? @default(0) @db.Decimal(14, 2)
 

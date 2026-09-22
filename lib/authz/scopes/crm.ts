@@ -450,6 +450,7 @@ export async function leadReadScopeWhere(user: AuthzUser) {
           },
           OR: [
             { assigned_partner_id: user.id },
+            { assigned_email_partner_id: user.id },
             { assigned_to: user.id },
             { createdBy: user.id },
           ],

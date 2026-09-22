@@ -224,6 +224,7 @@ export async function POST(req: Request) {
     // 2. Exception & Postcode Assignment Logic
     let currentOwnerId: string | null = null;
     let partnerId: string | null = null;
+    let emailPartnerId: string | null = null;
     let areaDirectorId: string | null = null;
     let regionalDirectorId: string | null = null;
 
@@ -261,7 +262,16 @@ export async function POST(req: Request) {
     // to normal postcode-area routing like any other lead — lead_source ("Meta Ads")
     // is what records where they actually came from.
     const isMetaAdsLead = typeof referrerRdId === "string" && referrerRdId.toLowerCase() === "meta";
-    const isFivePoundLead = (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") && !isMetaAdsLead;
+    // An email_partner's own referral link works the same way as a Meta ads link:
+    // there's no individual referring RD, so the lead still falls through to normal
+    // postcode-area routing — the email partner is recorded separately as the
+    // originating partner via assigned_email_partner_id rather than as the owner.
+    const isEmailPartnerReferral = referredRdUser?.role === "email_partner";
+    const isFivePoundLead = (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") && !isMetaAdsLead && !isEmailPartnerReferral;
+
+    if (isEmailPartnerReferral && referredRdUser) {
+      emailPartnerId = referredRdUser.id;
+    }
 
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
@@ -288,7 +298,7 @@ export async function POST(req: Request) {
       currentOwnerId = campaignUser.id;
       regionalDirectorId = null;
       areaDirectorId = null;
-    } else if (referredRdUser) {
+    } else if (referredRdUser && !isEmailPartnerReferral) {
       currentOwnerId = referredRdUser.id;
       regionalDirectorId = referredRdUser.id;
     } else if (isFivePoundLead) {
@@ -428,8 +438,9 @@ export async function POST(req: Request) {
               ? `${existingLead.description} | ${lead_type} completed via ${lead_source}`
               : `${lead_type} completed via ${lead_source}`,
             // Deliberately untouched: assigned_to, assigned_partner_id,
-            // assigned_area_director_id, assigned_regional_director_id, refered_by,
-            // lead_type_id — this must never reassign the lead.
+            // assigned_email_partner_id, assigned_area_director_id,
+            // assigned_regional_director_id, refered_by, lead_type_id — this must
+            // never reassign the lead.
           }
         });
 
@@ -466,6 +477,7 @@ export async function POST(req: Request) {
           lead_source_id: lead_source_id || existingLead.lead_source_id,
           assigned_to: currentOwnerId || existingLead.assigned_to,
           assigned_partner_id: partnerId || existingLead.assigned_partner_id,
+          assigned_email_partner_id: emailPartnerId || existingLead.assigned_email_partner_id,
           assigned_area_director_id: areaDirectorId || existingLead.assigned_area_director_id,
           assigned_regional_director_id: regionalDirectorId || existingLead.assigned_regional_director_id,
           refered_by: referrerRdId || existingLead.refered_by,
@@ -507,6 +519,7 @@ export async function POST(req: Request) {
         lead_source_id,
         assigned_to: currentOwnerId,
         assigned_partner_id: partnerId,
+        assigned_email_partner_id: emailPartnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
         refered_by: referrerRdId || null,

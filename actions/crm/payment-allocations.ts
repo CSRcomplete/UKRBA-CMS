@@ -39,6 +39,36 @@ export async function getContactPaymentAllocation(contactId: string) {
 
     const serializedAlloc = allocation ? serializeDecimals(allocation) : null;
 
+    // If this contact came from a lead an email partner originated, suggest
+    // that partner as the External Partner allocation (still editable —
+    // this only pre-fills, it never auto-saves or auto-pays out).
+    let suggestedPartner: { id: string; name: string } | null = null;
+    if (!allocation) {
+      const contact = await prismadb.crm_Contacts.findUnique({
+        where: { id: contactId },
+        select: { email: true },
+      });
+      if (contact?.email) {
+        const lead = await prismadb.crm_Leads.findFirst({
+          where: {
+            email: { equals: contact.email, mode: "insensitive" },
+            assigned_email_partner_id: { not: null },
+          },
+          orderBy: { updatedAt: "desc" },
+          select: { assigned_email_partner_id: true },
+        });
+        if (lead?.assigned_email_partner_id) {
+          const partner = await prismadb.users.findUnique({
+            where: { id: lead.assigned_email_partner_id },
+            select: { id: true, name: true, email: true },
+          });
+          if (partner) {
+            suggestedPartner = { id: partner.id, name: partner.name || partner.email };
+          }
+        }
+      }
+    }
+
     return {
       allocation: serializedAlloc
         ? {
@@ -58,6 +88,7 @@ export async function getContactPaymentAllocation(contactId: string) {
         role: u.role,
       })),
       currentUserRole: session.user.role || "user",
+      suggestedPartner,
     };
   } catch (error: any) {
     console.error("[GET_PAYMENT_ALLOCATION_ERROR]", error);
@@ -72,6 +103,7 @@ export async function saveContactPaymentAllocation(data: {
   teamAllocations: TeamAllocationItem[];
   partnerName?: string;
   partnerPercentage?: number;
+  partnerUserId?: string | null;
 }) {
   const session = await getSession();
   if (!session?.user?.id) {
@@ -83,7 +115,7 @@ export async function saveContactPaymentAllocation(data: {
     return { error: "Security Restriction: Only CEO and Admin can modify payment allocations." };
   }
 
-  const { contactId, customerName, saleAmount, teamAllocations, partnerName, partnerPercentage = 0 } = data;
+  const { contactId, customerName, saleAmount, teamAllocations, partnerName, partnerPercentage = 0, partnerUserId = null } = data;
 
   if (!contactId) return { error: "Contact ID is required" };
   if (saleAmount < 0) return { error: "Sale amount must be a positive number" };
@@ -126,6 +158,7 @@ export async function saveContactPaymentAllocation(data: {
           sale_amount: saleAmount,
           team_allocations: validTeamAllocations,
           partner_name: partnerName ? partnerName.trim() : null,
+          partner_user_id: partnerUserId || null,
           partner_percentage: partnerP,
           partner_amount: partnerAmt,
           total_percentage: totalP,
@@ -141,6 +174,7 @@ export async function saveContactPaymentAllocation(data: {
           sale_amount: saleAmount,
           team_allocations: validTeamAllocations,
           partner_name: partnerName ? partnerName.trim() : null,
+          partner_user_id: partnerUserId || null,
           partner_percentage: partnerP,
           partner_amount: partnerAmt,
           total_percentage: totalP,

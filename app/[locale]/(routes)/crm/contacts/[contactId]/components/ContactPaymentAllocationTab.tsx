@@ -56,6 +56,7 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
   // 1 External Partner slot
   const [partnerName, setPartnerName] = useState<string>("");
   const [partnerPercentage, setPartnerPercentage] = useState<number>(0);
+  const [partnerUserId, setPartnerUserId] = useState<string | null>(null);
 
   const isCeoOrAdmin =
     currentUserRole.toLowerCase() === "admin" || currentUserRole.toLowerCase() === "ceo" || currentUserRole.toLowerCase() === "coo";
@@ -87,6 +88,7 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
         setStatus(res.allocation.status || "pending");
         setPartnerName(res.allocation.partner_name || "");
         setPartnerPercentage(res.allocation.partner_percentage || 0);
+        setPartnerUserId(res.allocation.partner_user_id || null);
 
         // Load existing team allocations into the 6 slots
         const loadedTeam = res.allocation.team_allocations || [];
@@ -102,6 +104,13 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
           return { userId: "none", userName: "", percentage: 0, amount: 0 };
         });
         setTeamAllocations(slots);
+      } else if (res.suggestedPartner) {
+        // No allocation saved yet — pre-fill the external partner slot from
+        // the lead's originating email partner. Still fully editable/
+        // overridable before the admin saves.
+        setPartnerName(res.suggestedPartner.name);
+        setPartnerPercentage(15);
+        setPartnerUserId(res.suggestedPartner.id);
       }
     } catch (err: any) {
       console.error(err);
@@ -170,6 +179,7 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
         teamAllocations: calcTeamAllocations,
         partnerName,
         partnerPercentage,
+        partnerUserId,
       });
 
       if (res.error) {
@@ -392,9 +402,20 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
                   disabled={!isCeoOrAdmin}
                   placeholder="e.g., Apex White Label Partner, Strategic Affiliate Ltd"
                   value={partnerName}
-                  onChange={(e) => setPartnerName(e.target.value)}
+                  onChange={(e) => {
+                    setPartnerName(e.target.value);
+                    // Editing the name away from the suggested/loaded partner
+                    // means it no longer necessarily refers to that partner
+                    // account — don't misattribute the commission record.
+                    setPartnerUserId(null);
+                  }}
                   className="text-xs bg-white dark:bg-slate-950"
                 />
+                {partnerUserId && (
+                  <span className="text-[11px] text-purple-600 dark:text-purple-400 shrink-0">
+                    Linked to partner account
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-4">
