@@ -58,6 +58,7 @@ interface UserManageFormProps {
     role: AppRole;
     parentId: string | null;
     postcode_routing_assignments: { postcode_routing_id: string }[];
+    postcode_routing_regional_assignments: { postcode_routing_id: string }[];
     children: { id: string }[];
   };
   postcodes: nextcrm_postcode_routing[];
@@ -112,9 +113,14 @@ export default function UserManageForm({
     password: "",
   });
 
-  // Selected postcode routing area IDs
+  // Selected postcode routing area IDs. Regional Directors are assigned
+  // postcodes directly (PostcodeRoutingToRegionalDirectors); Area Directors
+  // and other roles use the separate PostcodeRoutingToAreaDirectors table.
   const [selectedPostcodeIds, setSelectedPostcodeIds] = useState<string[]>(
-    user.postcode_routing_assignments.map((a) => a.postcode_routing_id)
+    (user.role === "regional_director"
+      ? user.postcode_routing_regional_assignments
+      : user.postcode_routing_assignments
+    ).map((a) => a.postcode_routing_id)
   );
 
   // Selected Channel Partner IDs (whose parentId is this user)

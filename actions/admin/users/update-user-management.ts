@@ -35,20 +35,34 @@ export const updateUserManagement = async (
         },
       });
 
-      // 2. Sync postcode routing assignments (PostcodeRoutingToAreaDirectors)
-      // Delete existing assignments for this user
-      await tx.postcodeRoutingToAreaDirectors.deleteMany({
-        where: { area_director_id: userId },
-      });
-
-      // Insert new assignments if any
-      if (data.postcodeAreaIds && data.postcodeAreaIds.length > 0) {
-        await tx.postcodeRoutingToAreaDirectors.createMany({
-          data: data.postcodeAreaIds.map((pcId) => ({
-            postcode_routing_id: pcId,
-            area_director_id: userId,
-          })),
+      // 2. Sync postcode routing assignments. Regional Directors are routed
+      // to directly (PostcodeRoutingToRegionalDirectors); Area Directors
+      // (and any other role this section applies to) use the separate
+      // PostcodeRoutingToAreaDirectors table.
+      if (data.role === "regional_director") {
+        await tx.postcodeRoutingToRegionalDirectors.deleteMany({
+          where: { regional_director_id: userId },
         });
+        if (data.postcodeAreaIds && data.postcodeAreaIds.length > 0) {
+          await tx.postcodeRoutingToRegionalDirectors.createMany({
+            data: data.postcodeAreaIds.map((pcId) => ({
+              postcode_routing_id: pcId,
+              regional_director_id: userId,
+            })),
+          });
+        }
+      } else {
+        await tx.postcodeRoutingToAreaDirectors.deleteMany({
+          where: { area_director_id: userId },
+        });
+        if (data.postcodeAreaIds && data.postcodeAreaIds.length > 0) {
+          await tx.postcodeRoutingToAreaDirectors.createMany({
+            data: data.postcodeAreaIds.map((pcId) => ({
+              postcode_routing_id: pcId,
+              area_director_id: userId,
+            })),
+          });
+        }
       }
 
       // 3. Sync channel partner assignments

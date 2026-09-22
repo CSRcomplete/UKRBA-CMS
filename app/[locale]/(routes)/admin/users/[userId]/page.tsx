@@ -31,6 +31,11 @@ export default async function UserPage(props: UserPageProps) {
           postcode_routing_id: true,
         },
       },
+      postcode_routing_regional_assignments: {
+        select: {
+          postcode_routing_id: true,
+        },
+      },
       children: {
         select: {
           id: true,
