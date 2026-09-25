@@ -201,6 +201,16 @@ export async function POST(req: Request) {
       try {
         const owner = await resolveReferralOwner(referralSlug);
         if (owner) {
+          let sourceId: string | null = null;
+          if (owner.sourceName) {
+            const sourceRecord = await prismadb.crm_Lead_Sources.upsert({
+              where: { name: owner.sourceName },
+              create: { name: owner.sourceName },
+              update: {},
+            });
+            sourceId = sourceRecord.id;
+          }
+
           await Promise.all([
             prismadb.crm_Members.update({
               where: { id: result.member.id },
@@ -214,7 +224,10 @@ export async function POST(req: Request) {
             // owner both read from these, independently of crm_Members.
             prismadb.crm_Leads.update({
               where: { id: matchingLead.id },
-              data: referralOwnerToLeadFields(owner),
+              data: {
+                ...referralOwnerToLeadFields(owner),
+                ...(sourceId ? { lead_source_id: sourceId } : {}),
+              },
             }),
             result.contact?.id
               ? prismadb.crm_Contacts.update({

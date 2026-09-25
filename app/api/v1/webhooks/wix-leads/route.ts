@@ -1,6 +1,7 @@
 import { prismadb } from "@/lib/prisma";
 import { logOwnershipChange } from "@/lib/ownership";
 import { extractPostcodeArea } from "@/lib/postcode";
+import { SLUG_ALIASES } from "@/lib/referral-attribution";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -240,7 +241,16 @@ export async function POST(req: Request) {
     });
     const opsDirectorId = opsDirector?.id || null;
 
-    const referrerRdId = body.referred_by_rd || body.regional_director_id;
+    let referrerRdId = body.referred_by_rd || body.regional_director_id;
+    // Fixed campaign slugs (e.g. a co-branded partner link) always attribute
+    // to a specific staff member's real email rather than being matched as-is.
+    if (typeof referrerRdId === "string") {
+      const alias = SLUG_ALIASES[referrerRdId.trim().toLowerCase()];
+      if (alias) {
+        referrerRdId = alias.email;
+        lead_source = alias.sourceName;
+      }
+    }
     let referredRdUser = null;
     if (referrerRdId && referrerRdId !== "direct") {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(referrerRdId);

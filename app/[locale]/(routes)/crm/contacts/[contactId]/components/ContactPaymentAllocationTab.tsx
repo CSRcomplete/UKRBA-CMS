@@ -104,13 +104,30 @@ export function ContactPaymentAllocationTab({ contactId, contactName }: ContactP
           return { userId: "none", userName: "", percentage: 0, amount: 0 };
         });
         setTeamAllocations(slots);
-      } else if (res.suggestedPartner) {
-        // No allocation saved yet — pre-fill the external partner slot from
-        // the lead's originating email partner. Still fully editable/
-        // overridable before the admin saves.
-        setPartnerName(res.suggestedPartner.name);
-        setPartnerPercentage(15);
-        setPartnerUserId(res.suggestedPartner.id);
+      } else {
+        if (res.suggestedPartner) {
+          // No allocation saved yet — pre-fill the external partner slot from
+          // the lead's originating email partner. Still fully editable/
+          // overridable before the admin saves.
+          setPartnerName(res.suggestedPartner.name);
+          setPartnerPercentage(15);
+          setPartnerUserId(res.suggestedPartner.id);
+        }
+        if (res.suggestedTeamMembers && res.suggestedTeamMembers.length > 0) {
+          // Pre-fill the lead's assigned RD/AD into empty team slots, with no
+          // percentage — admin decides and fills that in themselves.
+          setTeamAllocations((prev) => {
+            const updated = [...prev];
+            let slot = 0;
+            for (const member of res.suggestedTeamMembers) {
+              while (slot < updated.length && updated[slot].userId !== "none") slot++;
+              if (slot >= updated.length) break;
+              updated[slot] = { userId: member.id, userName: member.name, percentage: 0, amount: 0 };
+              slot++;
+            }
+            return updated;
+          });
+        }
       }
     } catch (err: any) {
       console.error(err);

@@ -12,6 +12,14 @@ export type ReferralOwner = {
   userId: string;
   role: string;
   label: string;
+  sourceName?: string;
+};
+
+// Fixed campaign slugs that always attribute to a specific staff member
+// (rather than matching their own email prefix) and force a specific lead
+// source label for tracking — e.g. a co-branded partner campaign link.
+export const SLUG_ALIASES: Record<string, { email: string; sourceName: string }> = {
+  wlchambers: { email: "m.jeffery@ukrba.org", sourceName: "WL Chambers" },
 };
 
 /**
@@ -30,18 +38,26 @@ export async function resolveReferralOwner(rawSlug: string | null | undefined): 
   const slug = rawSlug.trim().toLowerCase();
   if (!slug) return null;
 
+  const alias = SLUG_ALIASES[slug];
+  const lookupEmail = alias?.email || slug;
+
   const staffUser = await prismadb.users.findFirst({
     where: {
       OR: [
-        { email: { equals: slug, mode: "insensitive" } },
-        { email: { startsWith: `${slug}@`, mode: "insensitive" } },
+        { email: { equals: lookupEmail, mode: "insensitive" } },
+        { email: { startsWith: `${lookupEmail}@`, mode: "insensitive" } },
       ],
     },
     select: { id: true, role: true, name: true },
   });
 
   if (staffUser) {
-    return { userId: staffUser.id, role: staffUser.role, label: staffUser.name || slug };
+    return {
+      userId: staffUser.id,
+      role: staffUser.role,
+      label: staffUser.name || slug,
+      sourceName: alias?.sourceName,
+    };
   }
 
   // Marketing channel — find or create its synthetic tracking user

@@ -1172,6 +1172,11 @@ const DashboardPage = async () => {
       {/* Regional Director Dashboard */}
       {userRole === "regional_director" && (
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <Link href="/accounts-payments" className="text-sm font-semibold text-primary hover:underline">
+              View My Sales & Payments →
+            </Link>
+          </div>
           <div className="space-y-4">
             <h2 className="text-xl font-semibold tracking-tight">Area Directors & Channel Partners in Your Region</h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">
@@ -1344,6 +1349,11 @@ const DashboardPage = async () => {
       {/* Channel Partner Dashboard */}
       {userRole === "channel_partner" && (
         <div className="space-y-4">
+          <div className="flex justify-end">
+            <Link href="/accounts-payments" className="text-sm font-semibold text-primary hover:underline">
+              View My Sales & Payments →
+            </Link>
+          </div>
           <h2 className="text-xl font-semibold tracking-tight">Leads Assigned to You</h2>
           <div className="rounded-md border bg-card text-card-foreground shadow-sm">
             <div className="p-6">
@@ -1391,6 +1401,11 @@ const DashboardPage = async () => {
       {/* Email Partner Dashboard */}
       {userRole === "email_partner" && (
         <div className="space-y-8">
+          <div className="flex justify-end">
+            <Link href="/accounts-payments" className="text-sm font-semibold text-primary hover:underline">
+              View My Sales & Payments →
+            </Link>
+          </div>
           <div className="space-y-4">
             <h2 className="text-xl font-semibold tracking-tight">Leads From Your Link</h2>
             <div className="rounded-md border bg-card text-card-foreground shadow-sm">

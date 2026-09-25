@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-server";
 import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import sendEmail from "@/lib/sendmail";
+import { requireAuthenticated, contactReadScopeWhere, type AuthzUser } from "@/lib/authz";
 
 export type TeamAllocationItem = {
   userId: string;
@@ -12,7 +13,84 @@ export type TeamAllocationItem = {
   amount: number;
 };
 
-import { serializeDecimals } from "@/lib/serialize-decimals";
+import { serializeDecimals, serializeDecimalsList } from "@/lib/serialize-decimals";
+
+const PRIVILEGED_ROLES = ["admin", "ceo", "coo", "operations_director", "manager"];
+
+/**
+ * Payment allocations a given user is allowed to see. Privileged roles see
+ * everything (today's behavior). Everyone else sees only allocations tied to
+ * them: their own contacts (via contactReadScopeWhere, which already covers
+ * an RD's/AD's hierarchy), their own external-partner rows, or allocations
+ * for a lead assigned to them as RD/AD/email partner (matched via the same
+ * email heuristic getContactPaymentAllocation's suggestions use — there's no
+ * direct FK from crm_Payment_Allocations to crm_Leads).
+ */
+export async function getScopedPaymentAllocations(user: AuthzUser) {
+  if (PRIVILEGED_ROLES.includes(user.role)) {
+    return prismadb.crm_Payment_Allocations.findMany({ orderBy: { createdAt: "desc" } });
+  }
+
+  const scopedContacts = await prismadb.crm_Contacts.findMany({
+    where: await contactReadScopeWhere(user),
+    select: { id: true },
+  });
+  const contactIdsFromScope = scopedContacts.map((c) => c.id);
+
+  const leadsAssignedToMe = await prismadb.crm_Leads.findMany({
+    where: {
+      OR: [
+        { assigned_email_partner_id: user.id },
+        { assigned_regional_director_id: user.id },
+        { assigned_area_director_id: user.id },
+      ],
+    },
+    select: { email: true },
+  });
+  const emailsAssignedToMe = leadsAssignedToMe.map((l) => l.email).filter((e): e is string => !!e);
+
+  const contactsFromLeadEmails = emailsAssignedToMe.length
+    ? await prismadb.crm_Contacts.findMany({
+        where: { email: { in: emailsAssignedToMe, mode: "insensitive" } },
+        select: { id: true },
+      })
+    : [];
+
+  const contactIds = Array.from(
+    new Set([...contactIdsFromScope, ...contactsFromLeadEmails.map((c) => c.id)])
+  );
+
+  const directMatches = await prismadb.crm_Payment_Allocations.findMany({
+    where: {
+      OR: [
+        ...(contactIds.length ? [{ contact_id: { in: contactIds } }] : []),
+        { partner_user_id: user.id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // A user can also be manually added to an internal team-allocation slot by
+  // an admin without being the lead's RD/AD/email partner — team_allocations
+  // is a JSON array, so this can't be expressed as a plain Prisma `where`.
+  // This table is sale-ledger sized (not lead-volume sized), so filtering a
+  // bounded fetch in application code is an acceptable, pragmatic tradeoff.
+  const allAllocations = await prismadb.crm_Payment_Allocations.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+  });
+  const teamMatches = allAllocations.filter((a) =>
+    Array.isArray(a.team_allocations) &&
+    (a.team_allocations as unknown as TeamAllocationItem[]).some((t) => t?.userId === user.id)
+  );
+
+  const byId = new Map(
+    [...directMatches, ...teamMatches].map((a) => [a.id, a])
+  );
+  return Array.from(byId.values()).sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+  );
+}
 
 export async function getContactPaymentAllocation(contactId: string) {
   const session = await getSession();
@@ -40,9 +118,12 @@ export async function getContactPaymentAllocation(contactId: string) {
     const serializedAlloc = allocation ? serializeDecimals(allocation) : null;
 
     // If this contact came from a lead an email partner originated, suggest
-    // that partner as the External Partner allocation (still editable —
-    // this only pre-fills, it never auto-saves or auto-pays out).
+    // that partner as the External Partner allocation. If it came from a
+    // lead assigned to a Regional/Area Director, suggest them as an
+    // (unfilled — no percentage) internal team slot. Both are still fully
+    // editable — this only pre-fills, it never auto-saves or auto-pays out.
     let suggestedPartner: { id: string; name: string } | null = null;
+    let suggestedTeamMembers: { id: string; name: string }[] = [];
     if (!allocation) {
       const contact = await prismadb.crm_Contacts.findUnique({
         where: { id: contactId },
@@ -50,20 +131,35 @@ export async function getContactPaymentAllocation(contactId: string) {
       });
       if (contact?.email) {
         const lead = await prismadb.crm_Leads.findFirst({
-          where: {
-            email: { equals: contact.email, mode: "insensitive" },
-            assigned_email_partner_id: { not: null },
-          },
+          where: { email: { equals: contact.email, mode: "insensitive" } },
           orderBy: { updatedAt: "desc" },
-          select: { assigned_email_partner_id: true },
+          select: {
+            assigned_email_partner_id: true,
+            assigned_regional_director_id: true,
+            assigned_area_director_id: true,
+          },
         });
-        if (lead?.assigned_email_partner_id) {
-          const partner = await prismadb.users.findUnique({
-            where: { id: lead.assigned_email_partner_id },
+
+        const suggestedIds = [
+          lead?.assigned_email_partner_id,
+          lead?.assigned_regional_director_id,
+          lead?.assigned_area_director_id,
+        ].filter((id): id is string => !!id);
+
+        if (suggestedIds.length > 0) {
+          const suggestedUsers = await prismadb.users.findMany({
+            where: { id: { in: suggestedIds } },
             select: { id: true, name: true, email: true },
           });
-          if (partner) {
-            suggestedPartner = { id: partner.id, name: partner.name || partner.email };
+          const byId = new Map(suggestedUsers.map((u) => [u.id, u.name || u.email]));
+
+          if (lead?.assigned_email_partner_id && byId.has(lead.assigned_email_partner_id)) {
+            suggestedPartner = { id: lead.assigned_email_partner_id, name: byId.get(lead.assigned_email_partner_id)! };
+          }
+          for (const id of [lead?.assigned_regional_director_id, lead?.assigned_area_director_id]) {
+            if (id && byId.has(id)) {
+              suggestedTeamMembers.push({ id, name: byId.get(id)! });
+            }
           }
         }
       }
@@ -89,6 +185,7 @@ export async function getContactPaymentAllocation(contactId: string) {
       })),
       currentUserRole: session.user.role || "user",
       suggestedPartner,
+      suggestedTeamMembers,
     };
   } catch (error: any) {
     console.error("[GET_PAYMENT_ALLOCATION_ERROR]", error);

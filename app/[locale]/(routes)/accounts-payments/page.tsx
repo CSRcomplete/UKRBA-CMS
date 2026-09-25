@@ -4,20 +4,16 @@ import { prismadb } from "@/lib/prisma";
 import Container from "../components/ui/Container";
 import { serializeDecimalsList } from "@/lib/serialize-decimals";
 import { AccountsPaymentAllocationsCard } from "../components/dasboard/AccountsPaymentAllocationsCard";
+import { requireAuthenticated } from "@/lib/authz";
+import { getScopedPaymentAllocations } from "@/actions/crm/payment-allocations";
 
 export default async function AccountsPaymentsPage() {
   const session = await getSession();
 
   if (!session) redirect("/sign-in");
 
-  const userId = session.user?.id as string;
-
-  const currentUser = await prismadb.users.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-
-  const userRole = currentUser?.role || "user";
+  const authzUser = await requireAuthenticated();
+  const userRole = authzUser.role || "user";
 
   let paymentAllocations: any[] = [];
   let totalAllocatedSum = 0;
@@ -25,12 +21,10 @@ export default async function AccountsPaymentsPage() {
   let pendingCount = 0;
 
   try {
-    const rawPaymentAllocations = await prismadb.crm_Payment_Allocations.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    });
+    const scoped = await getScopedPaymentAllocations(authzUser);
+    const isPrivileged = ["admin", "ceo", "coo", "operations_director", "manager"].includes(userRole);
 
-    paymentAllocations = serializeDecimalsList(rawPaymentAllocations).map((a: any) => ({
+    paymentAllocations = serializeDecimalsList(isPrivileged ? scoped.slice(0, 5) : scoped).map((a: any) => ({
       ...a,
       sale_amount: Number(a.sale_amount || 0),
       total_percentage: Number(a.total_percentage || 0),
@@ -39,20 +33,9 @@ export default async function AccountsPaymentsPage() {
       team_allocations: (a.team_allocations as any[]) || [],
     }));
 
-    const totalAllocatedSumRaw = await prismadb.crm_Payment_Allocations.aggregate({
-      _sum: {
-        total_allocated: true,
-      },
-    });
-    totalAllocatedSum = Number(totalAllocatedSumRaw._sum?.total_allocated || 0);
-
-    approvedCount = await prismadb.crm_Payment_Allocations.count({
-      where: { status: "approved" },
-    });
-
-    pendingCount = await prismadb.crm_Payment_Allocations.count({
-      where: { status: "pending" },
-    });
+    totalAllocatedSum = scoped.reduce((sum, a) => sum + Number(a.total_allocated || 0), 0);
+    approvedCount = scoped.filter((a) => a.status === "approved").length;
+    pendingCount = scoped.filter((a) => a.status === "pending").length;
   } catch (paymentErr) {
     console.error("[PAYMENT_ALLOCATION_PAGE_ERROR]", paymentErr);
   }

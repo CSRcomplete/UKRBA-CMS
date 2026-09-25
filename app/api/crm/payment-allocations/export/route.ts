@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { prismadb } from "@/lib/prisma";
+import { requireAuthenticated } from "@/lib/authz";
+import { getScopedPaymentAllocations } from "@/actions/crm/payment-allocations";
+
+const PRIVILEGED_ROLES = ["admin", "ceo", "coo", "operations_director", "manager"];
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -13,16 +17,27 @@ export async function GET(request: Request) {
   const includeAll = searchParams.get("status") === "all";
 
   try {
+    const authzUser = await requireAuthenticated();
+    const isPrivileged = PRIVILEGED_ROLES.includes(authzUser.role);
+
     // Accounts should only be paying out approved allocations
     const whereCondition: any = includeAll ? {} : { status: "approved" };
     if (contactId) {
       whereCondition.contact_id = contactId;
     }
 
-    const allocations = await prismadb.crm_Payment_Allocations.findMany({
+    let allocations = await prismadb.crm_Payment_Allocations.findMany({
       where: whereCondition,
       orderBy: { createdAt: "desc" },
     });
+
+    // Non-privileged roles can only export their own allocations (own
+    // contacts/leads, or their own external-partner/team rows) — never the
+    // full accounts ledger.
+    if (!isPrivileged) {
+      const scopedIds = new Set((await getScopedPaymentAllocations(authzUser)).map((a) => a.id));
+      allocations = allocations.filter((a) => scopedIds.has(a.id));
+    }
 
     const userIds = allocations
       .map((a) => a.approved_by)
