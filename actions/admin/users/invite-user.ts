@@ -17,7 +17,7 @@ export const inviteUser = async (data: {
 }) => {
   let actor;
   try {
-    actor = await requireRole(["admin"]);
+    actor = await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { error: "Forbidden" };

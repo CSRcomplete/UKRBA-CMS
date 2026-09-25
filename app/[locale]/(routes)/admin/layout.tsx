@@ -4,7 +4,7 @@ import { AdminSidebarNav } from "./_components/AdminSidebarNav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   try {
-    await requireRole(["admin"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) redirect("/sign-in");
     if (e instanceof AuthorizationError) redirect("/");

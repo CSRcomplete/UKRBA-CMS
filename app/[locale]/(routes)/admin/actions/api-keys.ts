@@ -11,7 +11,7 @@ import {
 
 async function ensureAdmin(): Promise<void> {
   try {
-    await requireRole(["admin"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) throw new Error("Unauthorized");
     if (e instanceof AuthorizationError) throw new Error("Forbidden");
