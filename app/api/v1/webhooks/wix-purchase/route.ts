@@ -1,6 +1,7 @@
 import { prismadb } from "@/lib/prisma";
 import { convertLeadToMember } from "@/actions/crm/leads/convert-lead-to-member";
 import { resolveReferralOwner, referralOwnerToMemberFields, referralOwnerToLeadFields } from "@/lib/referral-attribution";
+import { routeByPostcode } from "@/lib/postcode-routing";
 import { SalesStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -154,6 +155,20 @@ export async function POST(req: Request) {
         });
       }
 
+      // Route by postcode the same way the Wix leads webhook does, so a
+      // direct plan purchase with no prior lead in the CRM still lands on
+      // the right RD/AD instead of going unassigned. A referral slug
+      // resolved below (if any) takes priority over this and overwrites it.
+      const opsDirector = await prismadb.users.findFirst({
+        where: {
+          OR: [
+            { name: { contains: "Operations", mode: "insensitive" } },
+            { email: { contains: "ops", mode: "insensitive" } },
+          ],
+        },
+      });
+      const routed = await routeByPostcode(postcode, opsDirector?.id || null);
+
       matchingLead = await prismadb.crm_Leads.create({
         data: {
           v: 0,
@@ -166,6 +181,9 @@ export async function POST(req: Request) {
           phone: telephone || null,
           postcode: postcode || null,
           lead_type_id: leadTypeRecord.id,
+          assigned_to: routed.ownerId,
+          assigned_area_director_id: routed.areaDirectorId,
+          assigned_regional_director_id: routed.regionalDirectorId,
         },
       });
     }

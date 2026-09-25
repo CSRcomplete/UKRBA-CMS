@@ -1,6 +1,6 @@
 import { prismadb } from "@/lib/prisma";
 import { logOwnershipChange } from "@/lib/ownership";
-import { extractPostcodeArea } from "@/lib/postcode";
+import { routeByPostcode } from "@/lib/postcode-routing";
 import { SLUG_ALIASES } from "@/lib/referral-attribution";
 import { NextResponse } from "next/server";
 
@@ -315,105 +315,13 @@ export async function POST(req: Request) {
       // No matching RD for the referral link — fall back to unassigned/Ops rather
       // than ever routing a 5GBP lead by postcode.
       currentOwnerId = opsDirectorId;
-    } else if (postcode) {
-      // Regular postcode allocation routing
-      const prefix = extractPostcodeArea(postcode);
-
-      const routingRule = await prismadb.nextcrm_postcode_routing.findUnique({
-        where: { postcode_area: prefix }
-      });
-
-      if (routingRule) {
-        const assignedRegionId = routingRule.assigned_region_id;
-
-        // Fetch many-to-many assigned Area Directors and Regional Directors for this postcode
-        const [assignedDirectors, assignedRegionalDirectors] = await Promise.all([
-          prismadb.postcodeRoutingToAreaDirectors.findMany({
-            where: { postcode_routing_id: routingRule.id },
-            include: { area_director: true }
-          }),
-          prismadb.postcodeRoutingToRegionalDirectors.findMany({
-            where: { postcode_routing_id: routingRule.id },
-            include: { regional_director: true }
-          }),
-        ]);
-
-        // Round-robin: pick whichever director (of a list) has the fewest auto-routed leads for this prefix
-        const pickByRoundRobin = async <T extends { id: string }>(
-          candidates: T[],
-          countField: "assigned_area_director_id" | "assigned_regional_director_id"
-        ): Promise<T> => {
-          const counts = await Promise.all(
-            candidates.map(async (director) => {
-              const count = await prismadb.crm_Leads.count({
-                where: {
-                  [countField]: director.id,
-                  postcode: { startsWith: prefix, mode: "insensitive" }
-                }
-              });
-              return { director, count };
-            })
-          );
-          counts.sort((a, b) => a.count - b.count);
-          return counts[0].director;
-        };
-
-        if (assignedDirectors.length > 0) {
-          const selected = await pickByRoundRobin(
-            assignedDirectors.map((ad) => ad.area_director),
-            "assigned_area_director_id"
-          );
-
-          currentOwnerId = selected.id;
-          areaDirectorId = selected.id;
-
-          if (assignedRegionalDirectors.length > 0) {
-            const selectedRd = await pickByRoundRobin(
-              assignedRegionalDirectors.map((rd) => rd.regional_director),
-              "assigned_regional_director_id"
-            );
-            regionalDirectorId = selectedRd.id;
-          } else if (selected.parentId) {
-            regionalDirectorId = selected.parentId;
-          }
-        } else if (assignedRegionalDirectors.length > 0) {
-          // No area director layer for this postcode — round-robin directly between the Regional Directors sharing it
-          const selectedRd = await pickByRoundRobin(
-            assignedRegionalDirectors.map((rd) => rd.regional_director),
-            "assigned_regional_director_id"
-          );
-
-          currentOwnerId = selectedRd.id;
-          regionalDirectorId = selectedRd.id;
-        } else {
-          // Fallback to legacy single director assignment or region match
-          let fallbackDirector = null;
-          if (routingRule.area_director_id) {
-            fallbackDirector = await prismadb.users.findUnique({
-              where: { id: routingRule.area_director_id }
-            });
-          }
-          if (!fallbackDirector) {
-            fallbackDirector = await prismadb.users.findFirst({
-              where: { region_id: assignedRegionId }
-            });
-          }
-
-          if (fallbackDirector) {
-            currentOwnerId = fallbackDirector.id;
-            areaDirectorId = fallbackDirector.id;
-            if (fallbackDirector.parentId) {
-              regionalDirectorId = fallbackDirector.parentId;
-            }
-          } else {
-            currentOwnerId = opsDirectorId;
-          }
-        }
-      } else {
-        currentOwnerId = opsDirectorId; // Fallback
-      }
     } else {
-      currentOwnerId = opsDirectorId; // Fallback if no postcode provided
+      // Regular postcode allocation routing (falls back to opsDirectorId
+      // internally when there's no postcode/routing rule/mapped director).
+      const routed = await routeByPostcode(postcode, opsDirectorId);
+      currentOwnerId = routed.ownerId;
+      areaDirectorId = routed.areaDirectorId;
+      regionalDirectorId = routed.regionalDirectorId;
     }
 
     // 5GBP assessment links are also sent to leads ALREADY in the CRM (RDs/ADs using
