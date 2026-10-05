@@ -19,6 +19,28 @@ import { getUKRBASignature, getUKRBASignatureHtml, getUKRBASignatureEditorHtml }
 
 type Mode = "new" | "reply" | "forward" | "draft";
 
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Most incoming mail is HTML-only (bodyText empty), so quote the HTML body,
+// stripping active content, and fall back to escaped plain text.
+function quotedOriginalHtml(mail?: Mail): string {
+  if (!mail) return "";
+  if (mail.bodyHtml?.trim()) {
+    const doc = new DOMParser().parseFromString(mail.bodyHtml, "text/html");
+    doc.querySelectorAll("script, style, link, meta, title, iframe, object, embed, base").forEach((el) => el.remove());
+    doc.body.querySelectorAll("*").forEach((el) => {
+      for (const attr of Array.from(el.attributes)) {
+        if (attr.name.toLowerCase().startsWith("on")) el.removeAttribute(attr.name);
+        else if (/^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+      }
+    });
+    return doc.body.innerHTML;
+  }
+  return escapeHtml(mail.bodyText ?? "").replace(/\r?\n/g, "<br>");
+}
+
 type Props = {
   accountId: string;
   mode?: Mode;
@@ -122,7 +144,7 @@ export function ComposeModal({
 
         setBody(
           mode === "reply" || mode === "forward"
-            ? `<div><br></div><div><br></div><blockquote class="ukrba-quote"><div>--- Original Message ---</div><div>${replyTo?.bodyText ?? ""}</div></blockquote>`
+            ? `<div><br></div><div><br></div><blockquote class="ukrba-quote"><div>--- Original Message ---</div><div>${quotedOriginalHtml(replyTo)}</div></blockquote>`
             : ""
         );
       }
