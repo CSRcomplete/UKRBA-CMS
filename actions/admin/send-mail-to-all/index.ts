@@ -17,7 +17,7 @@ import {
 
 const handler = async (data: InputType): Promise<ReturnType> => {
   try {
-    await requireRole(["admin"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) {
       return { error: "You must be authenticated." };

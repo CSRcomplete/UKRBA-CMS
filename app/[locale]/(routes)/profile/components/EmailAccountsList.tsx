@@ -17,12 +17,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { Pencil, Check, X as XIcon } from "lucide-react";
 import {
   createEmailAccount,
   deleteEmailAccount,
   setEmailAccountActive,
   testEmailConnection,
   listImapFolders,
+  updateEmailAccountLabel,
 } from "@/actions/emails/accounts";
 import type { getEmailAccounts } from "@/actions/emails/accounts";
 import { triggerSync } from "@/actions/emails/sync";
@@ -35,6 +37,9 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
   const [testing, setTesting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [form, setForm] = useState({
     label: "",
     imapHost: "",
@@ -48,12 +53,31 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
     sentFolderName: "Sent",
   });
 
-  const [provider, setProvider] = useState<"gmail" | "generic">("generic");
+  const [provider, setProvider] = useState<"gmail" | "hostinger" | "generic">("generic");
   const [discovering, setDiscovering] = useState(false);
   const [folders, setFolders] = useState<string[]>([]);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
 
   const refresh = () => router.refresh();
+
+  async function handleSaveRename(id: string) {
+    if (!editingLabel.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateEmailAccountLabel(id, editingLabel.trim());
+      setEditingId(null);
+      refresh();
+    } catch {
+      // Ignore
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  function startEditing(acc: Account) {
+    setEditingId(acc.id);
+    setEditingLabel(acc.label);
+  }
 
   function applyGmailPreset() {
     setProvider("gmail");
@@ -67,6 +91,21 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
       smtpPort: "465",
       smtpSsl: true,
       sentFolderName: "[Gmail]/Sent Mail",
+    }));
+  }
+
+  function applyHostingerPreset() {
+    setProvider("hostinger");
+    setForm((f) => ({
+      ...f,
+      label: f.label || "Hostinger Mail",
+      imapHost: "imap.hostinger.com",
+      imapPort: "993",
+      imapSsl: true,
+      smtpHost: "smtp.hostinger.com",
+      smtpPort: "465",
+      smtpSsl: true,
+      sentFolderName: "Sent",
     }));
   }
 
@@ -144,8 +183,55 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
           key={acc.id}
           className="flex items-center justify-between rounded-md border border-border px-4 py-3"
         >
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{acc.label}</p>
+          <div className="space-y-0.5 flex-1 max-w-sm mr-2">
+            {editingId === acc.id ? (
+              <div className="flex items-center gap-1.5 py-0.5">
+                <Input
+                  size={1}
+                  value={editingLabel}
+                  onChange={(e) => setEditingLabel(e.target.value)}
+                  className="h-7 text-xs font-medium"
+                  placeholder="Account Label"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveRename(acc.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                  disabled={savingEdit}
+                  onClick={() => handleSaveRename(acc.id)}
+                  title="Save Label"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-muted-foreground"
+                  onClick={() => setEditingId(null)}
+                  title="Cancel"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{acc.label}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => startEditing(acc)}
+                  title="Rename Account"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               {acc.username} @ {acc.imapHost}
             </p>
@@ -203,12 +289,29 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {provider === "gmail" ? "Connect Gmail Account" : "Connect IMAP Account"}
+              {provider === "gmail"
+                ? "Connect Gmail Account"
+                : provider === "hostinger"
+                ? "Connect Hostinger Mail"
+                : "Connect IMAP Account"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {/* Provider quick-select */}
-            <div className="flex gap-2 pb-1">
+            <div className="flex flex-wrap gap-2 pb-1">
+              <Button
+                type="button"
+                variant={provider === "hostinger" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5"
+                onClick={applyHostingerPreset}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                Connect Hostinger
+              </Button>
               <Button
                 type="button"
                 variant={provider === "gmail" ? "default" : "outline"}
@@ -234,9 +337,9 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
                   setDiscoverError(null);
                   setForm((f) => ({
                     ...f,
-                    label: f.label === "Gmail" ? "" : f.label,
-                    imapHost: f.imapHost === "imap.gmail.com" ? "" : f.imapHost,
-                    smtpHost: f.smtpHost === "smtp.gmail.com" ? "" : f.smtpHost,
+                    label: f.label === "Gmail" || f.label === "Hostinger Mail" ? "" : f.label,
+                    imapHost: f.imapHost === "imap.gmail.com" || f.imapHost === "imap.hostinger.com" ? "" : f.imapHost,
+                    smtpHost: f.smtpHost === "smtp.gmail.com" || f.smtpHost === "smtp.hostinger.com" ? "" : f.smtpHost,
                     sentFolderName: f.sentFolderName === "[Gmail]/Sent Mail" ? "Sent" : f.sentFolderName,
                   }));
                 }}
@@ -266,6 +369,16 @@ export function EmailAccountsList({ accounts }: { accounts: Account[] }) {
                 />
               </div>
             ))}
+
+            {/* Hostinger hint */}
+            {provider === "hostinger" && (
+              <Alert className="border-purple-200 bg-purple-50 text-purple-900 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-100">
+                <Info className="h-4 w-4 shrink-0" />
+                <AlertDescription className="text-xs leading-relaxed">
+                  Hostinger preset automatically sets IMAP (<code>imap.hostinger.com:993</code>) & SMTP (<code>smtp.hostinger.com:465</code>). Simply enter your full Hostinger email address & mailbox password.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* App Password hint for Gmail */}
             {provider === "gmail" && (

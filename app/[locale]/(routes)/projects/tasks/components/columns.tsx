@@ -9,7 +9,9 @@ import { labels, priorities, statuses } from "../data/data";
 import { Task } from "../data/schema";
 import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
+import { TaskStatusSelect } from "./TaskStatusSelect";
 import moment from "moment";
+import { GROUP_ASSIGNMENTS } from "@/lib/constants/group-assignments";
 
 export const columns: ColumnDef<Task>[] = [
   /*   {
@@ -52,15 +54,17 @@ export const columns: ColumnDef<Task>[] = [
       <DataTableColumnHeader column={column} title="Assigned to" />
     ),
 
-    cell: ({ row }) => (
-      <div className="w-[180px]">
-        {
-          //@ts-ignore
-          //TODO: fix this
-          row.getValue("assigned_user")?.name ?? "Unassigned"
-        }
-      </div>
-    ),
+    cell: ({ row }) => {
+      const assignedUser = row.getValue("assigned_user") as any;
+      const rawUserId = (row.original as any).user;
+      const groupMatch = GROUP_ASSIGNMENTS.find((g) => g.id === rawUserId);
+
+      return (
+        <div className="w-[180px] font-medium">
+          {assignedUser?.name ?? groupMatch?.name ?? "Unassigned"}
+        </div>
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -90,21 +94,12 @@ export const columns: ColumnDef<Task>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      const status = statuses.find(
-        (status) => status.value === row.getValue("taskStatus")
-      );
-
-      if (!status) {
-        return null;
-      }
-
+      const currentStatus = (row.getValue("taskStatus") as string) || "ACTIVE";
       return (
-        <div className="flex w-[100px] items-center">
-          {status.icon && (
-            <status.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-          )}
-          <span>{status.label}</span>
-        </div>
+        <TaskStatusSelect
+          taskId={row.original.id}
+          status={currentStatus as "PENDING" | "ACTIVE" | "COMPLETE"}
+        />
       );
     },
     filterFn: (row, id, value) => {
@@ -137,6 +132,23 @@ export const columns: ColumnDef<Task>[] = [
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id));
     },
+  },
+  {
+    accessorKey: "tags",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Completed Date" />
+    ),
+    cell: ({ row }) => {
+      const tags = row.original.tags as Record<string, any> | null;
+      const completedAt = tags?.completedAt;
+      return (
+        <div className="w-[100px] text-muted-foreground">
+          {completedAt ? moment(completedAt).format("YY-MM-DD") : "—"}
+        </div>
+      );
+    },
+    enableSorting: false,
+    enableHiding: true,
   },
   {
     id: "actions",

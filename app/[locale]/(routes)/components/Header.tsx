@@ -43,9 +43,6 @@ const Header = ({ id, lang }: Props) => {
         </div>
         <div className="flex items-center gap-2">
           <CommandComponent />
-          <SetLanguage userId={id} />
-          <Feedback />
-          <CurrencySwitcher />
           <ThemeToggle />
           <SupportComponent />
         </div>

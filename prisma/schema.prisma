@@ -91,20 +91,25 @@ model crm_Leads {
   lead_source                   crm_Lead_Sources?     @relation("lead_source_relation", fields: [lead_source_id], references: [id])
   lead_status                   crm_Lead_Statuses?    @relation("lead_status_relation", fields: [lead_status_id], references: [id])
   lead_type                     crm_Lead_Types?       @relation("lead_type_relation", fields: [lead_type_id], references: [id])
+  sales_status                  SalesStatus?
   refered_by                    String?
   campaign                      String?
   assigned_to                   String?               @db.Uuid
   assigned_to_user              Users?                @relation("LeadAssignedTo", fields: [assigned_to], references: [id])
   postcode                      String?
   assigned_partner_id           String?               @db.Uuid
+  assigned_email_partner_id     String?               @db.Uuid
   assigned_area_director_id     String?               @db.Uuid
   assigned_regional_director_id String?               @db.Uuid
   accountsIDs                   String?               @db.Uuid
   assigned_accounts             crm_Accounts?         @relation(fields: [accountsIDs], references: [id])
   documents                     DocumentsToLeads[]
   embedding                     crm_Embeddings_Leads?
+  email_flows                   crm_LeadEmailFlow[]
   deletedAt                     DateTime?
   deletedBy                     String?               @db.Uuid
+  fivePoundAssessmentAt         DateTime?
+  freeAssessmentAt              DateTime?
 
   @@index([assigned_to])
   @@index([accountsIDs])
@@ -116,8 +121,44 @@ model crm_Leads {
   @@index([createdAt])
   @@index([deletedAt])
   @@index([assigned_partner_id])
+  @@index([assigned_email_partner_id])
   @@index([assigned_area_director_id])
   @@index([assigned_regional_director_id])
+}
+
+enum crm_LeadEmailFlowStatus {
+  in_progress
+  customer_bought
+  completed_no_purchase
+}
+
+model crm_LeadEmailFlow {
+  id         String                  @id @default(uuid()) @db.Uuid
+  lead_id    String                  @db.Uuid
+  status     crm_LeadEmailFlowStatus @default(in_progress)
+  created_at DateTime                @default(now())
+  updated_at DateTime                @updatedAt
+
+  lead  crm_Leads               @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  steps crm_LeadEmailFlowStep[]
+
+  @@index([lead_id])
+  @@index([status])
+}
+
+model crm_LeadEmailFlowStep {
+  id           String    @id @default(uuid()) @db.Uuid
+  flow_id      String    @db.Uuid
+  step_number  Int
+  subject      String
+  body         String
+  generated_at DateTime  @default(now())
+  sent_at      DateTime?
+
+  flow crm_LeadEmailFlow @relation(fields: [flow_id], references: [id], onDelete: Cascade)
+
+  @@unique([flow_id, step_number])
+  @@index([flow_id])
 }
 
 model crm_Contact_Enrichment {
@@ -483,6 +524,7 @@ model crm_Contacts {
   social_tiktok    String?
   contact_type_id  String?            @db.Uuid
   contact_type     crm_Contact_Types? @relation(fields: [contact_type_id], references: [id])
+  sales_status     SalesStatus?
   tags             String[]
   notes            String[]
 
@@ -657,6 +699,118 @@ model crm_ActivityLinks {
 
   @@index([activityId])
   @@index([entityType, entityId, activityId])
+}
+
+model crm_Appointments {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  location    String?
+  startTime   DateTime
+  endTime     DateTime
+  isAllDay    Boolean   @default(false)
+  attendees   Json      @default("[]")
+  reminderMin Int?      @default(15)
+  notes       String?   @db.Text
+  userId      String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user Users @relation("user_appointments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([deletedAt])
+}
+
+model crm_Announcements {
+  id             String    @id @default(uuid()) @db.Uuid
+  title          String
+  category       String    @default("Company News")
+  content        String    @db.Text
+  attachmentUrl  String?   @db.Text
+  attachmentName String?
+  attachmentSize Int?
+  isPinned       Boolean   @default(false)
+  authorId       String    @db.Uuid
+  targetGroup    String?   @default("ALL")
+  targetUserIds  String[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  author Users @relation("announcement_author", fields: [authorId], references: [id], onDelete: Cascade)
+  reads  crm_AnnouncementReads[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([isPinned])
+  @@index([targetGroup])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model crm_Candidates {
+  id                String    @id @default(uuid()) @db.Uuid
+  // Personal info
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
+  address           String?
+  // Role applied for
+  position          String
+  positionType      String    @default("Full-time") // Full-time / Part-time / Contract / Volunteer
+  // Pipeline stage
+  status            String    @default("Applied")
+  // CV attachment
+  cvUrl             String?   @db.Text
+  cvFileName        String?
+  cvSize            Int?
+  // Interview
+  interviewDate     DateTime?
+  interviewNotes    String?   @db.Text
+  interviewedBy     String?
+  // Contract
+  contractStatus    String    @default("None")  // None / Sent / Signed
+  contractSentAt    DateTime?
+  contractSignedAt  DateTime?
+  // Source
+  source            String    @default("Manual")
+  // Meta
+  notes             String?   @db.Text
+  createdById       String    @db.Uuid
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  createdBy         Users                    @relation("candidate_created_by", fields: [createdById], references: [id], onDelete: Cascade)
+  activities        crm_CandidateActivities[]
+
+  @@index([status])
+  @@index([position])
+  @@index([email])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model crm_CandidateActivities {
+  id          String   @id @default(uuid()) @db.Uuid
+  candidateId String   @db.Uuid
+  userId      String   @db.Uuid
+  type        String   @default("note")   // note / call / email / interview / contract / other
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+
+  candidate   crm_Candidates @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user        Users          @relation("candidate_activity_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Boards {
@@ -925,6 +1079,24 @@ enum AppRole {
   user
   manager
   admin
+  ceo
+  coo
+  operations_director
+  regional_director
+  area_director
+  channel_partner
+  email_partner
+}
+
+// Membership tier sold on a closed deal — kept separate from the lead's
+// working pipeline status (crm_Lead_Statuses) and Lead Source. Only settable
+// by the lead's own assigned director/partner or CEO/COO/Admin.
+enum SalesStatus {
+  basic
+  verified
+  accredited
+  premium
+  white_label
 }
 
 model Users {
@@ -942,6 +1114,7 @@ model Users {
   name          String?
   password      String?
   username      String?
+  phone         String?
   userStatus    ActiveStatus @default(PENDING)
   userLanguage  Language     @default(en)
   banned        Boolean      @default(false)
@@ -961,6 +1134,7 @@ model Users {
   crated_contacts              crm_Contacts[]           @relation("created_contacts")
   apiKeys                      ApiKeys[]
   assigned_contracts           crm_Contracts[]
+  announcementReads            crm_AnnouncementReads[]
   boards                       Boards[]                 @relation("assigned_user")
   watching_boards              BoardWatchers[]
   watching_accounts            AccountWatchers[]
@@ -986,6 +1160,10 @@ model Users {
   invoiceAttachments           Invoice_Attachments[]    @relation("InvoiceAttachmentUploadedBy")
   invoiceActivity              Invoice_Activity[]       @relation("InvoiceActivityActor")
   ownership_changes_logged     crm_Ownership_History[]  @relation("ownership_changes_by")
+  appointments                 crm_Appointments[]       @relation("user_appointments")
+  announcements                crm_Announcements[]      @relation("announcement_author")
+  candidates_created           crm_Candidates[]         @relation("candidate_created_by")
+  candidate_activities         crm_CandidateActivities[] @relation("candidate_activity_user")
 
   // Organizational Tree properties
   region_id Int?
@@ -993,6 +1171,8 @@ model Users {
   parentId  String? @db.Uuid
   parent    Users?  @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Users[] @relation("UserHierarchy")
+  postcode_routing_assignments PostcodeRoutingToAreaDirectors[] @relation("AreaDirectorToPostcodeRouting")
+  postcode_routing_regional_assignments PostcodeRoutingToRegionalDirectors[] @relation("RegionalDirectorToPostcodeRouting")
 
   @@index([email])
   @@index([userStatus])
@@ -1443,6 +1623,40 @@ model EmailAccount {
 enum EmailFolder {
   INBOX
   SENT
+  DRAFTS
+  TRASH
+}
+
+model EmailAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  emailId    String   @db.Uuid
+  filename   String
+  mimeType   String
+  size       Int
+  storageUrl String?
+  contentId  String?
+  createdAt  DateTime @default(now())
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+}
+
+// Public, tokenized download links for files too large to email as
+// attachments (e.g. Hostinger's SMTP size limit). The token is unguessable
+// and the /api/dl/[token] route serves the file directly with no auth and
+// no CRM page — just an immediate file download for external recipients.
+model SharedFileLink {
+  id            String    @id @default(uuid()) @db.Uuid
+  token         String    @unique
+  storageKey    String
+  filename      String
+  contentType   String
+  size          Int
+  createdById   String?   @db.Uuid
+  downloadCount Int       @default(0)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
 }
 
 model Email {
@@ -1453,6 +1667,12 @@ model Email {
   imapUid        Int?
   folder         EmailFolder
   subject        String?
+  // Standard RFC 5322 threading headers — the reliable way to group a
+  // conversation, unlike matching on subject text (which false-positives
+  // whenever two unrelated conversations share a generic subject like
+  // "Re: Catch-up meeting").
+  inReplyTo      String?
+  references     String[]    @default([])
   fromName       String?
   fromEmail      String?
   toRecipients   Json        @default("[]")
@@ -1466,13 +1686,14 @@ model Email {
   updatedAt      DateTime    @updatedAt
   createdAt      DateTime    @default(now())
 
-  account   EmailAccount       @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
-  user      Users              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  embedding EmailEmbedding?
-  contacts  EmailsToContacts[]
-  accounts  EmailsToAccounts[]
+  account     EmailAccount       @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+  user        Users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embedding   EmailEmbedding?
+  contacts    EmailsToContacts[]
+  accounts    EmailsToAccounts[]
+  attachments EmailAttachment[]
 
-  @@unique([emailAccountId, rfcMessageId])
+  @@unique([emailAccountId, folder, rfcMessageId])
   @@index([userId])
   @@index([emailAccountId])
   @@index([folder])
@@ -1924,11 +2145,39 @@ model Invoice_Settings {
 }
 
 model nextcrm_postcode_routing {
-  id                 String   @id @default(uuid()) @db.Uuid
-  postcode_area      String   @unique
+  id                 String                           @id @default(uuid()) @db.Uuid
+  postcode_area      String                           @unique
+  area_name          String?
   region_country     String
   assigned_region_id Int
-  createdAt          DateTime @default(now())
+  area_director_id   String?                          @db.Uuid
+  createdAt          DateTime                         @default(now())
+  area_directors     PostcodeRoutingToAreaDirectors[]
+  regional_directors PostcodeRoutingToRegionalDirectors[]
+}
+
+model PostcodeRoutingToAreaDirectors {
+  postcode_routing_id String @db.Uuid
+  area_director_id    String @db.Uuid
+
+  postcode_routing nextcrm_postcode_routing @relation(fields: [postcode_routing_id], references: [id], onDelete: Cascade)
+  area_director    Users                    @relation("AreaDirectorToPostcodeRouting", fields: [area_director_id], references: [id], onDelete: Cascade)
+
+  @@id([postcode_routing_id, area_director_id])
+  @@index([postcode_routing_id])
+  @@index([area_director_id])
+}
+
+model PostcodeRoutingToRegionalDirectors {
+  postcode_routing_id  String @db.Uuid
+  regional_director_id String @db.Uuid
+
+  postcode_routing  nextcrm_postcode_routing @relation(fields: [postcode_routing_id], references: [id], onDelete: Cascade)
+  regional_director Users                    @relation("RegionalDirectorToPostcodeRouting", fields: [regional_director_id], references: [id], onDelete: Cascade)
+
+  @@id([postcode_routing_id, regional_director_id])
+  @@index([postcode_routing_id])
+  @@index([regional_director_id])
 }
 
 model sys_audit_logs {
@@ -1950,6 +2199,7 @@ model crm_Members {
   telephone                     String
   email                         String
   assigned_channel_partner_id   String? @db.Uuid
+  assigned_email_partner_id     String? @db.Uuid
   assigned_area_director_id     String? @db.Uuid
   assigned_regional_director_id String? @db.Uuid
   lifecycle_status              String  @default("Membership")
@@ -1958,6 +2208,11 @@ model crm_Members {
   recurring_revenue_tier  Decimal? @db.Decimal(10, 2)
   partner_commission_rate Decimal? @db.Decimal(5, 2)
   override_structure_id   Int?
+
+  // Which /fsl/[slug] link the sale was attributed to at checkout (e.g. a
+  // coupon code carrying an RD's or marketing channel's slug) — kept as the
+  // raw string for audit/traceability alongside the resolved owner fields.
+  referral_source String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -1981,3 +2236,50 @@ model crm_Ownership_History {
   @@index([entity_id])
   @@index([entity_type, entity_id])
 }
+
+
+
+model crm_AnnouncementReads {
+  id             String   @id @default(uuid()) @db.Uuid
+  announcementId String   @db.Uuid
+  userId         String   @db.Uuid
+  readAt         DateTime @default(now())
+
+  announcement crm_Announcements @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         Users             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+  @@index([userId])
+}
+
+model crm_Payment_Allocations {
+  id               String   @id @default(uuid()) @db.Uuid
+  contact_id       String   @db.Uuid
+  member_id        String?  @db.Uuid
+  lead_id          String?  @db.Uuid
+  customer_name    String
+  sale_amount      Decimal  @default(0) @db.Decimal(14, 2)
+  sale_date        DateTime @default(now())
+  status           String   @default("pending")
+  approved_by      String?  @db.Uuid
+  approved_at      DateTime?
+
+  team_allocations Json     @default("[]")
+
+  partner_name       String?
+  partner_user_id    String?  @db.Uuid
+  partner_percentage Decimal? @default(0) @db.Decimal(5, 2)
+  partner_amount     Decimal? @default(0) @db.Decimal(14, 2)
+
+  total_percentage Decimal  @default(0) @db.Decimal(5, 2)
+  total_allocated  Decimal  @default(0) @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  @db.Uuid
+
+  @@index([contact_id])
+  @@index([status])
+}
+

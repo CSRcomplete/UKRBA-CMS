@@ -23,6 +23,17 @@ type TargetList = {
   _count: { targets: number };
 };
 
+type PostcodeOption = { postcode_area: string; area_name: string | null };
+
+type AudienceLead = {
+  id: string;
+  name: string;
+  email: string;
+  company: string | null;
+  postcode: string | null;
+  postcodeArea: string;
+};
+
 type FormData = {
   // Step 1
   name?: string;
@@ -51,9 +62,13 @@ type FormData = {
 export function WizardShell({
   templates,
   targetLists,
+  postcodeOptions,
+  leads,
 }: {
   templates: Template[];
   targetLists: TargetList[];
+  postcodeOptions: PostcodeOption[];
+  leads: AudienceLead[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -157,6 +172,8 @@ export function WizardShell({
         <Step3Audience
           initialData={formData}
           targetLists={targetLists}
+          postcodeOptions={postcodeOptions}
+          leads={leads}
           onNext={handleNext}
           onBack={handleBack}
         />

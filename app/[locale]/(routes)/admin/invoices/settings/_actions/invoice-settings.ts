@@ -68,7 +68,7 @@ export async function saveInvoiceSettings(
   input: InvoiceSettingsInput
 ): Promise<ActionResult> {
   try {
-    await requireRole(["admin"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { ok: false, error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { ok: false, error: "Forbidden" };

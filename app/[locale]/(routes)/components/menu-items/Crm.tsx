@@ -41,6 +41,10 @@ export const getCrmMenuItem = ({ localizations }: Props): NavItem => {
         url: "/crm",
       },
       {
+        title: "Accounts & Opportunities",
+        url: "/crm/accounts-opportunities",
+      },
+      {
         title: localizations.accounts,
         url: "/crm/accounts",
       },
@@ -51,6 +55,22 @@ export const getCrmMenuItem = ({ localizations }: Props): NavItem => {
       {
         title: localizations.leads,
         url: "/crm/leads",
+      },
+      {
+        title: "Upload Leads",
+        url: "/crm/leads/upload",
+      },
+      {
+        title: "Members",
+        url: "/crm/members",
+      },
+      {
+        title: "Meetings",
+        url: "/crm/meetings",
+      },
+      {
+        title: "Calendar & Diary",
+        url: "/crm/calendar",
       },
       {
         title: localizations.opportunities,

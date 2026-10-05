@@ -12,7 +12,7 @@ export function isInvoiceImmutable(status: InvoiceStatus): boolean {
 }
 
 function isManagerOrAdmin(user: UserCtx): boolean {
-  return user.role === "manager" || user.role === "admin";
+  return user.role === "manager" || user.role === "admin" || user.role === "ceo" || user.role === "coo";
 }
 
 function isOwnerOrPrivileged(invoice: InvoiceCtx, user: UserCtx): boolean {

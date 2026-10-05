@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-server";
 
 import { prismadb } from "@/lib/prisma";
 import { inngest } from "@/inngest/client";
+import { performEmailAccountSync } from "@/lib/email-sync";
 
 async function requireSession() {
   const session = await getSession();
@@ -19,5 +20,13 @@ export async function triggerSync(accountId: string) {
   });
   if (!account) throw new Error("Account not found");
 
-  await inngest.send({ name: "email/sync-account", data: { accountId } });
+  // Perform immediate direct IMAP sync
+  await performEmailAccountSync(accountId);
+
+  // Send background event to Inngest if active
+  try {
+    await inngest.send({ name: "email/sync-account", data: { accountId } });
+  } catch {
+    // Inngest daemon might be offline; direct sync already completed above
+  }
 }

@@ -27,18 +27,18 @@ const findTask = prismadb.tasks.findUnique as jest.MockedFunction<
 beforeEach(() => jest.clearAllMocks());
 
 describe("boardReadScopeWhere", () => {
-  it("admin → only deletedAt:null", () => {
-    expect(boardReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin → only deletedAt:null", async () => {
+    expect(await boardReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
   });
-  it("manager → only deletedAt:null", () => {
-    expect(boardReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+  it("manager → only deletedAt:null", async () => {
+    expect(await boardReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + OR with 4 branches (owner / shared / public / watcher)", () => {
-    const w = boardReadScopeWhere({ id: "u1", role: "user" }) as {
+  it("user → deletedAt + OR with 4 branches (owner / shared / public / watcher)", async () => {
+    const w = (await boardReadScopeWhere({ id: "u1", role: "user" })) as {
       deletedAt: null;
       OR: unknown[];
     };
@@ -56,18 +56,18 @@ describe("boardReadScopeWhere", () => {
 });
 
 describe("boardWriteScopeWhere", () => {
-  it("admin → only deletedAt:null", () => {
-    expect(boardWriteScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin → only deletedAt:null", async () => {
+    expect(await boardWriteScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
   });
-  it("manager → only deletedAt:null", () => {
-    expect(boardWriteScopeWhere({ id: "x", role: "manager" })).toEqual({
+  it("manager → only deletedAt:null", async () => {
+    expect(await boardWriteScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → owner only", () => {
-    expect(boardWriteScopeWhere({ id: "u1", role: "user" })).toEqual({
+  it("user → owner only", async () => {
+    expect(await boardWriteScopeWhere({ id: "u1", role: "user" })).toEqual({
       deletedAt: null,
       user: "u1",
     });

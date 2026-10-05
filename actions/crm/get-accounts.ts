@@ -4,8 +4,9 @@ import { requireAuthenticated, accountReadScopeWhere } from "@/lib/authz";
 
 export const getAccounts = cache(async () => {
   const user = await requireAuthenticated();
+  const scope = await accountReadScopeWhere(user);
   const data = await prismadb.crm_Accounts.findMany({
-    where: accountReadScopeWhere(user),
+    where: scope,
     include: {
       assigned_to_user: {
         select: {

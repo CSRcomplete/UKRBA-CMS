@@ -3,6 +3,7 @@ import {
   requireAuthenticated,
   filterAuthorizedDocumentIds,
   AuthenticationError,
+  isAdmin,
 } from "@/lib/authz";
 import { prismadb } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -17,6 +18,8 @@ export async function bulkDeleteDocuments(documentIds: string[]) {
     if (e instanceof AuthenticationError) throw new Error("Unauthenticated");
     throw e;
   }
+
+  if (!isAdmin(user)) throw new Error("Forbidden");
 
   if (!documentIds || documentIds.length === 0) return;
 

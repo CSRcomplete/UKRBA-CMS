@@ -1,7 +1,8 @@
 import { inngest } from "@/inngest/client";
 import { prismadb } from "@/lib/prisma";
 import { decrypt } from "@/lib/email-crypto";
-import { fetchBodyByUid } from "@/inngest/lib/imap-utils";
+import { fetchBodyByMessageId, fetchBodyByUid } from "@/inngest/lib/imap-utils";
+import { storeFetchedAttachments } from "@/lib/email-attachment-storage";
 
 export const emailLinkCrm = inngest.createFunction(
   {
@@ -19,6 +20,7 @@ export const emailLinkCrm = inngest.createFunction(
         toRecipients: true,
         ccRecipients: true,
         imapUid: true,
+        rfcMessageId: true,
         folder: true,
         emailAccountId: true,
       },
@@ -61,8 +63,11 @@ export const emailLinkCrm = inngest.createFunction(
       return contactLinks.length + accountLinks.length;
     });
 
-    // Only fetch body + embed for emails that are CRM-relevant
-    if (linked > 0 && email.imapUid) {
+    // Body is fetched for every synced email regardless of CRM linkage —
+    // staff correspondence with no matching Contact/Account still needs to
+    // be readable in the inbox. Only the (OpenAI-billed) embedding step
+    // stays gated to CRM-relevant emails.
+    if (email.imapUid) {
       const emailAccount = await prismadb.emailAccount.findUnique({
         where: { id: email.emailAccountId },
         select: {
@@ -84,35 +89,56 @@ export const emailLinkCrm = inngest.createFunction(
         // Wrap body fetch in step.run for idempotent retry behaviour
         await step.run("fetch-and-save-body", async () => {
           try {
-            const body = await fetchBodyByUid(
-              {
-                username: emailAccount.username,
-                password: decrypt(emailAccount.passwordEncrypted),
-                imapHost: emailAccount.imapHost,
-                imapPort: emailAccount.imapPort,
-                imapSsl: emailAccount.imapSsl,
-              },
-              folderName,
-              email.imapUid!
-            );
+            const creds = {
+              username: emailAccount.username,
+              password: decrypt(emailAccount.passwordEncrypted),
+              imapHost: emailAccount.imapHost,
+              imapPort: emailAccount.imapPort,
+              imapSsl: emailAccount.imapSsl,
+            };
+
+            // Our own synthetic fallback IDs (used when a header had no real
+            // Message-ID) never appear on the server, so a Message-ID search
+            // can't find them — UID is the only option in that case. When a
+            // *real* Message-ID search comes up empty, the message is most
+            // likely gone from that folder — falling back to the stored UID
+            // there would risk fetching a different message that has since
+            // taken over that UID, so we deliberately don't.
+            const isRealMessageId = !email.rfcMessageId.endsWith("-header@local");
+
+            const body = isRealMessageId
+              ? await fetchBodyByMessageId(creds, folderName, email.rfcMessageId)
+              : email.imapUid
+                ? await fetchBodyByUid(creds, folderName, email.imapUid)
+                : {};
 
             await prismadb.email.update({
               where: { id: emailId },
               data: {
                 bodyText: body.bodyText ?? null,
                 bodyHtml: body.bodyHtml ?? null,
+                inReplyTo: body.inReplyTo ?? undefined,
+                references: body.references ?? undefined,
               },
             });
+
+            // This eager fetch runs for every synced email regardless of
+            // whether/when a user opens it in the CRM, so it — not
+            // getEmail()'s lazy fetch — is almost always the one that
+            // actually sees body.attachments first in practice.
+            await storeFetchedAttachments(emailId, body.attachments);
           } catch (e) {
             console.warn(`[link-crm] Body fetch failed for email ${emailId}:`, e);
             // embed will still fire with subject-only text
           }
         });
 
-        await step.sendEvent("trigger-embed", {
-          name: "email/embed-email",
-          data: { emailId },
-        });
+        if (linked > 0) {
+          await step.sendEvent("trigger-embed", {
+            name: "email/embed-email",
+            data: { emailId },
+          });
+        }
       } else {
         console.warn(
           `[link-crm] EmailAccount ${email.emailAccountId} not found for email ${emailId} — skipping body fetch`

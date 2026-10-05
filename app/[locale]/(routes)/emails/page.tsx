@@ -29,7 +29,7 @@ const EmailRoute = async ({
   const collapsed = (await cookies()).get("react-resizable-panels:collapsed");
 
   // Parse layout with validation - ensure left panel is visible
-  const FALLBACK_LAYOUT = [20, 35, 45];
+  const FALLBACK_LAYOUT = [20, 80];
   let validatedLayout: number[] | undefined;
 
   if (layout) {
@@ -37,7 +37,7 @@ const EmailRoute = async ({
       const parsed = JSON.parse(layout.value);
       if (
         Array.isArray(parsed) &&
-        parsed.length === 3 &&
+        parsed.length === 2 &&
         parsed.every((n: number) => typeof n === "number" && n > 0) &&
         parsed[0] >= 18
       ) {
@@ -72,8 +72,16 @@ const EmailRoute = async ({
     );
   }
 
-  const activeAccountId = params.accountId ?? connectedAccounts[0]?.id;
-  const activeFolder = params.folder === "SENT" ? EmailFolder.SENT : EmailFolder.INBOX;
+  const accountMatch = connectedAccounts.find((a) => a.id === params.accountId);
+  const activeAccountId = accountMatch ? accountMatch.id : (connectedAccounts[0]?.id ?? null);
+  const activeFolder =
+    params.folder === "SENT"
+      ? EmailFolder.SENT
+      : params.folder === "DRAFTS"
+        ? EmailFolder.DRAFTS
+        : params.folder === "TRASH"
+          ? EmailFolder.TRASH
+          : EmailFolder.INBOX;
 
   const activePage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const emailsResult = activeAccountId
@@ -96,6 +104,7 @@ const EmailRoute = async ({
           defaultLayout={validatedLayout}
           defaultCollapsed={defaultCollapsed}
           navCollapsedSize={8}
+          currentUser={{ name: session?.user?.name, role: (session?.user as any)?.role }}
         />
       </Suspense>
     </Container>

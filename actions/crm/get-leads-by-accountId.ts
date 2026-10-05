@@ -27,10 +27,11 @@ export const getLeadsByAccountId = async (accountId: string) => {
 
   // Defense in depth: even with parent-account access, scope the lead list
   // by the lead's own ownership rules.
+  const leadScope = await leadReadScopeWhere(user);
   const data = await prismadb.crm_Leads.findMany({
     where: {
       accountsIDs: accountId,
-      ...leadReadScopeWhere(user),
+      ...leadScope,
     },
     include: {
       assigned_to_user: {

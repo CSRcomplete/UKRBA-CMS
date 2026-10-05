@@ -15,6 +15,7 @@ import DocumentsView from "../../components/DocumentsView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoryTab } from "./components/HistoryTab";
 import { ActivitiesSection } from "./components/ActivitiesSection";
+import { ContactPaymentAllocationTab } from "./components/ContactPaymentAllocationTab";
 
 const ContactViewPage = async (props: any) => {
   const params = await props.params;
@@ -25,18 +26,19 @@ const ContactViewPage = async (props: any) => {
   const accounts = await getAccountsByContactId(contactId);
   const crmData = await getAllCrmData();
 
-  //  console.log(accounts, "accounts");
-
   if (!contact) return <div>Contact not found</div>;
+
+  const contactFullName = `${contact?.first_name || ""} ${contact?.last_name || ""}`.trim();
 
   return (
     <Container
-      title={`Contact detail view: ${contact?.first_name} ${contact?.last_name}`}
+      title={`Contact detail view: ${contactFullName}`}
       description={"Everything you need to know about sales potential"}
     >
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="payment-allocation">Payment Allocation</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
@@ -48,6 +50,12 @@ const ContactViewPage = async (props: any) => {
             <OpportunitiesView data={opportunities} crmData={crmData} />
             <DocumentsView data={documents} />
           </div>
+        </TabsContent>
+        <TabsContent value="payment-allocation">
+          <ContactPaymentAllocationTab
+            contactId={contactId}
+            contactName={contactFullName || "Customer"}
+          />
         </TabsContent>
         <TabsContent value="history">
           <HistoryTab contactId={contactId} />

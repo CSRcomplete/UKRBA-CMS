@@ -27,6 +27,8 @@ interface LeadDetailActionsProps {
   leadTypes: ConfigItem[];
 }
 
+import { ConvertLeadModal } from "./ConvertLeadModal";
+
 export function LeadDetailActions({
   lead,
   leadSources,
@@ -35,8 +37,12 @@ export function LeadDetailActions({
 }: LeadDetailActionsProps) {
   const [updateOpen, setUpdateOpen] = useState(false);
 
+  const leadFullName = `${lead?.firstName || ""} ${lead?.lastName || ""}`.trim() || "Lead";
+
   return (
-    <>
+    <div className="flex items-center gap-2">
+      <ConvertLeadModal leadId={lead?.id} leadName={leadFullName} />
+
       <Sheet open={updateOpen} onOpenChange={setUpdateOpen}>
         <SheetContent className="w-full md:max-w-[771px] overflow-y-auto">
           <SheetHeader>
@@ -74,6 +80,6 @@ export function LeadDetailActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </>
+    </div>
   );
 }

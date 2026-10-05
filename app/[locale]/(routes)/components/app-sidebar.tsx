@@ -18,9 +18,14 @@ import getProjectsMenuItem from "./menu-items/Projects";
 import getEmailsMenuItem from "./menu-items/Emails";
 import getReportsMenuItem from "./menu-items/Reports";
 import getDocumentsMenuItem from "./menu-items/Documents";
+import getRepositoryMenuItem from "./menu-items/Repository";
 import getInvoicesMenuItem from "./menu-items/Invoices";
 import getAdministrationMenuItem from "./menu-items/Administration";
 import getCampaignsMenuItem from "./menu-items/Campaigns";
+import getAutomationsMenuItem from "./menu-items/Automations";
+import getNewsMenuItem from "./menu-items/News";
+import getDiaryMenuItem from "./menu-items/Diary";
+import getRecruitmentMenuItem from "./menu-items/Recruitment";
 
 /**
  * AppSidebar Component - Task Groups 1.2, 2.2-2.7, 3.1, 5.3, 5.4
@@ -101,16 +106,21 @@ export function AppSidebar({
         targetLists: "Target Lists",
       },
     }),
+    getAutomationsMenuItem({ title: "Automations" }),
     getProjectsMenuItem({ title: dict?.projects || "Projects" }),
     getEmailsMenuItem({ title: dict?.emails || "Emails" }),
     getReportsMenuItem({ title: dict?.reports || "Reports" }),
     getDocumentsMenuItem({ title: dict?.documents || "Documents" }),
+    getRepositoryMenuItem({ title: "Repository" }),
     getInvoicesMenuItem({ title: dict?.invoices || "Invoices" }),
+    getDiaryMenuItem({ title: "Diary" }),
+    getNewsMenuItem({ title: "News & Announcements" }),
   ];
 
-  // Administration: admin users only
-  if (session?.user?.role === "admin") {
+  // Administration & Recruitment: admin or ceo users only
+  if (session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo") {
     navItems.push(
+      getRecruitmentMenuItem({ title: "Recruitment Centre" }),
       getAdministrationMenuItem({ title: dict?.settings || "Administration" }),
     );
   }
@@ -150,7 +160,7 @@ export function AppSidebar({
               !isExpanded ? "w-0 opacity-0" : "w-auto opacity-100",
             )}
           >
-            {process.env.NEXT_PUBLIC_APP_NAME || "NextCRM"}
+            {process.env.NEXT_PUBLIC_APP_NAME || "UKRBA"}
           </h1>
         </div>
       </SidebarHeader>

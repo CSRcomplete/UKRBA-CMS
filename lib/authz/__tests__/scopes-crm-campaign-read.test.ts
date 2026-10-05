@@ -28,35 +28,35 @@ const findTemplate = prismadb.crm_campaign_templates
 beforeEach(() => jest.clearAllMocks());
 
 describe("campaignReadScopeWhere", () => {
-  it("admin/manager → { status: { not: 'deleted' } }", () => {
-    expect(campaignReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → { status: { not: 'deleted' } }", async () => {
+    expect(await campaignReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       status: { not: "deleted" },
     });
-    expect(campaignReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await campaignReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       status: { not: "deleted" },
     });
   });
-  it("user → { status: { not: 'deleted' }, created_by: user.id }", () => {
-    expect(campaignReadScopeWhere({ id: "u1", role: "user" })).toEqual({
+  it("user → { status: { not: 'deleted' }, created_by: user.id }", async () => {
+    expect(await campaignReadScopeWhere({ id: "u1", role: "user" })).toEqual({
       status: { not: "deleted" },
-      created_by: "u1",
+      created_by: { in: ["u1"] },
     });
   });
 });
 
 describe("campaignTemplateReadScopeWhere", () => {
-  it("admin/manager → { deletedAt: null }", () => {
+  it("admin/manager → { deletedAt: null }", async () => {
     expect(
-      campaignTemplateReadScopeWhere({ id: "x", role: "admin" }),
+      await campaignTemplateReadScopeWhere({ id: "x", role: "admin" }),
     ).toEqual({ deletedAt: null });
     expect(
-      campaignTemplateReadScopeWhere({ id: "x", role: "manager" }),
+      await campaignTemplateReadScopeWhere({ id: "x", role: "manager" }),
     ).toEqual({ deletedAt: null });
   });
-  it("user → { deletedAt: null, created_by: user.id }", () => {
-    expect(campaignTemplateReadScopeWhere({ id: "u1", role: "user" })).toEqual({
+  it("user → { deletedAt: null, created_by: user.id }", async () => {
+    expect(await campaignTemplateReadScopeWhere({ id: "u1", role: "user" })).toEqual({
       deletedAt: null,
-      created_by: "u1",
+      created_by: { in: ["u1"] },
     });
   });
 });
@@ -74,7 +74,7 @@ describe("assertCanReadCampaign", () => {
     findCampaign.mockResolvedValue({ id: "c1" } as any);
     await assertCanReadCampaign({ id: "u1", role: "user" }, "c1");
     expect(findCampaign).toHaveBeenCalledWith({
-      where: { id: "c1", status: { not: "deleted" }, created_by: "u1" },
+      where: { id: "c1", status: { not: "deleted" }, created_by: { in: ["u1"] } },
       select: { id: true },
     });
   });
@@ -91,7 +91,7 @@ describe("assertCanWriteCampaign", () => {
     findCampaign.mockResolvedValue({ id: "c1" } as any);
     await assertCanWriteCampaign({ id: "u1", role: "user" }, "c1");
     expect(findCampaign).toHaveBeenCalledWith({
-      where: { id: "c1", status: { not: "deleted" }, created_by: "u1" },
+      where: { id: "c1", status: { not: "deleted" }, created_by: { in: ["u1"] } },
       select: { id: true },
     });
   });
@@ -116,7 +116,7 @@ describe("assertCanReadTemplate", () => {
     findTemplate.mockResolvedValue({ id: "t1" } as any);
     await assertCanReadTemplate({ id: "u1", role: "user" }, "t1");
     expect(findTemplate).toHaveBeenCalledWith({
-      where: { id: "t1", deletedAt: null, created_by: "u1" },
+      where: { id: "t1", deletedAt: null, created_by: { in: ["u1"] } },
       select: { id: true },
     });
   });
@@ -133,7 +133,7 @@ describe("assertCanWriteTemplate", () => {
     findTemplate.mockResolvedValue({ id: "t1" } as any);
     await assertCanWriteTemplate({ id: "u1", role: "user" }, "t1");
     expect(findTemplate).toHaveBeenCalledWith({
-      where: { id: "t1", deletedAt: null, created_by: "u1" },
+      where: { id: "t1", deletedAt: null, created_by: { in: ["u1"] } },
       select: { id: true },
     });
   });

@@ -1,12 +1,16 @@
 import { prismadb } from "@/lib/prisma";
 import { getExchangeRates, convertAmount } from "@/lib/currency";
 import { Decimal } from "@prisma/client/runtime/client";
+import { requireAuthenticated, opportunityReadScopeWhere } from "@/lib/authz";
 
 export const getExpectedRevenue = async (displayCurrency: string) => {
+  const user = await requireAuthenticated();
+  const readScope = await opportunityReadScopeWhere(user);
+
   const activeOpportunities = await prismadb.crm_Opportunities.findMany({
     where: {
+      ...readScope,
       status: "ACTIVE",
-      deletedAt: null,
     },
     select: {
       budget: true,

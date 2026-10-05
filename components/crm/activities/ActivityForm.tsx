@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -56,7 +57,40 @@ export function ActivityForm({ open, onOpenChange, entityType, entityId, activit
   const [emailSubject, setEmailSubject] = useState(
     (activity?.metadata as Record<string, string> | null)?.subject ?? ""
   );
+  const [meetingLink, setMeetingLink] = useState(
+    (activity?.metadata as Record<string, any> | null)?.meetingLink ?? ""
+  );
+  const [followUpRequired, setFollowUpRequired] = useState(
+    (activity?.metadata as Record<string, any> | null)?.followUpRequired ?? false
+  );
   const [saving, setSaving] = useState(false);
+
+  // Sync state with activity when opening/editing
+  useEffect(() => {
+    if (activity) {
+      setType(activity.type);
+      setTitle(activity.title);
+      setDescription(activity.description ?? "");
+      setDate(new Date(activity.date).toISOString().slice(0, 16));
+      setStatus(activity.status);
+      setDuration(activity.duration?.toString() ?? "");
+      setOutcome(activity.outcome ?? "");
+      setEmailSubject((activity.metadata as Record<string, any> | null)?.subject ?? "");
+      setMeetingLink((activity.metadata as Record<string, any> | null)?.meetingLink ?? "");
+      setFollowUpRequired((activity.metadata as Record<string, any> | null)?.followUpRequired ?? false);
+    } else {
+      setType("call");
+      setTitle("");
+      setDescription("");
+      setDate("");
+      setStatus("scheduled");
+      setDuration("");
+      setOutcome("");
+      setEmailSubject("");
+      setMeetingLink("");
+      setFollowUpRequired(false);
+    }
+  }, [activity, open]);
 
   // Auto-set status when type changes (only in create mode)
   useEffect(() => {
@@ -84,6 +118,10 @@ export function ActivityForm({ open, onOpenChange, entityType, entityId, activit
 
     const metadata: Record<string, unknown> = {};
     if (showEmailSubject && emailSubject) metadata.subject = emailSubject;
+    if (type === "meeting") {
+      if (meetingLink) metadata.meetingLink = meetingLink.trim();
+      metadata.followUpRequired = followUpRequired;
+    }
 
     const payload = {
       type,
@@ -200,6 +238,32 @@ export function ActivityForm({ open, onOpenChange, entityType, entityId, activit
             </div>
           )}
 
+          {type === "meeting" && (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="meeting-link">Meeting Link (Zoho Meeting)</Label>
+                <Input
+                  id="meeting-link"
+                  type="url"
+                  value={meetingLink}
+                  onChange={(e) => setMeetingLink(e.target.value)}
+                  placeholder="e.g. https://meeting.zoho.com/meeting/..."
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="follow-up-required"
+                  checked={followUpRequired}
+                  onCheckedChange={(checked) => setFollowUpRequired(!!checked)}
+                />
+                <Label htmlFor="follow-up-required" className="text-sm font-medium leading-none cursor-pointer">
+                  Follow-Up Required
+                </Label>
+              </div>
+            </>
+          )}
+
           {showEmailSubject && (
             <div className="space-y-1">
               <Label htmlFor="activity-email-subject">Email Subject</Label>
@@ -236,3 +300,4 @@ export function ActivityForm({ open, onOpenChange, entityType, entityId, activit
     </Sheet>
   );
 }
+

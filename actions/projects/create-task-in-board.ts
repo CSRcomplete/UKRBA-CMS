@@ -11,6 +11,9 @@ import {
   AuthorizationError,
 } from "@/lib/authz";
 
+import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP } from "@/lib/constants/group-assignments";
+import { ensureGroupSystemUser } from "@/actions/projects/ensure-group-system-user";
+
 export const createTaskInBoard = async (data: {
   boardId: string;
   section: string;
@@ -53,12 +56,12 @@ export const createTaskInBoard = async (data: {
         data: {
           v: 0,
           priority: "normal",
-          title: "New task",
-          content: "",
+          title: title || "New task",
+          content: content || "",
           section,
           createdBy: session.user.id,
           updatedBy: session.user.id,
-          position: tasksCount > 0 ? tasksCount : 0,
+          position: BigInt(tasksCount > 0 ? tasksCount : 0),
           user: session.user.id,
           taskStatus: "ACTIVE",
         },
@@ -71,9 +74,9 @@ export const createTaskInBoard = async (data: {
 
       revalidatePath("/[locale]/(routes)/projects", "page");
       return { success: true };
-    } catch (error) {
-      console.log("[CREATE_TASK_IN_BOARD_QUICK]", error);
-      return { error: "Failed to create task" };
+    } catch (error: any) {
+      console.error("[CREATE_TASK_IN_BOARD_QUICK]", error);
+      return { error: error?.message || "Failed to create task" };
     }
   }
 
@@ -83,18 +86,20 @@ export const createTaskInBoard = async (data: {
       where: { section },
     });
 
+    const targetUserId = await ensureGroupSystemUser(user);
+
     const task = await prismadb.tasks.create({
       data: {
         v: 0,
-        priority,
-        title,
-        content,
-        dueDateAt,
+        priority: priority || "normal",
+        title: title.trim(),
+        content: content || title.trim(),
+        dueDateAt: dueDateAt ? new Date(dueDateAt) : new Date(),
         section,
-        createdBy: user,
-        updatedBy: user,
-        position: tasksCount > 0 ? tasksCount : 0,
-        user,
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+        position: BigInt(tasksCount > 0 ? tasksCount : 0),
+        user: targetUserId,
         taskStatus: "ACTIVE",
       },
     });
@@ -105,7 +110,7 @@ export const createTaskInBoard = async (data: {
     });
 
     // Send email notification if assigning to a different user
-    if (user !== session.user.id) {
+    if (targetUserId !== session.user.id) {
       try {
         let resend;
         try {
@@ -117,14 +122,14 @@ export const createTaskInBoard = async (data: {
 
         if (resend) {
           const notifyRecipient = await prismadb.users.findUnique({
-            where: { id: user },
+            where: { id: targetUserId },
           });
 
           const boardData = await prismadb.boards.findUnique({
             where: { id: boardId },
           });
 
-          if (notifyRecipient?.email) {
+          if (notifyRecipient?.email && !notifyRecipient.email.endsWith("@system.local")) {
             await resend.emails.send({
               from:
                 process.env.NEXT_PUBLIC_APP_NAME +
@@ -154,8 +159,8 @@ export const createTaskInBoard = async (data: {
 
     revalidatePath("/[locale]/(routes)/projects", "page");
     return { success: true };
-  } catch (error) {
-    console.log("[CREATE_TASK_IN_BOARD]", error);
-    return { error: "Failed to create task" };
+  } catch (error: any) {
+    console.error("[CREATE_TASK_IN_BOARD]", error);
+    return { error: error?.message || "Failed to create task" };
   }
 };

@@ -21,7 +21,14 @@ export const campaignSendStep = inngest.createFunction(
       return prismadb.crm_campaign_sends.findUnique({
         where: { id: sendId },
         include: {
-          campaign: { select: { status: true, from_name: true, reply_to: true } },
+          campaign: {
+            select: {
+              status: true,
+              from_name: true,
+              reply_to: true,
+              created_by_user: { select: { name: true, email: true } },
+            },
+          },
           step: { include: { template: true } },
           target: true,
         },
@@ -33,9 +40,11 @@ export const campaignSendStep = inngest.createFunction(
 
     const html = resolveMergeTags(sendRecord.step.template.content_html, sendRecord.target);
 
-    const fromAddress = sendRecord.campaign.from_name
-      ? `${sendRecord.campaign.from_name} <${process.env.RESEND_FROM_EMAIL}>`
-      : process.env.RESEND_FROM_EMAIL!;
+    const creator = sendRecord.campaign.created_by_user;
+    const senderEmail = creator?.email || process.env.EMAIL_FROM!;
+    const senderName = sendRecord.campaign.from_name || creator?.name;
+    const fromAddress = senderName ? `${senderName} <${senderEmail}>` : senderEmail;
+    const replyTo = sendRecord.campaign.reply_to || creator?.email;
 
     const result = await step.run("send-email", async () => {
       return resend.emails.send({
@@ -43,7 +52,7 @@ export const campaignSendStep = inngest.createFunction(
         to: sendRecord.email,
         subject: resolveMergeTags(sendRecord.step.subject, sendRecord.target),
         html,
-        ...(sendRecord.campaign.reply_to ? { replyTo: sendRecord.campaign.reply_to } : {}),
+        ...(replyTo ? { replyTo } : {}),
         headers: {
           "List-Unsubscribe": `<${process.env.NEXTAUTH_URL}/api/campaigns/unsubscribe?token=${sendRecord.unsubscribe_token}>`,
         },

@@ -1,9 +1,9 @@
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, HeadBucketCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { minioClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
+import { minioClient, minioPublicClient, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { randomUUID } from "crypto";
 
 const ALLOWED_FOLDERS = ["avatars", "images", "documents", "uploads"] as const;
@@ -22,19 +22,11 @@ export async function POST(req: NextRequest) {
     ? (rawFolder as AllowedFolder)
     : "uploads";
 
-  if (!filename || !contentType) {
-    return NextResponse.json({ error: "filename and contentType are required" }, { status: 400 });
+  if (!filename) {
+    return NextResponse.json({ error: "filename is required" }, { status: 400 });
   }
 
-  const ALLOWED_CONTENT_TYPES = new Set([
-    "image/jpeg", "image/png", "image/gif", "image/webp",
-    "application/pdf", "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "text/plain",
-  ]);
-  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
-    return NextResponse.json({ error: "Content type not allowed" }, { status: 400 });
-  }
+  const effectiveContentType = contentType || "application/octet-stream";
 
   // Fall back to "bin" if filename has no extension or extension is empty (e.g., ".")
   const ext = filename.includes(".") ? filename.split(".").pop()?.trim() || "bin" : "bin";
@@ -43,12 +35,26 @@ export async function POST(req: NextRequest) {
   const command = new PutObjectCommand({
     Bucket: MINIO_BUCKET,
     Key: key,
-    ContentType: contentType,
+    ContentType: effectiveContentType,
   });
 
   // Presigned URL valid for 10 minutes
   try {
-    const presignedUrl = await getSignedUrl(minioClient, command, { expiresIn: 600 });
+    // Auto-create bucket if it doesn't exist
+    try {
+      await minioClient.send(new HeadBucketCommand({ Bucket: MINIO_BUCKET }));
+    } catch (err: any) {
+      const isNotFound =
+        err.name === "NotFound" ||
+        err.name === "NoSuchBucket" ||
+        err.$metadata?.httpStatusCode === 404;
+
+      if (isNotFound) {
+        await minioClient.send(new CreateBucketCommand({ Bucket: MINIO_BUCKET }));
+      }
+    }
+
+    const presignedUrl = await getSignedUrl(minioPublicClient, command, { expiresIn: 3600 });
 
     // The public URL where the file will be accessible after upload
     const fileUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${key}`;

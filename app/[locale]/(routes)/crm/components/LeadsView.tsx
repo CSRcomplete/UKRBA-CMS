@@ -25,15 +25,21 @@ import { NewLeadForm } from "../leads/components/NewLeadForm";
 import { LeadDataTable } from "../leads/table-components/data-table";
 
 import type { getAllCrmData } from "@/actions/crm/get-crm-data";
+import type { PostcodeOption } from "@/actions/crm/get-postcode-options";
 
 type CrmData = Awaited<ReturnType<typeof getAllCrmData>>;
 
 interface LeadsViewProps {
   data: any[];
   crmData: CrmData;
+  postcodeOptions?: PostcodeOption[];
+  title?: string;
+  backHref?: string;
 }
 
-const LeadsView = ({ data, crmData }: LeadsViewProps) => {
+import { Upload } from "lucide-react";
+
+const LeadsView = ({ data, crmData, postcodeOptions = [], title, backHref }: LeadsViewProps) => {
   const { accounts, leadSources, leadStatuses, leadTypes } = crmData;
   const [open, setOpen] = useState(false);
   const t = useTranslations("CrmPage");
@@ -41,16 +47,24 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex justify-between">
+        <div className="flex items-center justify-between">
           <div>
             <CardTitle>
-              <Link href="/crm/leads" className="hover:underline">
-                {t("leads.viewTitle")}
+              <Link href={backHref ?? "/crm/leads"} className="hover:underline">
+                {title ?? t("leads.viewTitle")}
               </Link>
             </CardTitle>
           </div>
+          <div className="flex items-center gap-2">
+            <Link href="/crm/leads/upload">
+              <Button size="sm" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                <span>Upload Leads</span>
+              </Button>
+            </Link>
+          </div>
         </div>
-        <Separator />
+        <Separator className="mt-3" />
       </CardHeader>
       <CardContent>
         {!data ||
@@ -63,6 +77,7 @@ const LeadsView = ({ data, crmData }: LeadsViewProps) => {
               leadSources={leadSources}
               leadStatuses={leadStatuses}
               leadTypes={leadTypes}
+              postcodeOptions={postcodeOptions}
             />
           ))}
       </CardContent>

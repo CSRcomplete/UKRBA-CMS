@@ -11,6 +11,9 @@ import {
   AuthorizationError,
 } from "@/lib/authz";
 
+import { GROUP_ASSIGNMENTS, LEGACY_KEY_MAP } from "@/lib/constants/group-assignments";
+import { ensureGroupSystemUser } from "@/actions/projects/ensure-group-system-user";
+
 export const updateTask = async (data: {
   taskId: string;
   title: string;
@@ -57,15 +60,17 @@ export const updateTask = async (data: {
   }
 
   try {
+    const targetUserId = await ensureGroupSystemUser(user);
+
     const task = await prismadb.tasks.update({
       where: { id: taskId },
       data: {
         priority,
         title,
         content,
-        updatedBy: user,
-        dueDateAt,
-        user,
+        updatedBy: session.user.id,
+        dueDateAt: dueDateAt ? new Date(dueDateAt) : undefined,
+        user: targetUserId,
       },
     });
 
@@ -77,7 +82,7 @@ export const updateTask = async (data: {
     }
 
     // Send email notification if assigning to a different user
-    if (user !== session.user.id && resolvedBoardId) {
+    if (targetUserId !== session.user.id && resolvedBoardId) {
       try {
         let resend;
         try {
@@ -88,14 +93,14 @@ export const updateTask = async (data: {
 
         if (resend) {
           const notifyRecipient = await prismadb.users.findUnique({
-            where: { id: user },
+            where: { id: targetUserId },
           });
 
           const boardData = await prismadb.boards.findUnique({
             where: { id: resolvedBoardId },
           });
 
-          if (notifyRecipient?.email) {
+          if (notifyRecipient?.email && !notifyRecipient.email.endsWith("@system.local")) {
             await resend.emails.send({
               from:
                 process.env.NEXT_PUBLIC_APP_NAME +

@@ -1,14 +1,15 @@
 import React from "react";
 import Container from "../../components/ui/Container";
 import { getTasks } from "@/actions/projects/get-tasks";
-import { TasksDataTable } from "./components/data-table";
-import { columns } from "./components/columns";
+import { getBoards } from "@/actions/projects/get-boards";
+import NewTaskDialog from "../dialogs/NewTask";
+import { TasksTabs } from "./components/TasksTabs";
 
-import { Button } from "@/components/ui/button";
 import { getTranslations } from "next-intl/server";
 
 const TasksPage = async () => {
   const tasks: any = await getTasks();
+  const boards: any = await getBoards();
   const t = await getTranslations("ProjectsPage");
 
   return (
@@ -17,10 +18,10 @@ const TasksPage = async () => {
       description={t("tasks.description")}
     >
       <div className="py-5">
-        <Button>{t("tasks.newTask")}</Button>
+        <NewTaskDialog boards={boards} />
       </div>
       <div>
-        <TasksDataTable data={tasks} columns={columns} />
+        <TasksTabs tasks={tasks} />
       </div>
     </Container>
   );

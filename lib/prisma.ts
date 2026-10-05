@@ -9,7 +9,12 @@ declare global {
 // Prisma Client configuration with connection pooling and lifecycle management
 const prismaClientSingleton = () => {
   const connectionString = `${process.env.DATABASE_URL}`;
-  const pool = new Pool({ connectionString });
+  // Default pg.Pool max is 10 — several pages (e.g. leads, which fires ~20
+  // concurrent queries across getAllCrmData/getLeads/getPostcodeOptions in
+  // one Promise.all) can exhaust that and starve out unrelated queries,
+  // including Better Auth's own session lookup, making requests look
+  // unauthenticated even for a valid, logged-in user.
+  const pool = new Pool({ connectionString, max: 30 });
   const adapter = new PrismaPg(pool);
 
   const client = new PrismaClient({

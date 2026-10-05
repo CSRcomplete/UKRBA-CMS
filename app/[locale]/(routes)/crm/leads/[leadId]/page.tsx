@@ -9,6 +9,10 @@ import { HistoryTab } from "./components/HistoryTab";
 import { ActivitiesSection } from "./components/ActivitiesSection";
 import { getOwnershipHistory } from "@/lib/ownership";
 import { OwnershipHistoryTimeline } from "@/components/crm/leads/OwnershipHistoryTimeline";
+import { EntityTasks } from "@/components/crm/tasks/EntityTasks";
+import { DirectMeetingScheduler } from "@/components/crm/meetings/DirectMeetingScheduler";
+import { getLeadEmailFlow } from "@/actions/crm/leads/get-lead-email-flow";
+import { EmailFlowPanel } from "./components/EmailFlowPanel";
 
 interface LeadDetailPageProps {
   params: Promise<{
@@ -25,6 +29,7 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
 
   const rawOwnershipHistory = await getOwnershipHistory("lead", leadId);
   const ownershipHistory = JSON.parse(JSON.stringify(rawOwnershipHistory));
+  const emailFlow = await getLeadEmailFlow(leadId);
 
   return (
     <Container
@@ -34,8 +39,11 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tasks">Next Actions</TabsTrigger>
+          <TabsTrigger value="meetings">Schedule Meeting</TabsTrigger>
           <TabsTrigger value="ownership">Ownership Trail</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
+          {emailFlow && <TabsTrigger value="email-flow">Email Flow</TabsTrigger>}
         </TabsList>
         <TabsContent value="overview">
           <div className="space-y-5">
@@ -45,12 +53,29 @@ const LeadDetailPage = async (props: LeadDetailPageProps) => {
             {/*         <DocumentsView data={lead?.documents} /> */}
           </div>
         </TabsContent>
+        <TabsContent value="tasks">
+          <EntityTasks entityId={leadId} entityType="lead" />
+        </TabsContent>
+        <TabsContent value="meetings">
+          <div className="max-w-2xl">
+            <DirectMeetingScheduler
+              inviteeType="lead"
+              inviteeId={lead.id}
+              inviteeName={`${lead.firstName || ""} ${lead.lastName || ""}`.trim()}
+            />
+          </div>
+        </TabsContent>
         <TabsContent value="ownership">
           <OwnershipHistoryTimeline history={ownershipHistory} />
         </TabsContent>
         <TabsContent value="history">
           <HistoryTab leadId={leadId} />
         </TabsContent>
+        {emailFlow && (
+          <TabsContent value="email-flow">
+            <EmailFlowPanel flow={emailFlow} />
+          </TabsContent>
+        )}
       </Tabs>
     </Container>
   );

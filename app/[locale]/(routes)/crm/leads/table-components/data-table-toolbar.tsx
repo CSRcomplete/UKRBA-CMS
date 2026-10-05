@@ -7,56 +7,74 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 
-import { statuses } from "../table-data/data";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
+import { SALES_STATUS_LABELS } from "@/lib/sales-status";
+
+type ConfigItem = { id: string; name: string };
+type PostcodeOption = { postcode_area: string; area_name: string | null };
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
+  leadSources?: ConfigItem[];
+  leadStatuses?: ConfigItem[];
+  postcodeOptions?: PostcodeOption[];
 }
+
+const salesStatusOptions = Object.entries(SALES_STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 export function DataTableToolbar<TData>({
   table,
+  leadSources = [],
+  leadStatuses = [],
+  postcodeOptions = [],
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex flex-1 items-center space-x-2">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-1 flex-wrap items-center gap-2">
         <Input
-          placeholder="Filter leads ..."
+          placeholder="Filter by company..."
           value={(table.getColumn("company")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("company")?.setFilterValue(event.target.value)
           }
-          className="h-8 w-[150px] lg:w-[250px]"
+          className="h-8 w-[150px] lg:w-[200px]"
         />
-        {/*         <Input
-          placeholder="Filter by assigned user ..."
-          value={
-            (table.getColumn("assigned_to_user")?.getFilterValue() as string) ??
-            ""
-          }
-          onChange={(event) =>
-            table
-              .getColumn("assigned_to_user")
-              ?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[150px] lg:w-[250px]"
-        /> */}
-        {table.getColumn("status") && (
+        {table.getColumn("postcode") && (
           <DataTableFacetedFilter
-            column={table.getColumn("status")}
-            title="Status"
-            options={statuses}
+            column={table.getColumn("postcode")}
+            title="Postcode"
+            options={postcodeOptions.map((p) => ({
+              value: p.postcode_area,
+              label: p.area_name ? `${p.postcode_area} — ${p.area_name}` : p.postcode_area,
+            }))}
           />
         )}
-        {/*        {table.getColumn("priority") && (
+        {table.getColumn("lead_status") && (
           <DataTableFacetedFilter
-            column={table.getColumn("priority")}
-            title="Priority"
-            options={priorities}
+            column={table.getColumn("lead_status")}
+            title="Status"
+            options={leadStatuses.map((s) => ({ value: s.id, label: s.name }))}
           />
-        )} */}
+        )}
+        {table.getColumn("lead_source") && (
+          <DataTableFacetedFilter
+            column={table.getColumn("lead_source")}
+            title="Lead Source"
+            options={leadSources.map((s) => ({ value: s.id, label: s.name }))}
+          />
+        )}
+        {table.getColumn("sales_status") && (
+          <DataTableFacetedFilter
+            column={table.getColumn("sales_status")}
+            title="Sales Status"
+            options={salesStatusOptions}
+          />
+        )}
         {isFiltered && (
           <Button
             variant="ghost"

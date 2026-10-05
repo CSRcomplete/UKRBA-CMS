@@ -11,27 +11,35 @@ async function requireSession() {
   return session.user.id as string;
 }
 
+import { serializeDecimalsList } from "@/lib/serialize-decimals";
+
 export async function getEmailAccounts() {
   const userId = await requireSession();
-  return prismadb.emailAccount.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      label: true,
-      imapHost: true,
-      imapPort: true,
-      imapSsl: true,
-      smtpHost: true,
-      smtpPort: true,
-      smtpSsl: true,
-      username: true,
-      isActive: true,
-      sentFolderName: true,
-      lastSyncedAt: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  try {
+    const accounts = await prismadb.emailAccount.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        label: true,
+        imapHost: true,
+        imapPort: true,
+        imapSsl: true,
+        smtpHost: true,
+        smtpPort: true,
+        smtpSsl: true,
+        username: true,
+        isActive: true,
+        sentFolderName: true,
+        lastSyncedAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return serializeDecimalsList(accounts);
+  } catch (err) {
+    console.error("Failed to fetch email accounts:", err);
+    return [];
+  }
 }
 
 type CreateInput = {
@@ -47,6 +55,8 @@ type CreateInput = {
   sentFolderName?: string;
 };
 
+import { performEmailAccountSync } from "@/lib/email-sync";
+
 export async function createEmailAccount(input: CreateInput) {
   const userId = await requireSession();
 
@@ -60,7 +70,7 @@ export async function createEmailAccount(input: CreateInput) {
   if (input.smtpPort < 1 || input.smtpPort > 65535) throw new Error("Invalid SMTP port");
 
   const passwordEncrypted = encrypt(input.password);
-  return prismadb.emailAccount.create({
+  const created = await prismadb.emailAccount.create({
     data: {
       userId,
       label: input.label,
@@ -74,6 +84,23 @@ export async function createEmailAccount(input: CreateInput) {
       passwordEncrypted,
       ...(input.sentFolderName && { sentFolderName: input.sentFolderName }),
     },
+    select: { id: true, label: true },
+  });
+
+  // Trigger immediate initial IMAP sync (non-blocking)
+  performEmailAccountSync(created.id).catch(() => {});
+
+  return created;
+}
+
+export async function updateEmailAccountLabel(id: string, newLabel: string) {
+  const userId = await requireSession();
+  if (!newLabel?.trim()) throw new Error("Label cannot be empty");
+  const account = await prismadb.emailAccount.findFirst({ where: { id, userId } });
+  if (!account) throw new Error("Not found");
+  return prismadb.emailAccount.update({
+    where: { id },
+    data: { label: newLabel.trim() },
     select: { id: true, label: true },
   });
 }
@@ -105,30 +132,42 @@ export async function testEmailConnection(
 ): Promise<{ ok: boolean; error?: string }> {
   await requireSession();
 
+  const username = (input.username || "").trim();
+  const password = input.password || "";
+  const imapHost = (input.imapHost || "").trim();
+
+  if (!username || !password || !imapHost) {
+    return { ok: false, error: "Username, password, and IMAP host are required." };
+  }
+
   const connectionPromise = new Promise<{ ok: boolean; error?: string }>((resolve) => {
     const imap = new Imap({
-      user: input.username,
-      password: input.password,
-      host: input.imapHost,
-      port: input.imapPort,
-      tls: input.imapSsl,
-      // tlsOptions: { rejectUnauthorized: false } intentionally disabled for self-signed cert support
+      user: username,
+      password: password,
+      host: imapHost,
+      port: input.imapPort || 993,
+      tls: input.imapSsl ?? true,
       tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 8000,
-      connTimeout: 8000,
+      authTimeout: 10000,
+      connTimeout: 10000,
     });
     imap.once("ready", () => {
       imap.end();
       resolve({ ok: true });
     });
     imap.once("error", (err: Error) => {
-      resolve({ ok: false, error: err.message });
+      let msg = err.message || "Authentication failed";
+      console.error(`IMAP test error for ${username}:`, err);
+      if (msg.includes("AUTHENTICATIONFAILED") || msg.toLowerCase().includes("auth")) {
+        msg = `Authentication failed for ${username}. On Hostinger, click the three dots next to the mailbox -> 'App passwords', generate an App Password, and paste it here.`;
+      }
+      resolve({ ok: false, error: msg });
     });
     imap.connect();
   });
 
   const timeoutPromise = new Promise<{ ok: boolean; error?: string }>((resolve) =>
-    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 10000)
+    setTimeout(() => resolve({ ok: false, error: "Connection timed out connecting to " + imapHost }), 12000)
   );
 
   return Promise.race([connectionPromise, timeoutPromise]);
@@ -147,16 +186,20 @@ export async function listImapFolders(
 ): Promise<{ ok: true; folders: string[] } | { ok: false; error: string }> {
   await requireSession();
 
+  const username = (input.username || "").trim();
+  const password = input.password || "";
+  const imapHost = (input.imapHost || "").trim();
+
   return new Promise((resolve) => {
     const imap = new Imap({
-      user: input.username,
-      password: input.password,
-      host: input.imapHost,
-      port: input.imapPort,
-      tls: input.imapSsl,
+      user: username,
+      password: password,
+      host: imapHost,
+      port: input.imapPort || 993,
+      tls: input.imapSsl ?? true,
       tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 8000,
-      connTimeout: 8000,
+      authTimeout: 10000,
+      connTimeout: 10000,
     });
 
     imap.once("ready", () => {
@@ -180,6 +223,6 @@ export async function listImapFolders(
     imap.once("error", (err: Error) => resolve({ ok: false, error: err.message }));
     imap.connect();
 
-    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 10000);
+    setTimeout(() => resolve({ ok: false, error: "Connection timed out" }), 12000);
   });
 }

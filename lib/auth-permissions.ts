@@ -18,6 +18,14 @@ export const admin = ac.newRole({
   settings: ["read", "update"],
 });
 
+export const ceo = ac.newRole({
+  user: ["create", "read", "update", "delete", "changeRole", "activate", "deactivate"],
+  crm: ["create", "read", "update", "delete"],
+  project: ["create", "read", "update", "delete"],
+  report: ["read", "export"],
+  settings: ["read", "update"],
+});
+
 export const manager = ac.newRole({
   user: ["read"],
   crm: ["create", "read", "update", "delete"],

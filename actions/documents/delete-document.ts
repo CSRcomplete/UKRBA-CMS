@@ -4,6 +4,7 @@ import {
   assertCanWriteDocument,
   AuthenticationError,
   AuthorizationError,
+  isAdmin,
 } from "@/lib/authz";
 
 import { prismadb } from "@/lib/prisma";
@@ -18,6 +19,8 @@ export async function deleteDocument(documentId: string) {
     if (e instanceof AuthenticationError) throw new Error("Unauthenticated");
     throw e;
   }
+
+  if (!isAdmin(user)) throw new Error("Forbidden");
 
   if (!documentId) throw new Error("Document ID is required");
 

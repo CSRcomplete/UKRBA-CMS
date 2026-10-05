@@ -32,6 +32,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { deleteLead } from "@/actions/crm/leads/delete-lead";
+import { useSession } from "@/lib/auth-client";
 
 type ConfigItem = { id: string; name: string };
 
@@ -50,6 +51,12 @@ export function DataTableRowActions<TData>({
 }: DataTableRowActionsProps<TData>) {
   const router = useRouter();
   const lead = leadSchema.parse(row.original);
+
+  const { data: session } = useSession();
+  const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
+  const isSupervisor = session?.user?.role === "regional_director" || session?.user?.role === "area_director";
+  const ownsLead = !!session?.user?.id && (row.original as { assigned_to?: string | null }).assigned_to === session.user.id;
+  const canDelete = isAdminOrCeo || (isSupervisor && ownsLead);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,11 +125,15 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem onClick={() => setUpdateOpen(true)}>
             Update
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setOpen(true)}>
-            Delete
-            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-          </DropdownMenuItem>
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setOpen(true)}>
+                Delete
+                <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

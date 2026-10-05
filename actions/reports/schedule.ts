@@ -35,7 +35,7 @@ export async function listSchedules() {
 async function loadAndAuthorizeSchedule(scheduleId: string, user: { id: string; role: string }) {
   const sched = await prismadb.crm_Report_Schedule.findUnique({ where: { id: scheduleId } });
   if (!sched) throw new Error("Not found");
-  if (user.role !== "admin" && user.role !== "manager" && sched.createdBy !== user.id) {
+  if (user.role !== "admin" && user.role !== "ceo" && user.role !== "coo" && user.role !== "manager" && sched.createdBy !== user.id) {
     throw new AuthorizationError();
   }
   return sched;

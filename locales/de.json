@@ -285,6 +285,7 @@
     "fullName": "Vollständiger Name",
     "username": "Benutzername",
     "company": "Unternehmen",
+    "phone": "Telefonnummer",
     "updateButton": "Profil aktualisieren",
     "photoUpdated": "Foto aktualisiert",
     "photoUpdatedDescription": "Ihr Profilfoto wurde aktualisiert.",

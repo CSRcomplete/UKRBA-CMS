@@ -1,5 +1,5 @@
 import Imap from "imap";
-import { simpleParser } from "mailparser";
+import { simpleParser, type Attachment } from "mailparser";
 
 export type ImapAccount = {
   username: string;
@@ -18,7 +18,19 @@ export type ParsedHeader = {
   to: { name?: string; email: string }[];
   cc: { name?: string; email: string }[];
   sentAt?: Date;
+  inReplyTo?: string;
+  references: string[];
 };
+
+/** mailparser returns `references` as a string, string[], or undefined
+ * depending on how many References headers/values were present — normalise
+ * to a clean array either way. */
+function normalizeReferences(references: unknown): string[] {
+  if (!references) return [];
+  if (Array.isArray(references)) return references.filter(Boolean);
+  if (typeof references === "string") return references.split(/\s+/).filter(Boolean);
+  return [];
+}
 
 /** Open a connection and resolve when ready. Caller is responsible for imap.end(). */
 export function connectImap(account: ImapAccount): Promise<Imap> {
@@ -85,6 +97,8 @@ export function fetchHeaders(
                   email: a.address ?? "",
                 })),
                 sentAt: parsed.date || undefined,
+                inReplyTo: parsed.inReplyTo || undefined,
+                references: normalizeReferences(parsed.references),
               });
             } catch (e) {
               console.warn(`[imap-utils] Failed to parse header for UID ${uid}:`, e);
@@ -102,12 +116,220 @@ export function fetchHeaders(
   });
 }
 
-/** Open a fresh IMAP connection, fetch the full body of one message by UID. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * mailparser leaves inline/embedded images as `<img src="cid:...">` in the
+ * parsed HTML and returns their actual bytes separately in `attachments`
+ * (keyed by `cid`) — it does not re-embed them itself. Without this step
+ * every email with an inline image/logo/signature renders a broken image.
+ */
+function embedInlineImages(html: string, attachments: Attachment[]): { html: string; consumedCids: Set<string> } {
+  let result = html;
+  const consumedCids = new Set<string>();
+  for (const att of attachments) {
+    if (!att.cid) continue;
+    const pattern = new RegExp(`cid:${escapeRegExp(att.cid)}`, "gi");
+    if (!pattern.test(html)) continue;
+    const dataUri = `data:${att.contentType};base64,${att.content.toString("base64")}`;
+    result = result.replace(pattern, dataUri);
+    consumedCids.add(att.cid);
+  }
+  return { html: result, consumedCids };
+}
+
+/**
+ * Rewrite remote (http/https) <img> src URLs to route through our own
+ * image proxy. Cloudflare-fronted CDNs frequently block or challenge
+ * cross-site <img> requests made from inside another site's iframe (they
+ * load fine as a direct fetch, but silently fail as an embedded image) —
+ * fetching them server-side and re-serving from our own origin sidesteps
+ * that entirely. Leaves data: URIs (already-embedded inline images) alone.
+ */
+function proxyRemoteImages(html: string): string {
+  return html.replace(
+    /(<img\b[^>]*?\bsrc\s*=\s*)(["'])(https?:\/\/[^"']+)\2/gi,
+    (_match, prefix: string, quote: string, url: string) =>
+      `${prefix}${quote}/api/emails/image-proxy?url=${encodeURIComponent(url)}${quote}`
+  );
+}
+
+export type FetchedAttachment = {
+  filename: string;
+  contentType: string;
+  size: number;
+  content: Buffer;
+  contentId?: string;
+};
+
+export type FetchedBody = {
+  bodyText?: string;
+  bodyHtml?: string;
+  inReplyTo?: string;
+  references?: string[];
+  attachments?: FetchedAttachment[];
+};
+
+/**
+ * Fetches and parses the body of the message at `uid` in the currently-open
+ * `box` on an already-connected `imap` client. Caller owns the connection
+ * and box lifecycle — this only runs one FETCH.
+ */
+function fetchBodyOnOpenBox(
+  imap: Imap,
+  uid: number
+): Promise<FetchedBody> {
+  return new Promise((resolve, reject) => {
+    const fetch = imap.fetch([uid], { bodies: "" });
+    const chunks: Buffer[] = [];
+    let found = false;
+
+    fetch.on("message", (msg) => {
+      found = true;
+      msg.on("body", (stream) => {
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      });
+      msg.on("end", () => {
+        simpleParser(Buffer.concat(chunks))
+          .then((parsed) => {
+            let html = parsed.html || undefined;
+            let consumedCids = new Set<string>();
+            if (html) {
+              if (parsed.attachments?.length) {
+                const embedded = embedInlineImages(html, parsed.attachments);
+                html = embedded.html;
+                consumedCids = embedded.consumedCids;
+              }
+              html = proxyRemoteImages(html);
+            }
+            // Real file attachments — anything that wasn't actually embedded
+            // inline via a cid: reference found in the HTML body. Some
+            // providers (e.g. Gmail) mark ordinary file attachments as
+            // "inline" in their Content-Disposition header even though they
+            // aren't referenced anywhere in the body, so contentDisposition
+            // alone isn't a reliable signal — whether the cid was actually
+            // consumed above is.
+            const realAttachments = (parsed.attachments || [])
+              .filter((att) => !att.cid || !consumedCids.has(att.cid))
+              .map((att) => ({
+                filename: att.filename || "attachment",
+                contentType: att.contentType,
+                size: att.size,
+                content: att.content,
+                contentId: att.cid,
+              }));
+            resolve({
+              bodyText: parsed.text || undefined,
+              bodyHtml: html,
+              inReplyTo: parsed.inReplyTo || undefined,
+              references: normalizeReferences(parsed.references),
+              attachments: realAttachments.length > 0 ? realAttachments : undefined,
+            });
+          })
+          .catch(reject);
+      });
+    });
+
+    fetch.on("error", reject);
+    fetch.on("end", () => {
+      if (!found) resolve({});
+    });
+  });
+}
+
+function searchByMessageId(imap: Imap, messageId: string): Promise<number[]> {
+  return new Promise((resolve, reject) => {
+    imap.search([["HEADER", "MESSAGE-ID", messageId]], (err, uids) => {
+      if (err) return reject(err);
+      resolve(uids ?? []);
+    });
+  });
+}
+
+/**
+ * Looks up and fetches multiple messages by Message-ID over a single IMAP
+ * connection/box — for bulk re-fetching, opening a fresh TLS connection per
+ * message is the dominant cost by far. Returns a map keyed by messageId;
+ * entries are omitted for IDs that weren't found (synthetic/local IDs or
+ * messages no longer present in this folder).
+ */
+export async function fetchBodiesByMessageIds(
+  account: ImapAccount,
+  folderName: string,
+  messageIds: string[]
+): Promise<Map<string, FetchedBody>> {
+  const results = new Map<string, FetchedBody>();
+  const imap = await connectImap(account);
+
+  await new Promise<void>((resolve, reject) => {
+    imap.openBox(folderName, true, (err) => (err ? reject(err) : resolve()));
+  });
+
+  try {
+    for (const messageId of messageIds) {
+      try {
+        const uids = await searchByMessageId(imap, messageId);
+        if (uids.length === 0) continue;
+        const body = await fetchBodyOnOpenBox(imap, uids[uids.length - 1]);
+        results.set(messageId, body);
+      } catch (e) {
+        console.warn(`[imap-utils] Failed to fetch message ${messageId} in ${folderName}:`, e);
+      }
+    }
+  } finally {
+    imap.end();
+  }
+
+  return results;
+}
+
+/**
+ * Open a fresh IMAP connection, find the message by its stable Message-ID
+ * header, then fetch its body. UIDs are only guaranteed to point at the
+ * same message within a single UIDVALIDITY session — if the mailbox is
+ * ever reindexed server-side (observed to happen on this account's
+ * provider), a UID stored during the initial sync can silently start
+ * pointing at a *different* message, pulling the wrong content into the
+ * wrong CRM record. Message-ID is permanent for the life of the message,
+ * so looking it up fresh every time avoids that class of corruption
+ * entirely — this is the only body-fetch path that should be used.
+ */
+export async function fetchBodyByMessageId(
+  account: ImapAccount,
+  folderName: string,
+  messageId: string
+): Promise<FetchedBody> {
+  const imap = await connectImap(account);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      imap.openBox(folderName, true, (err) => (err ? reject(err) : resolve()));
+    });
+
+    const uids = await searchByMessageId(imap, messageId);
+    if (uids.length === 0) return {};
+
+    // If somehow more than one message shares this Message-ID, prefer the
+    // most recently added one.
+    return await fetchBodyOnOpenBox(imap, uids[uids.length - 1]);
+  } finally {
+    imap.end();
+  }
+}
+
+/** Open a fresh IMAP connection, fetch the full body of one message by UID.
+ * @deprecated UIDs can go stale if the mailbox is reindexed server-side,
+ * silently attributing one message's body to a different message's row.
+ * Use `fetchBodyByMessageId` instead — kept only for the incremental-sync
+ * watermark path where a stale UID just means a message gets re-checked,
+ * not corrupted. */
 export async function fetchBodyByUid(
   account: ImapAccount,
   folderName: string,
   uid: number
-): Promise<{ bodyText?: string; bodyHtml?: string }> {
+): Promise<FetchedBody> {
   const imap = await connectImap(account);
 
   return new Promise((resolve, reject) => {
@@ -118,32 +340,9 @@ export async function fetchBodyByUid(
     imap.openBox(folderName, true, (err) => {
       if (err) { end(); return reject(err); }
 
-      const fetch = imap.fetch([uid], { bodies: "" });
-      const chunks: Buffer[] = [];
-      let found = false;
-
-      fetch.on("message", (msg) => {
-        found = true;
-        msg.on("body", (stream) => {
-          stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-        });
-        msg.on("end", () => {
-          simpleParser(Buffer.concat(chunks))
-            .then((parsed) => {
-              end();
-              resolve({
-                bodyText: parsed.text || undefined,
-                bodyHtml: parsed.html || undefined,
-              });
-            })
-            .catch((e) => { end(); reject(e); });
-        });
-      });
-
-      fetch.on("error", (e) => { end(); reject(e); });
-      fetch.on("end", () => {
-        if (!found) { end(); resolve({}); }
-      });
+      fetchBodyOnOpenBox(imap, uid)
+        .then((result) => { end(); resolve(result); })
+        .catch((e) => { end(); reject(e); });
     });
   });
 }

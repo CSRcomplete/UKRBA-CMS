@@ -1,4 +1,4 @@
-// Type definitions for the emails feature — mock data removed
+import { EmailFolder } from "@prisma/client";
 
 export type EmailRecipient = { name?: string; email: string };
 
@@ -10,13 +10,20 @@ export type Mail = {
   fromEmail: string | null;
   sentAt: Date | null;
   isRead: boolean;
-  folder: "INBOX" | "SENT";
+  folder: EmailFolder;
   // Detail fields — present only when fetched via getEmail()
   rfcMessageId?: string;
   toRecipients?: EmailRecipient[];
   ccRecipients?: EmailRecipient[];
   bodyText?: string | null;
   bodyHtml?: string | null;
+  attachments?: {
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    storageUrl: string | null;
+  }[];
 };
 
 export type ConnectedAccount = {

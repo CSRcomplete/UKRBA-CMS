@@ -45,23 +45,23 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
   const c = useTranslations("Common");
 
   const formSchema = z.object({
-    id: z.uuid(),
-    firstName: z.string().optional().nullable(),
-    lastName: z.string().min(1, t("lastNameRequired")).max(30),
-    company: z.string().nullable().optional(),
-    jobTitle: z.string().nullable().optional(),
-    email: z.string().email(t("emailInvalid")).nullable().optional().or(z.literal("")),
-    phone: z.string().min(0).max(15).nullable().optional(),
-    description: z.string().nullable().optional(),
-    lead_source_id: z.string().nullable().optional(),
-    lead_status_id: z.string().nullable().optional(),
-    lead_type_id: z.string().nullable().optional(),
-    refered_by: z.string().optional().nullable(),
-    //TODO: add campaing schema from db as data source
-    campaign: z.string().optional().nullable(),
-    assigned_to: z.string().optional().nullable(),
-    accountsIDs: z.string().optional().nullable(),
-    change_reason: z.string().optional().nullable(),
+    id: z.string(),
+    firstName: z.string().optional().nullable().or(z.literal("")),
+    lastName: z.string().optional().nullable().or(z.literal("")),
+    company: z.string().optional().nullable().or(z.literal("")),
+    jobTitle: z.string().optional().nullable().or(z.literal("")),
+    email: z.string().optional().nullable().or(z.literal("")),
+    phone: z.string().optional().nullable().or(z.literal("")),
+    website: z.string().optional().nullable().or(z.literal("")),
+    description: z.string().optional().nullable().or(z.literal("")),
+    lead_source_id: z.string().optional().nullable().or(z.literal("")),
+    lead_status_id: z.string().optional().nullable().or(z.literal("")),
+    lead_type_id: z.string().optional().nullable().or(z.literal("")),
+    refered_by: z.string().optional().nullable().or(z.literal("")),
+    campaign: z.string().optional().nullable().or(z.literal("")),
+    assigned_to: z.string().optional().nullable().or(z.literal("")),
+    accountsIDs: z.string().optional().nullable().or(z.literal("")),
+    change_reason: z.string().optional().nullable().or(z.literal("")),
   });
 
   type NewLeadFormValues = z.infer<typeof formSchema>;
@@ -69,24 +69,38 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
   //TODO: fix this any
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     defaultValues: {
-      ...initialData,
-      lead_source_id: initialData.lead_source_id ?? "",
-      lead_status_id: initialData.lead_status_id ?? "",
-      lead_type_id: initialData.lead_type_id ?? "",
+      id: initialData?.id || "",
+      firstName: initialData?.firstName || "",
+      lastName: initialData?.lastName || "",
+      company: initialData?.company || "",
+      jobTitle: initialData?.jobTitle || "",
+      email: initialData?.email || "",
+      phone: initialData?.phone || "",
+      website: initialData?.website || "",
+      description: initialData?.description || "",
+      lead_source_id: initialData?.lead_source_id ?? "",
+      lead_status_id: initialData?.lead_status_id ?? "",
+      lead_type_id: initialData?.lead_type_id ?? "",
+      refered_by: initialData?.refered_by || "",
+      campaign: initialData?.campaign || "",
+      assigned_to: initialData?.assigned_to || "",
+      accountsIDs: initialData?.accountsIDs || "",
       change_reason: "",
     },
   });
 
   const onSubmit = async (data: NewLeadFormValues) => {
+    const sanitizeUuid = (val?: string | null) => (val && val.trim() !== "" ? val.trim() : undefined);
+
     const result = await updateLead({
       ...data,
-      lead_source_id: data.lead_source_id ?? undefined,
-      lead_status_id: data.lead_status_id ?? undefined,
-      lead_type_id: data.lead_type_id ?? undefined,
-      assigned_to: data.assigned_to ?? undefined,
-      accountIDs: data.accountsIDs ?? undefined,
+      lead_source_id: sanitizeUuid(data.lead_source_id),
+      lead_status_id: sanitizeUuid(data.lead_status_id),
+      lead_type_id: sanitizeUuid(data.lead_type_id),
+      assigned_to: sanitizeUuid(data.assigned_to),
+      accountIDs: sanitizeUuid(data.accountsIDs),
       change_reason: data.change_reason || undefined,
     });
     if (result?.error) {
@@ -151,7 +165,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                     <FormControl>
                       <Input
                         disabled={form.formState.isSubmitting}
-                        placeholder="NextCRM Inc."
+                        placeholder="UKRBA Inc."
                         {...field}
                       />
                     </FormControl>

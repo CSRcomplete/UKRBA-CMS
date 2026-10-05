@@ -10,6 +10,7 @@ import { DataTableColumnHeader } from "./data-table-column-header";
 import { DataTableRowActions } from "./data-table-row-actions";
 import moment from "moment";
 import Link from "next/link";
+import { GROUP_ASSIGNMENTS } from "@/lib/constants/group-assignments";
 
 export const columns: ColumnDef<Task>[] = [
   {
@@ -31,11 +32,17 @@ export const columns: ColumnDef<Task>[] = [
       <DataTableColumnHeader column={column} title="Assigned to" />
     ),
 
-    cell: ({ row }) => (
-      <div className="w-[150px]">
-        {row.original.assigned_user.name ?? "Unassigned"}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const assignedUser = row.original.assigned_user;
+      const rawUserId = (row.original as any).user;
+      const groupMatch = GROUP_ASSIGNMENTS.find((g) => g.id === rawUserId);
+
+      return (
+        <div className="w-[150px]">
+          {assignedUser?.name ?? groupMatch?.name ?? "Unassigned"}
+        </div>
+      );
+    },
     enableSorting: true,
     enableHiding: true,
   },

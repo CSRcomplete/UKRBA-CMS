@@ -16,32 +16,73 @@ import {
   createPostcodeRoute, updatePostcodeRoute, deletePostcodeRoute
 } from "../actions";
 
+import { getHierarchyOptions } from "@/actions/admin/users/get-hierarchy-options";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect } from "react";
+
 interface PostcodeRoute {
   id: string;
   postcode_area: string;
+  area_name?: string | null;
   region_country: string;
   assigned_region_id: number;
+  area_directors?: {
+    area_director: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  }[];
+  regional_directors?: {
+    regional_director: {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+  }[];
 }
 
 export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: PostcodeRoute[] }) {
   const [routes, setRoutes] = useState<PostcodeRoute[]>(initialRoutes);
   const [searchQuery, setSearchQuery] = useState("");
+  const [areaDirectors, setAreaDirectors] = useState<{ id: string; name: string | null; email: string }[]>([]);
+  const [regionalDirectors, setRegionalDirectors] = useState<{ id: string; name: string | null; email: string }[]>([]);
 
   // Create state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [postcodeArea, setPostcodeArea] = useState("");
+  const [areaName, setAreaName] = useState("");
   const [regionCountry, setRegionCountry] = useState("England");
   const [assignedRegionId, setAssignedRegionId] = useState(1);
+  const [areaDirectorIds, setAreaDirectorIds] = useState<string[]>([]);
+  const [regionalDirectorIds, setRegionalDirectorIds] = useState<string[]>([]);
 
   // Edit state
   const [editingRoute, setEditingRoute] = useState<PostcodeRoute | null>(null);
   const [editPostcodeArea, setEditPostcodeArea] = useState("");
+  const [editAreaName, setEditAreaName] = useState("");
   const [editRegionCountry, setEditRegionCountry] = useState("");
   const [editAssignedRegionId, setEditAssignedRegionId] = useState(1);
+  const [editAreaDirectorIds, setEditAreaDirectorIds] = useState<string[]>([]);
+  const [editRegionalDirectorIds, setEditRegionalDirectorIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchDirectors = async () => {
+      try {
+        const allUsers = await getHierarchyOptions();
+        setAreaDirectors(allUsers.filter((u) => u.role === "area_director"));
+        setRegionalDirectors(allUsers.filter((u) => u.role === "regional_director"));
+      } catch (e) {
+        console.error("Failed to load directors", e);
+      }
+    };
+    fetchDirectors();
+  }, []);
 
   // Filter routes based on search query
   const filteredRoutes = routes.filter((r) =>
     r.postcode_area.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (r.area_name && r.area_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
     r.region_country.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -54,8 +95,11 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
 
     const res = await createPostcodeRoute({
       postcode_area: postcodeArea,
+      area_name: areaName || null,
       region_country: regionCountry,
       assigned_region_id: assignedRegionId,
+      area_director_ids: areaDirectorIds,
+      regional_director_ids: regionalDirectorIds,
     });
 
     if (res.error) {
@@ -65,8 +109,11 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
       setRoutes((prev) => [...prev, res.route as PostcodeRoute].sort((a, b) => a.postcode_area.localeCompare(b.postcode_area)));
       setIsAddOpen(false);
       setPostcodeArea("");
+      setAreaName("");
       setRegionCountry("England");
       setAssignedRegionId(1);
+      setAreaDirectorIds([]);
+      setRegionalDirectorIds([]);
     }
   };
 
@@ -79,8 +126,11 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
 
     const res = await updatePostcodeRoute(editingRoute.id, {
       postcode_area: editPostcodeArea,
+      area_name: editAreaName || null,
       region_country: editRegionCountry,
       assigned_region_id: editAssignedRegionId,
+      area_director_ids: editAreaDirectorIds,
+      regional_director_ids: editRegionalDirectorIds,
     });
 
     if (res.error) {
@@ -112,8 +162,11 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
   const startEdit = (route: PostcodeRoute) => {
     setEditingRoute(route);
     setEditPostcodeArea(route.postcode_area);
+    setEditAreaName(route.area_name || "");
     setEditRegionCountry(route.region_country);
     setEditAssignedRegionId(route.assigned_region_id);
+    setEditAreaDirectorIds(route.area_directors?.map((ad) => ad.area_director.id) || []);
+    setEditRegionalDirectorIds(route.regional_directors?.map((rd) => rd.regional_director.id) || []);
   };
 
   return (
@@ -141,25 +194,38 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
           <TableHeader>
             <TableRow>
               <TableHead>Postcode Area</TableHead>
+              <TableHead>Area Name</TableHead>
               <TableHead>Region/Country</TableHead>
               <TableHead>Assigned Region ID</TableHead>
+              <TableHead>Regional Director(s)</TableHead>
+              <TableHead>Area Director</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRoutes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No postcode routing rules found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRoutes.map((route) => (
-                <TableRow key={route.id}>
-                  <TableCell className="font-semibold">{route.postcode_area}</TableCell>
-                  <TableCell>{route.region_country}</TableCell>
-                  <TableCell>{route.assigned_region_id}</TableCell>
-                  <TableCell className="text-right">
+              filteredRoutes.map((route) => {
+                const directorsText = route.area_directors && route.area_directors.length > 0
+                  ? route.area_directors.map((ad) => ad.area_director.name || ad.area_director.email).join(", ")
+                  : "Unassigned";
+                const regionalDirectorsText = route.regional_directors && route.regional_directors.length > 0
+                  ? route.regional_directors.map((rd) => rd.regional_director.name || rd.regional_director.email).join(", ")
+                  : "Unassigned";
+                return (
+                  <TableRow key={route.id}>
+                    <TableCell className="font-semibold">{route.postcode_area}</TableCell>
+                    <TableCell>{route.area_name || "N/A"}</TableCell>
+                    <TableCell>{route.region_country}</TableCell>
+                    <TableCell>{route.assigned_region_id}</TableCell>
+                    <TableCell>{regionalDirectorsText}</TableCell>
+                    <TableCell>{directorsText}</TableCell>
+                    <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => startEdit(route)}>
                         <Edit2 className="h-4 w-4" />
@@ -170,7 +236,8 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -194,6 +261,15 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
               />
             </div>
             <div className="space-y-1">
+              <Label htmlFor="area_name">Area Name</Label>
+              <Input
+                id="area_name"
+                placeholder="e.g. Aberdeen or Bath"
+                value={areaName}
+                onChange={(e) => setAreaName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="region_country">Country / Region Group</Label>
               <Input
                 id="region_country"
@@ -212,6 +288,57 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 onChange={(e) => setAssignedRegionId(Number(e.target.value))}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned Regional Directors</Label>
+              <p className="text-xs text-muted-foreground">Select more than one to round-robin website/campaign leads for this postcode between them. Leads a director uploads themselves are always assigned to that director directly.</p>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {regionalDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`rd-${d.id}`}
+                      checked={regionalDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setRegionalDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setRegionalDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`rd-${d.id}`} className="font-normal cursor-pointer">
+                      {d.name || d.email}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned Area Directors</Label>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {areaDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`ad-${d.id}`}
+                      checked={areaDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAreaDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setAreaDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`ad-${d.id}`} className="font-normal cursor-pointer">
+                      {d.name || d.email}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
@@ -240,6 +367,15 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
               />
             </div>
             <div className="space-y-1">
+              <Label htmlFor="edit_area_name">Area Name</Label>
+              <Input
+                id="edit_area_name"
+                placeholder="e.g. Aberdeen or Bath"
+                value={editAreaName}
+                onChange={(e) => setEditAreaName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="edit_region_country">Country / Region Group</Label>
               <Input
                 id="edit_region_country"
@@ -257,6 +393,57 @@ export function PostcodeRoutingTable({ initialRoutes }: { initialRoutes: Postcod
                 onChange={(e) => setEditAssignedRegionId(Number(e.target.value))}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned Regional Directors</Label>
+              <p className="text-xs text-muted-foreground">Select more than one to round-robin website/campaign leads for this postcode between them. Leads a director uploads themselves are always assigned to that director directly.</p>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {regionalDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-rd-${d.id}`}
+                      checked={editRegionalDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditRegionalDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setEditRegionalDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`edit-rd-${d.id}`} className="font-normal cursor-pointer">
+                      {d.name || d.email}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned Area Directors</Label>
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {areaDirectors.map((d) => (
+                  <div key={d.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`edit-ad-${d.id}`}
+                      checked={editAreaDirectorIds.includes(d.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditAreaDirectorIds((prev) => [...prev, d.id]);
+                        } else {
+                          setEditAreaDirectorIds((prev) => prev.filter((id) => id !== d.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor={`edit-ad-${d.id}`} className="font-normal cursor-pointer">
+                      {d.name || d.email}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditingRoute(null)}>

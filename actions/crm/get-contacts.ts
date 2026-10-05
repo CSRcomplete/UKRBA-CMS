@@ -15,8 +15,9 @@ export const getContacts = cache(async () => {
     throw e;
   }
 
+  const scope = await contactReadScopeWhere(user);
   const data = await prismadb.crm_Contacts.findMany({
-    where: { ...contactReadScopeWhere(user) },
+    where: { ...scope },
     include: {
       // Include assigned user (uses "assigned_contacts" relation)
       assigned_to_user: {

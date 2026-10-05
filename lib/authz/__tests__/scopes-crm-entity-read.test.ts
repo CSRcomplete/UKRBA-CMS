@@ -41,21 +41,21 @@ const linkedAccountOR = (uid: string) => ({
 });
 
 describe("leadReadScopeWhere", () => {
-  it("admin/manager → only deletedAt:null", () => {
-    expect(leadReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → only deletedAt:null", async () => {
+    expect(await leadReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
-    expect(leadReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await leadReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + OR ownership + linked-account scope", () => {
-    const w = leadReadScopeWhere({ id: "u1", role: "user" }) as any;
+  it("user → deletedAt + OR ownership + linked-account scope", async () => {
+    const w = (await leadReadScopeWhere({ id: "u1", role: "user" })) as any;
     expect(w.deletedAt).toBeNull();
     expect(w.OR).toEqual(
       expect.arrayContaining([
-        { assigned_to: "u1" },
-        { createdBy: "u1" },
+        { assigned_to: { in: ["u1"] } },
+        { createdBy: { in: ["u1"] } },
         { assigned_accounts: linkedAccountOR("u1") },
       ]),
     );
@@ -63,21 +63,21 @@ describe("leadReadScopeWhere", () => {
 });
 
 describe("contactReadScopeWhere", () => {
-  it("admin/manager → only deletedAt:null", () => {
-    expect(contactReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → only deletedAt:null", async () => {
+    expect(await contactReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
-    expect(contactReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await contactReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + creator OR + linked-account scope", () => {
-    const w = contactReadScopeWhere({ id: "u1", role: "user" }) as any;
+  it("user → deletedAt + creator OR + linked-account scope", async () => {
+    const w = (await contactReadScopeWhere({ id: "u1", role: "user" })) as any;
     expect(w.deletedAt).toBeNull();
     expect(w.OR).toEqual(
       expect.arrayContaining([
-        { assigned_to: "u1" },
-        { createdBy: "u1" },
+        { assigned_to: { in: ["u1"] } },
+        { createdBy: { in: ["u1"] } },
         { assigned_accounts: linkedAccountOR("u1") },
       ]),
     );
@@ -85,21 +85,21 @@ describe("contactReadScopeWhere", () => {
 });
 
 describe("opportunityReadScopeWhere", () => {
-  it("admin/manager → only deletedAt:null", () => {
-    expect(opportunityReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → only deletedAt:null", async () => {
+    expect(await opportunityReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
-    expect(opportunityReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await opportunityReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + creator OR + assigned_account linked scope", () => {
-    const w = opportunityReadScopeWhere({ id: "u1", role: "user" }) as any;
+  it("user → deletedAt + creator OR + assigned_account linked scope", async () => {
+    const w = (await opportunityReadScopeWhere({ id: "u1", role: "user" })) as any;
     expect(w.deletedAt).toBeNull();
     expect(w.OR).toEqual(
       expect.arrayContaining([
-        { assigned_to: "u1" },
-        { createdBy: "u1" },
+        { assigned_to: { in: ["u1"] } },
+        { createdBy: { in: ["u1"] } },
         { assigned_account: linkedAccountOR("u1") },
       ]),
     );
@@ -107,21 +107,21 @@ describe("opportunityReadScopeWhere", () => {
 });
 
 describe("contractReadScopeWhere", () => {
-  it("admin/manager → only deletedAt:null", () => {
-    expect(contractReadScopeWhere({ id: "x", role: "admin" })).toEqual({
+  it("admin/manager → only deletedAt:null", async () => {
+    expect(await contractReadScopeWhere({ id: "x", role: "admin" })).toEqual({
       deletedAt: null,
     });
-    expect(contractReadScopeWhere({ id: "x", role: "manager" })).toEqual({
+    expect(await contractReadScopeWhere({ id: "x", role: "manager" })).toEqual({
       deletedAt: null,
     });
   });
-  it("user → deletedAt + OR ownership + assigned_account linked scope", () => {
-    const w = contractReadScopeWhere({ id: "u1", role: "user" }) as any;
+  it("user → deletedAt + OR ownership + assigned_account linked scope", async () => {
+    const w = (await contractReadScopeWhere({ id: "u1", role: "user" })) as any;
     expect(w.deletedAt).toBeNull();
     expect(w.OR).toEqual(
       expect.arrayContaining([
-        { assigned_to: "u1" },
-        { createdBy: "u1" },
+        { assigned_to: { in: ["u1"] } },
+        { createdBy: { in: ["u1"] } },
         { assigned_account: linkedAccountOR("u1") },
       ]),
     );

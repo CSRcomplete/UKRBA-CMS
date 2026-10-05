@@ -9,8 +9,9 @@ import {
 export const getAccounts = async () => {
   try {
     const user = await requireAuthenticated();
+    const scope = await accountReadScopeWhere(user);
     const accounts = await prismadb.crm_Accounts.findMany({
-      where: accountReadScopeWhere(user),
+      where: scope,
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });

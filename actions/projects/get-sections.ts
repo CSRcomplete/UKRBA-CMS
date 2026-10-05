@@ -14,9 +14,10 @@ export const getSections = async () => {
     throw e;
   }
 
+  const scope = await boardReadScopeWhere(user);
   const data = await prismadb.sections.findMany({
     where: {
-      board_relation: boardReadScopeWhere(user),
+      board_relation: scope,
     },
   });
 

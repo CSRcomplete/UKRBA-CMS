@@ -1,6 +1,14 @@
 [
-  { "name": "New" },
+  { "name": "New Lead" },
+  { "name": "Attempted Contact" },
   { "name": "Contacted" },
+  { "name": "Interested" },
   { "name": "Qualified" },
-  { "name": "Lost" }
+  { "name": "Follow-Up" },
+  { "name": "Proposal / Link Sent" },
+  { "name": "Decision Pending" },
+  { "name": "Won / Customer" },
+  { "name": "Not Now" },
+  { "name": "Lost / Not Interested" },
+  { "name": "Unqualified" }
 ]

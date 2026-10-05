@@ -1,0 +1,60 @@
+name: Deploy to Production VPS
+
+# Manual only — never triggered by a push. Run this from the Actions tab
+# (or `gh workflow run deploy-production.yml`) once changes have been
+# tested on the dev environment and are ready to go live.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or commit SHA to deploy to production"
+        required: false
+        default: "dev"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Deploy to Production Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /var/www/UKRBA-CMS
+
+            # Fetch and hard reset to the exact ref that was tested on dev
+            git fetch origin
+            git reset --hard origin/${{ inputs.ref }}
+
+            # Install dependencies (ignoring peer dependency conflicts)
+            npm install --legacy-peer-deps
+
+            # Sync database schema changes
+            npx prisma db push
+            npx prisma generate
+
+            # Clean previous build output before rebuilding — an incremental
+            # build on top of a differently-produced .next directory (e.g.
+            # from a manual deploy) can silently omit required manifest
+            # files and crash every page in production.
+            rm -rf .next
+
+            # Build Next.js application
+            npm run build
+
+            # Copy static files to standalone directory for Next.js standalone server
+            cp -r public .next/standalone/
+            mkdir -p .next/standalone/.next
+            cp -r .next/static .next/standalone/.next/
+
+            # Restart PM2 process using ecosystem config (falls back to start
+            # if the process isn't already running)
+            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js

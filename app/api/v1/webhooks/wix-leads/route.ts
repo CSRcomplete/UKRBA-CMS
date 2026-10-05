@@ -1,5 +1,7 @@
 import { prismadb } from "@/lib/prisma";
 import { logOwnershipChange } from "@/lib/ownership";
+import { routeByPostcode } from "@/lib/postcode-routing";
+import { SLUG_ALIASES } from "@/lib/referral-attribution";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -43,17 +45,92 @@ export async function POST(req: Request) {
     let contact_name = body.contact_name;
     let email = body.email;
     let telephone = body.telephone || body["telephone "]; // handle optional trailing spaces from Wix UI
-    let business_name = body.business_name;
-    let postcode = body.postcode;
+    let business_name = body.business_name || body.business_name_1 || body.Company;
+    let postcode = body.postcode || body.postcode_1;
     let website = body.website;
     let lead_type = body.lead_type;
+
+    // Resolve lead_type from interested_service if not explicitly provided
+    if (!lead_type && body.interested_service) {
+      const rawService = String(body.interested_service).trim();
+      const validLeadTypes = [
+        'SME Membership',
+        'White Label Partner',
+        'Corporate Partnership',
+        'Assessment Enquiry',
+        'General Enquiry'
+      ];
+      
+      const matched = validLeadTypes.find(
+        (t) => t.toLowerCase() === rawService.toLowerCase()
+      );
+      if (matched) {
+        lead_type = matched;
+      } else {
+        const lowerRaw = rawService.toLowerCase();
+        if (lowerRaw.includes("sme")) {
+          lead_type = "SME Membership";
+        } else if (lowerRaw.includes("white label") || lowerRaw.includes("whitelabel")) {
+          lead_type = "White Label Partner";
+        } else if (lowerRaw.includes("corporate")) {
+          lead_type = "Corporate Partnership";
+        } else if (lowerRaw.includes("assessment")) {
+          lead_type = "Assessment Enquiry";
+        } else {
+          lead_type = "General Enquiry";
+        }
+      }
+    }
+
     let lead_source = body.lead_source || "Wix Website";
+
+    // Fallbacks for raw Wix event structure
+    if (!contact_name) {
+      if (body.contact?.name) {
+        const nameObj = body.contact.name;
+        if (typeof nameObj === 'object') {
+          const first = nameObj.first || "";
+          const last = nameObj.last || "";
+          contact_name = `${first} ${last}`.trim() || null;
+        } else if (typeof nameObj === 'string') {
+          contact_name = nameObj;
+        }
+      } else if (body.buyer?.name) {
+        contact_name = body.buyer.name;
+      } else if (body.buyer?.firstName || body.buyer?.lastName) {
+        contact_name = `${body.buyer.firstName || ""} ${body.buyer.lastName || ""}`.trim() || null;
+      } else if (body.contact?.firstName || body.contact?.lastName) {
+        contact_name = `${body.contact.firstName || ""} ${body.contact.lastName || ""}`.trim() || null;
+      } else if (body.firstName || body.lastName) {
+        contact_name = `${body.firstName || ""} ${body.lastName || ""}`.trim() || null;
+      }
+    }
+
+    if (!email) {
+      email = body.contact?.email || body.buyer?.email || body.emailAddress;
+    }
+
+    if (!telephone) {
+      telephone = body.contact?.phone || body.buyer?.phone || body.phone || body.phoneNumber || body.contact?.telephone || body.telephone;
+    }
+
+    if (!business_name) {
+      business_name = body.Company || body.contact?.company || body.buyer?.company || body.company || body.businessName || body.business_name_1 || body.contact?.business_name_1 || body.buyer?.business_name_1;
+    }
+
+    if (!postcode) {
+      postcode = body.contact?.address?.postalCode || body.contact?.address?.zipCode || body.contact?.address?.formattedAddress || body.buyer?.address?.postalCode || body.buyer?.address?.zipCode || body.address?.postalCode || body.address?.zipCode || body.zipCode || body.postalCode || body.contact?.postcode_1 || body.buyer?.postcode_1 || body.address?.postcode_1;
+    }
+
+    if (!website) {
+      website = body.contact?.website || body.buyer?.website || body.companyWebsite;
+    }
 
     if (body.contact) {
       const contact = body.contact;
       
       // Resolve name
-      if (contact.name) {
+      if (!contact_name && contact.name) {
         if (typeof contact.name === 'object') {
           const first = contact.name.first || "";
           const last = contact.name.last || "";
@@ -68,8 +145,8 @@ export async function POST(req: Request) {
       business_name = business_name || contact.company;
       
       // Resolve address / postcode
-      if (contact.address) {
-        postcode = postcode || contact.address.postalCode || contact.address.zipCode || contact.address.formattedAddress;
+      if (!postcode && contact.address) {
+        postcode = contact.address.postalCode || contact.address.zipCode || contact.address.formattedAddress;
       }
       
       website = website || contact.website;
@@ -97,8 +174,9 @@ export async function POST(req: Request) {
     }
 
     // Determine lead type automatically based on Wix Plan ordered if not explicitly passed
-    if (!lead_type && body.plan_title) {
-      const planTitle = body.plan_title.toLowerCase();
+    const rawPlanTitle = body.plan_title || body.planTitle || body.planName || body.order?.planName || body.order?.planTitle || body.plan?.name || body.plan?.title;
+    if (!lead_type && rawPlanTitle) {
+      const planTitle = rawPlanTitle.toLowerCase();
       if (planTitle.includes("white label") || planTitle.includes("partner")) {
         lead_type = "White Label Partner";
       } else {
@@ -106,19 +184,29 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!lead_type) {
+      lead_type = "General Enquiry";
+    }
+
+
     if (!contact_name || !email || !lead_type || !lead_source) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
     }
 
-    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry'];
+    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', '5GBP purchase', '5GBP Free Assessment'];
     if (!validLeadTypes.includes(lead_type)) {
       return NextResponse.json({ message: "Invalid lead_type parameter" }, { status: 400 });
     }
 
     // Resolve lead_type_id from crm_Lead_Types lookup table
-    const leadTypeRecord = await prismadb.crm_Lead_Types.findFirst({
+    let leadTypeRecord = await prismadb.crm_Lead_Types.findFirst({
       where: { name: lead_type }
     });
+    if (!leadTypeRecord) {
+      leadTypeRecord = await prismadb.crm_Lead_Types.create({
+        data: { name: lead_type }
+      });
+    }
     const lead_type_id = leadTypeRecord?.id || null;
 
     // Resolve lead_source_id — upsert so "Wix Website" is auto-created if missing
@@ -137,6 +225,7 @@ export async function POST(req: Request) {
     // 2. Exception & Postcode Assignment Logic
     let currentOwnerId: string | null = null;
     let partnerId: string | null = null;
+    let emailPartnerId: string | null = null;
     let areaDirectorId: string | null = null;
     let regionalDirectorId: string | null = null;
 
@@ -152,45 +241,185 @@ export async function POST(req: Request) {
     });
     const opsDirectorId = opsDirector?.id || null;
 
+    let referrerRdId = body.referred_by_rd || body.regional_director_id;
+    // Fixed campaign slugs (e.g. a co-branded partner link) always attribute
+    // to a specific staff member's real email rather than being matched as-is.
+    if (typeof referrerRdId === "string") {
+      const alias = SLUG_ALIASES[referrerRdId.trim().toLowerCase()];
+      if (alias) {
+        referrerRdId = alias.email;
+        lead_source = alias.sourceName;
+      }
+    }
+    let referredRdUser = null;
+    if (referrerRdId && referrerRdId !== "direct") {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(referrerRdId);
+      referredRdUser = await prismadb.users.findFirst({
+        where: {
+          OR: [
+            ...(isUuid ? [{ id: referrerRdId }] : []),
+            { email: referrerRdId },
+            { email: { startsWith: `${referrerRdId}@`, mode: "insensitive" } }
+          ]
+        }
+      });
+    }
+
+    // 5GBP purchase/free-assessment leads: postcode is stored for reference but must
+    // NEVER drive routing — these leads are only ever assigned via the RD's referral
+    // link (referred_by_rd), never by postcode-area lookup. Exception: Meta ads leads
+    // (referred_by_rd === "meta") have no individual referring RD, so they fall through
+    // to normal postcode-area routing like any other lead — lead_source ("Meta Ads")
+    // is what records where they actually came from.
+    const isMetaAdsLead = typeof referrerRdId === "string" && referrerRdId.toLowerCase() === "meta";
+    // An email_partner's own referral link works the same way as a Meta ads link:
+    // there's no individual referring RD, so the lead still falls through to normal
+    // postcode-area routing — the email partner is recorded separately as the
+    // originating partner via assigned_email_partner_id rather than as the owner.
+    const isEmailPartnerReferral = referredRdUser?.role === "email_partner";
+    const isFivePoundLead = (lead_type === "5GBP purchase" || lead_type === "5GBP Free Assessment") && !isMetaAdsLead && !isEmailPartnerReferral;
+
+    if (isEmailPartnerReferral && referredRdUser) {
+      emailPartnerId = referredRdUser.id;
+    }
+
     if (lead_type === 'White Label Partner') {
       currentOwnerId = opsDirectorId;
     } else if (lead_type === 'Corporate Partnership') {
       currentOwnerId = null; // Stays unassigned, visible to CEO/Ops
-    } else if (postcode) {
-      // Regular postcode allocation routing
-      const cleanPostcode = postcode.replace(/\s+/g, "").toUpperCase();
-      const prefixMatch = cleanPostcode.match(/^([A-Z]{1,2})/);
-      const prefix = prefixMatch ? prefixMatch[1] : "";
-
-      const routingRule = await prismadb.nextcrm_postcode_routing.findUnique({
-        where: { postcode_area: prefix }
+    } else if (referrerRdId === "direct") {
+      currentOwnerId = null; // Bypasses postcode routing, remains unassigned
+      regionalDirectorId = null;
+      areaDirectorId = null;
+    } else if (referrerRdId === "ukrbadisc") {
+      let campaignUser = await prismadb.users.findFirst({
+        where: { name: "Email Campaign" }
       });
+      if (!campaignUser) {
+        campaignUser = await prismadb.users.create({
+          data: {
+            name: "Email Campaign",
+            email: "campaign@ukrba.org",
+            role: "user",
+            userStatus: "ACTIVE",
+          }
+        });
+      }
+      currentOwnerId = campaignUser.id;
+      regionalDirectorId = null;
+      areaDirectorId = null;
+    } else if (referredRdUser && !isEmailPartnerReferral) {
+      currentOwnerId = referredRdUser.id;
+      regionalDirectorId = referredRdUser.id;
+    } else if (isFivePoundLead) {
+      // No matching RD for the referral link — fall back to unassigned/Ops rather
+      // than ever routing a 5GBP lead by postcode.
+      currentOwnerId = opsDirectorId;
+    } else {
+      // Regular postcode allocation routing (falls back to opsDirectorId
+      // internally when there's no postcode/routing rule/mapped director).
+      const routed = await routeByPostcode(postcode, opsDirectorId);
+      currentOwnerId = routed.ownerId;
+      areaDirectorId = routed.areaDirectorId;
+      regionalDirectorId = routed.regionalDirectorId;
+    }
 
-      if (routingRule) {
-        const assignedRegionId = routingRule.assigned_region_id;
+    // 5GBP assessment links are also sent to leads ALREADY in the CRM (RDs/ADs using
+    // them to try to close an existing lead) — for those, match by email regardless
+    // of age, since the original lead could be weeks old. Every other lead type keeps
+    // the original "recently created duplicate" 15-minute window.
+    const existingLead = await prismadb.crm_Leads.findFirst({
+      where: {
+        email: { equals: email, mode: "insensitive" },
+        deletedAt: null,
+        ...(isFivePoundLead ? {} : { createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } }),
+      },
+      orderBy: { updatedAt: "desc" },
+    });
 
-        // Find active Area Director ID mapped to that region_id
-        const areaDirector = await prismadb.users.findFirst({
-          where: {
-            region_id: assignedRegionId,
+    const assessmentDateField = lead_type === "5GBP Free Assessment"
+      ? "freeAssessmentAt"
+      : lead_type === "5GBP purchase"
+        ? "fivePoundAssessmentAt"
+        : null;
+
+    if (existingLead) {
+      // For 5GBP leads matched against an EXISTING lead, this is a close-the-deal
+      // submission, not a new lead — ownership must never change. Only record that
+      // the assessment was completed.
+      if (isFivePoundLead) {
+        const updatedLead = await prismadb.crm_Leads.update({
+          where: { id: existingLead.id },
+          data: {
+            ...(assessmentDateField ? { [assessmentDateField]: new Date() } : {}),
+            description: existingLead.description
+              ? `${existingLead.description} | ${lead_type} completed via ${lead_source}`
+              : `${lead_type} completed via ${lead_source}`,
+            // Deliberately untouched: assigned_to, assigned_partner_id,
+            // assigned_email_partner_id, assigned_area_director_id,
+            // assigned_regional_director_id, refered_by, lead_type_id — this must
+            // never reassign the lead.
           }
         });
 
-        if (areaDirector) {
-          currentOwnerId = areaDirector.id;
-          areaDirectorId = areaDirector.id;
-          // Traverse up to find regional director parent
-          if (areaDirector.parentId) {
-            regionalDirectorId = areaDirector.parentId;
+        await prismadb.sys_audit_logs.create({
+          data: {
+            entity_type: "crm_Leads",
+            entity_id: updatedLead.id,
+            field_mutated: assessmentDateField || "ASSESSMENT_COMPLETED",
+            new_value: JSON.stringify({ id: updatedLead.id, lead_type, assessmentDateField })
           }
-        } else {
-          currentOwnerId = opsDirectorId; // Fallback
-        }
-      } else {
-        currentOwnerId = opsDirectorId; // Fallback
+        });
+
+        return NextResponse.json({
+          message: "Assessment recorded on existing lead — ownership unchanged",
+          lead_id: updatedLead.id,
+          lead_type,
+          lead_source,
+          assigned_owner_id: updatedLead.assigned_to
+        }, { status: 200 });
       }
-    } else {
-      currentOwnerId = opsDirectorId; // Fallback if no postcode provided
+
+      // Merge/update details (only overwrite if the incoming data is non-empty)
+      const updatedLead = await prismadb.crm_Leads.update({
+        where: { id: existingLead.id },
+        data: {
+          firstName: firstName || existingLead.firstName,
+          lastName: lastName || existingLead.lastName,
+          // If the existing company is "Self", allow overwriting with a real business name
+          company: (business_name && business_name !== "Self") ? business_name : (existingLead.company || "Self"),
+          phone: telephone || existingLead.phone,
+          website: website || existingLead.website,
+          postcode: postcode || existingLead.postcode,
+          lead_type_id: lead_type_id || existingLead.lead_type_id,
+          lead_source_id: lead_source_id || existingLead.lead_source_id,
+          assigned_to: currentOwnerId || existingLead.assigned_to,
+          assigned_partner_id: partnerId || existingLead.assigned_partner_id,
+          assigned_email_partner_id: emailPartnerId || existingLead.assigned_email_partner_id,
+          assigned_area_director_id: areaDirectorId || existingLead.assigned_area_director_id,
+          assigned_regional_director_id: regionalDirectorId || existingLead.assigned_regional_director_id,
+          refered_by: referrerRdId || existingLead.refered_by,
+          description: existingLead.description + ` | Additional info from Wix update (${lead_type})`
+        }
+      });
+
+      // Write CDC Log manually for the update
+      await prismadb.sys_audit_logs.create({
+        data: {
+          entity_type: "crm_Leads",
+          entity_id: updatedLead.id,
+          field_mutated: "ALL_UPDATE",
+          new_value: JSON.stringify({ id: updatedLead.id, company: business_name, lead_type, lead_type_id, lead_source_id })
+        }
+      });
+
+      return NextResponse.json({
+        message: "Lead updated successfully (deduplicated)",
+        lead_id: updatedLead.id,
+        lead_type,
+        lead_source,
+        assigned_owner_id: updatedLead.assigned_to
+      }, { status: 200 });
     }
 
     // Create the Lead record
@@ -208,9 +437,12 @@ export async function POST(req: Request) {
         lead_source_id,
         assigned_to: currentOwnerId,
         assigned_partner_id: partnerId,
+        assigned_email_partner_id: emailPartnerId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`
+        refered_by: referrerRdId || null,
+        description: `Wix Webhook Ingestion — ${lead_type} via ${lead_source}`,
+        ...(assessmentDateField ? { [assessmentDateField]: new Date() } : {}),
       }
     });
 

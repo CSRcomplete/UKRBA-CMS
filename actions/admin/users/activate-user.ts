@@ -10,7 +10,7 @@ import {
 
 export const activateUser = async (userId: string) => {
   try {
-    await requireRole(["admin"]);
+    await requireRole(["admin", "ceo", "coo"]);
   } catch (e) {
     if (e instanceof AuthenticationError) return { error: "Unauthorized" };
     if (e instanceof AuthorizationError) return { error: "Forbidden" };

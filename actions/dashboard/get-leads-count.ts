@@ -1,6 +1,9 @@
 import { prismadb } from "@/lib/prisma";
+import { requireAuthenticated, leadReadScopeWhere } from "@/lib/authz";
 
 export const getLeadsCount = async () => {
-  const data = await prismadb.crm_Leads.count({ where: { deletedAt: null } });
+  const user = await requireAuthenticated();
+  const where = await leadReadScopeWhere(user);
+  const data = await prismadb.crm_Leads.count({ where });
   return data;
 };

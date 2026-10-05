@@ -31,11 +31,25 @@ export const markTaskDone = async (taskId: string) => {
   }
 
   try {
+    const taskRecord = await prismadb.tasks.findUnique({
+      where: { id: taskId },
+      select: { tags: true },
+    });
+
+    let currentTags = {};
+    if (taskRecord?.tags && typeof taskRecord.tags === "object") {
+      currentTags = taskRecord.tags;
+    }
+
     await prismadb.tasks.update({
       where: { id: taskId },
       data: {
         taskStatus: "COMPLETE",
         updatedBy: session.user.id,
+        tags: {
+          ...currentTags,
+          completedAt: new Date().toISOString(),
+        },
       },
     });
 

@@ -14,8 +14,9 @@ export const getBoards = async (_userId?: string) => {
     if (e instanceof AuthenticationError) return [];
     throw e;
   }
+  const scope = await boardReadScopeWhere(user);
   const data = await prismadb.boards.findMany({
-    where: boardReadScopeWhere(user),
+    where: scope,
     include: {
       assigned_user: {
         select: {
