@@ -13,6 +13,7 @@ import {
 
 interface NavProps {
   isCollapsed: boolean;
+  horizontal?: boolean;
   links: {
     title: string;
     label?: string;
@@ -22,13 +23,18 @@ interface NavProps {
   }[];
 }
 
-export function Nav({ links, isCollapsed }: NavProps) {
+export function Nav({ links, isCollapsed, horizontal }: NavProps) {
   return (
     <div
       data-collapsed={isCollapsed}
       className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2"
     >
-      <nav className="grid gap-1 px-2 group-[[data-collapsed=true]]:px-2">
+      <nav
+        className={cn(
+          "grid gap-1 px-2 group-[[data-collapsed=true]]:px-2",
+          horizontal && "grid-flow-col auto-cols-fr overflow-x-auto"
+        )}
+      >
         {links.map((link, index) =>
           isCollapsed ? (
             <Tooltip key={index} delayDuration={0}>
@@ -62,11 +68,11 @@ export function Nav({ links, isCollapsed }: NavProps) {
               className={cn(
                 buttonVariants({ variant: link.variant, size: "sm" }),
                 link.variant === "default" && "dark:bg-muted dark:text-white",
-                "justify-start"
+                horizontal ? "justify-center px-2" : "justify-start"
               )}
             >
-              <link.icon className="mr-2 h-4 w-4" />
-              {link.title}
+              <link.icon className={cn("h-4 w-4", horizontal ? "sm:mr-2" : "mr-2")} />
+              <span className={cn(horizontal && "hidden sm:inline")}>{link.title}</span>
               {link.label && (
                 <span
                   className={cn(
