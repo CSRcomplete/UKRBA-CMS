@@ -12,6 +12,7 @@ import { Nav } from "@/app/[locale]/(routes)/emails/components/nav";
 import type { ConnectedAccount, Mail } from "@/app/[locale]/(routes)/emails/data";
 import { useMail } from "@/app/[locale]/(routes)/emails/use-mail";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export function MailComponent({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const isMobile = useIsMobile();
 
   async function handleSync() {
     if (!activeAccountId) return;
@@ -73,6 +75,115 @@ export function MailComponent({
     p.set("folder", folder);
     p.delete("page");
     return `?${p.toString()}`;
+  }
+
+  const folderLinks = [
+    {
+      title: "Inbox",
+      icon: Inbox,
+      variant: activeFolder === "INBOX" ? ("default" as const) : ("ghost" as const),
+      href: folderHref("INBOX"),
+    },
+    {
+      title: "Sent Items",
+      icon: Send,
+      variant: activeFolder === "SENT" ? ("default" as const) : ("ghost" as const),
+      href: folderHref("SENT"),
+    },
+    {
+      title: "Drafts",
+      icon: FileText,
+      variant: activeFolder === "DRAFTS" ? ("default" as const) : ("ghost" as const),
+      href: folderHref("DRAFTS"),
+    },
+    {
+      title: "Deleted Items",
+      icon: Trash2,
+      variant: activeFolder === "TRASH" ? ("default" as const) : ("ghost" as const),
+      href: folderHref("TRASH"),
+    },
+  ];
+
+  const content = mail.selected ? (
+    <MailDisplay
+      mail={mails.find((item) => item.id === mail.selected) || null}
+      activeAccountId={activeAccountId}
+      currentUser={currentUser}
+    />
+  ) : (
+    <Tabs defaultValue="all" className="h-full w-full min-w-0 flex flex-col">
+      <div className="flex items-center px-4 py-2">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold">
+            {activeFolder === "SENT"
+              ? "Sent Items"
+              : activeFolder === "DRAFTS"
+                ? "Drafts"
+                : activeFolder === "TRASH"
+                  ? "Deleted Items"
+                  : "Inbox"}
+          </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={isSyncing || !activeAccountId}
+            onClick={handleSync}
+            title="Sync Emails Now"
+          >
+            <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
+          </Button>
+        </div>
+        <TabsList className="ml-auto">
+          <TabsTrigger value="all" className="text-zinc-600 dark:text-zinc-200">
+            All mail
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="text-zinc-600 dark:text-zinc-200">
+            Unread
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <Separator />
+      <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <form>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search mail..." className="pl-8" />
+          </div>
+        </form>
+      </div>
+      <TabsContent value="all" className="m-0 min-h-0 flex-1 overflow-hidden">
+        <MailList items={mails} page={page} totalPages={totalPages} />
+      </TabsContent>
+      <TabsContent value="unread" className="m-0 min-h-0 flex-1 overflow-hidden">
+        <MailList items={mails.filter((item) => !item.isRead)} page={page} totalPages={totalPages} />
+      </TabsContent>
+    </Tabs>
+  );
+
+  if (isMobile) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
+          <div className="shrink-0 border-b">
+            <div className="flex items-center gap-2 p-2">
+              <div className="min-w-0 flex-1">
+                <AccountSwitcher
+                  isCollapsed={false}
+                  accounts={accounts}
+                  activeAccountId={activeAccountId}
+                />
+              </div>
+              {activeAccountId && (
+                <ComposeModal accountId={activeAccountId} currentUser={currentUser} />
+              )}
+            </div>
+            <Nav isCollapsed={false} horizontal links={folderLinks} />
+          </div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{content}</div>
+        </div>
+      </TooltipProvider>
+    );
   }
 
   return (
@@ -138,100 +249,15 @@ export function MailComponent({
               ]}
             />
           </div>
-          <Nav
-            isCollapsed={isCollapsed}
-            links={[
-              {
-                title: "Inbox",
-                icon: Inbox,
-                variant: activeFolder === "INBOX" ? "default" : "ghost",
-                href: folderHref("INBOX"),
-              },
-              {
-                title: "Sent Items",
-                icon: Send,
-                variant: activeFolder === "SENT" ? "default" : "ghost",
-                href: folderHref("SENT"),
-              },
-              {
-                title: "Drafts",
-                icon: FileText,
-                variant: activeFolder === "DRAFTS" ? "default" : "ghost",
-                href: folderHref("DRAFTS"),
-              },
-              {
-                title: "Deleted Items",
-                icon: Trash2,
-                variant: activeFolder === "TRASH" ? "default" : "ghost",
-                href: folderHref("TRASH"),
-              },
-            ]}
-          />
+          <Nav isCollapsed={isCollapsed} links={folderLinks} />
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={`${defaultLayout[1]}%`} minSize="60%">
-          {mail.selected ? (
-            <MailDisplay
-              mail={mails.find((item) => item.id === mail.selected) || null}
-              activeAccountId={activeAccountId}
-              currentUser={currentUser}
-            />
-          ) : (
-            <Tabs defaultValue="all" className="h-full flex flex-col">
-              <div className="flex items-center px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold">
-                    {activeFolder === "SENT"
-                      ? "Sent Items"
-                      : activeFolder === "DRAFTS"
-                        ? "Drafts"
-                        : activeFolder === "TRASH"
-                          ? "Deleted Items"
-                          : "Inbox"}
-                  </h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isSyncing || !activeAccountId}
-                    onClick={handleSync}
-                    title="Sync Emails Now"
-                  >
-                    <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
-                  </Button>
-                </div>
-                <TabsList className="ml-auto">
-                  <TabsTrigger
-                    value="all"
-                    className="text-zinc-600 dark:text-zinc-200"
-                  >
-                    All mail
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="unread"
-                    className="text-zinc-600 dark:text-zinc-200"
-                  >
-                    Unread
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              <Separator />
-              <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <form>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search mail..." className="pl-8" />
-                  </div>
-                </form>
-              </div>
-              <TabsContent value="all" className="m-0 flex-1 overflow-hidden">
-                <MailList items={mails} page={page} totalPages={totalPages} />
-              </TabsContent>
-              <TabsContent value="unread" className="m-0 flex-1 overflow-hidden">
-                <MailList items={mails.filter((item) => !item.isRead)} page={page} totalPages={totalPages} />
-              </TabsContent>
-            </Tabs>
-          )}
+        <ResizablePanel
+          defaultSize={`${defaultLayout[1]}%`}
+          minSize="60%"
+          className="min-w-0 overflow-hidden"
+        >
+          {content}
         </ResizablePanel>
       </ResizablePanelGroup>
     </TooltipProvider>

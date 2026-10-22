@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Mail } from "@/app/[locale]/(routes)/emails/data";
 import { useMail } from "@/app/[locale]/(routes)/emails/use-mail";
 
@@ -27,7 +26,7 @@ export function MailList({ items, page, totalPages }: MailListProps) {
   }
 
   return (
-    <ScrollArea className="h-full">
+    <div className="h-full w-full min-w-0 overflow-x-hidden overflow-y-auto">
       <div className="flex flex-col border-t">
         {items.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
@@ -40,7 +39,15 @@ export function MailList({ items, page, totalPages }: MailListProps) {
               const firstTo = item.toRecipients[0];
               sender = `To: ${firstTo.name || firstTo.email}`;
             }
-            const snippet = item.bodyText?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || "";
+            const snippet = (item.bodyText || "")
+              .slice(0, 400)
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 160);
+            const date = item.sentAt
+              ? formatDistanceToNow(new Date(item.sentAt), { addSuffix: true })
+              : "";
 
             return (
               <div
@@ -52,43 +59,42 @@ export function MailList({ items, page, totalPages }: MailListProps) {
                   })
                 }
                 className={cn(
-                  "flex items-center gap-3 border-b px-4 py-3 text-sm cursor-pointer transition-colors hover:bg-accent/50",
+                  "flex w-full min-w-0 items-center gap-3 border-b px-4 py-3 text-sm cursor-pointer transition-colors hover:bg-accent/50",
                   !item.isRead
                     ? "bg-background font-semibold text-foreground"
                     : "bg-muted/20 text-muted-foreground font-normal"
                 )}
               >
                 {/* Unread status indicator dot */}
-                <div className="flex items-center justify-center w-3 h-3">
+                <div className="flex items-center justify-center w-3 h-3 shrink-0">
                   {!item.isRead ? (
                     <span className="h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-500" />
                   ) : null}
                 </div>
 
-                {/* Sender Name / Address */}
-                <div className="w-44 shrink-0 truncate font-medium text-foreground">
-                  {sender}
-                </div>
-
-                {/* Subject & Preview Snippet */}
-                <div className="flex flex-1 items-center gap-2 overflow-hidden truncate">
-                  <span className="shrink-0 font-medium text-foreground">
-                    {item.subject || "(no subject)"}
-                  </span>
-                  {snippet && (
-                    <span className="truncate text-xs text-muted-foreground font-normal">
-                      - {snippet}
+                {/* Mobile: stacked sender/date + subject. Desktop: single row */}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 md:flex-row md:items-center md:gap-3">
+                  <div className="flex min-w-0 items-center justify-between gap-2 md:w-44 md:shrink-0">
+                    <span className="truncate font-medium text-foreground">{sender}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground md:hidden">
+                      {date}
                     </span>
-                  )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="max-w-full truncate font-medium text-foreground md:max-w-[60%] md:shrink-0">
+                      {item.subject || "(no subject)"}
+                    </span>
+                    {snippet && (
+                      <span className="hidden min-w-0 flex-1 truncate text-xs text-muted-foreground font-normal md:inline">
+                        - {snippet}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Sent / Received Date */}
-                <div className="w-28 shrink-0 text-right text-xs text-muted-foreground">
-                  {item.sentAt
-                    ? formatDistanceToNow(new Date(item.sentAt), {
-                        addSuffix: true,
-                      })
-                    : ""}
+                <div className="hidden w-28 shrink-0 text-right text-xs text-muted-foreground md:block">
+                  {date}
                 </div>
               </div>
             );
@@ -118,6 +124,6 @@ export function MailList({ items, page, totalPages }: MailListProps) {
           </Button>
         </div>
       )}
-    </ScrollArea>
+    </div>
   );
 }

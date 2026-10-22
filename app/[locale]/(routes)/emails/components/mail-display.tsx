@@ -120,7 +120,13 @@ function AutoResizingIframe({ html }: { html: string }) {
         if (!doc || !doc.body || doc.body.dataset.quoteCollapsed) return;
         doc.body.dataset.quoteCollapsed = "1";
 
-        const candidates = Array.from(doc.querySelectorAll('blockquote, [class*="quote"]')) as HTMLElement[];
+        // A forwarded message is the main content, not earlier history — Gmail
+        // wraps it in .gmail_quote too, so skip any candidate that opens with a
+        // forward header and only collapse quotes nested inside it.
+        const forwardHeader = /^\s*(-{2,}\s*)?(forwarded message|begin forwarded message|message transf[ée]r[ée]|original message)/i;
+        const candidates = (Array.from(doc.querySelectorAll('blockquote, [class*="quote"]')) as HTMLElement[]).filter(
+          (el) => !forwardHeader.test(el.textContent ?? "")
+        );
         if (candidates.length === 0) return;
 
         const target =
