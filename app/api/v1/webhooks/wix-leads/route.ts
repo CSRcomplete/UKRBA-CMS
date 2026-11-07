@@ -1,6 +1,7 @@
 import { prismadb } from "@/lib/prisma";
 import { logOwnershipChange } from "@/lib/ownership";
 import { routeByPostcode } from "@/lib/postcode-routing";
+import { createPledgeFollowUpTask } from "@/lib/pledge-task";
 import { SLUG_ALIASES } from "@/lib/referral-attribution";
 import { NextResponse } from "next/server";
 
@@ -460,6 +461,15 @@ export async function POST(req: Request) {
       changedById: null,
       changeReason: `Wix Webhook Ingestion (${lead_type}) - Postcode: ${postcode || "None"}`,
     });
+
+    // Pledge leads: give the assigned owner a follow-up task from the COO.
+    if (lead_type === "Pledge") {
+      await createPledgeFollowUpTask({
+        leadId: newLead.id,
+        assignedTo: currentOwnerId,
+        leadLabel: business_name || contact_name,
+      });
+    }
 
     // Write CDC Log manually
     await prismadb.sys_audit_logs.create({
