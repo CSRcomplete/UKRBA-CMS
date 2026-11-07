@@ -58,7 +58,8 @@ export async function POST(req: Request) {
         'White Label Partner',
         'Corporate Partnership',
         'Assessment Enquiry',
-        'General Enquiry'
+        'General Enquiry',
+        'Pledge'
       ];
       
       const matched = validLeadTypes.find(
@@ -68,7 +69,9 @@ export async function POST(req: Request) {
         lead_type = matched;
       } else {
         const lowerRaw = rawService.toLowerCase();
-        if (lowerRaw.includes("sme")) {
+        if (lowerRaw.includes("pledge")) {
+          lead_type = "Pledge";
+        } else if (lowerRaw.includes("sme")) {
           lead_type = "SME Membership";
         } else if (lowerRaw.includes("white label") || lowerRaw.includes("whitelabel")) {
           lead_type = "White Label Partner";
@@ -193,7 +196,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing mandatory fields: contact_name, email, lead_type, and lead_source are required" }, { status: 400 });
     }
 
-    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', '5GBP purchase', '5GBP Free Assessment'];
+    const validLeadTypes = ['SME Membership', 'White Label Partner', 'Corporate Partnership', 'Assessment Enquiry', 'General Enquiry', 'Pledge', '5GBP purchase', '5GBP Free Assessment'];
     if (!validLeadTypes.includes(lead_type)) {
       return NextResponse.json({ message: "Invalid lead_type parameter" }, { status: 400 });
     }
