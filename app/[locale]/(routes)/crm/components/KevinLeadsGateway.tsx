@@ -7,16 +7,16 @@ export function KevinLeadsGateway() {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <Link
         href="/crm/leads/all"
-        className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
+        className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/25"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform">
             <Users className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:text-brand-blue" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
             Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
@@ -27,16 +27,16 @@ export function KevinLeadsGateway() {
 
       <Link
         href="/crm/leads/kevin"
-        className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
+        className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/25"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-navy/10 dark:bg-brand-navy/30 text-brand-navy dark:text-brand-navy shadow-none transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform">
             <Sparkles className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-navy" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:text-brand-blue" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-navy transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
             Kevin Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
