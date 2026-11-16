@@ -1,6 +1,6 @@
 /**
  * Imports Kevin's merged contact list (rows.json, converted from
- * Kevin_Merged_Contacts.xlsx) as CRM leads of type "Kevin Lead".
+ * Kevin_Merged_Contacts_with_Postcodes.xlsx) as CRM leads of type "Kevin Lead".
  *
  * DRY RUN by default: prints what would happen and writes nothing.
  *   npx tsx scripts/import-leads-xlsx.ts <rows.json>                 # unassigned
@@ -44,7 +44,7 @@ async function main() {
     owners.push(m[0]);
   }
 
-  // Columns of Kevin_Merged_Contacts.xlsx, looked up by header name.
+  // Columns of Kevin_Merged_Contacts_with_Postcodes.xlsx, looked up by header name.
   const all: string[][] = JSON.parse(fs.readFileSync(file, "utf8"));
   const col = (h: string) => all[0].findIndex((x) => x.trim().toLowerCase() === h.toLowerCase());
   const rows = all.slice(1);
@@ -65,6 +65,7 @@ async function main() {
     email: emailOf(r),
     website: pick(r, "Website"),
     phone: pick(r, "Phone"),
+    postcode: pick(r, "Postcode"),
     personalEmail: pick(r, "Personal Email"),
     personAddress: pick(r, "Person Address"),
     seniority: pick(r, "Seniority"),
