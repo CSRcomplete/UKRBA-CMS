@@ -14,7 +14,7 @@ const SHORT_FIELDS: { key: string; label: string; link?: boolean }[] = [
   { key: "companyCity", label: "Company city" },
   { key: "linkedinUrl", label: "LinkedIn", link: true },
   { key: "companyLinkedinUrl", label: "Company LinkedIn", link: true },
-  { key: "facebook", label: "Facebook" },
+  { key: "facebook", label: "Facebook", link: true },
 ];
 
 const LONG_FIELDS: { key: string; label: string }[] = [
@@ -40,17 +40,27 @@ export function ProspectDetailsCard({ data }: { data: Record<string, any> }) {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             {short.map((f) => {
               const v = String(data[f.key]).trim();
+              // Split on anything that can't be in a URL, so "['https://a', 'https://b']" yields two links.
+              const urls = f.link
+                ? v.split(/[^a-zA-Z0-9:/._~%?&=#@+-]+/).filter((u) => u.startsWith("http"))
+                : [];
               return (
                 <div key={f.key} className="min-w-0">
                   <dt className="text-sm font-medium leading-none">{f.label}</dt>
                   <dd className="mt-1 break-words text-sm text-muted-foreground">
-                    {f.link && /^https?:\/\//i.test(v) ? (
-                      <a href={v} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        {v}
-                      </a>
-                    ) : (
-                      v
-                    )}
+                    {urls.length > 0
+                      ? urls.map((u) => (
+                          <a
+                            key={u}
+                            href={u}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-primary hover:underline"
+                          >
+                            {u}
+                          </a>
+                        ))
+                      : v}
                   </dd>
                 </div>
               );

@@ -17,17 +17,35 @@ type ConfigItem = { id: string; name: string };
 
 
 /** Optional text column (prospect / enrichment data); hidden by default, shown via the View menu. */
-const textColumn = (key: string, title: string): ColumnDef<Lead> => ({
+const textColumn = (key: string, title: string, isUrl = false): ColumnDef<Lead> => ({
   accessorKey: key,
   header: ({ column }) => <DataTableColumnHeader column={column} title={title} />,
-  cell: ({ row }) => (
-    <Link
-      href={`/crm/leads/${row.original.id}`}
-      className="w-[150px] text-muted-foreground hover:text-foreground transition-colors block truncate"
-    >
-      {(row.getValue(key) as string | null | undefined) || "-"}
-    </Link>
-  ),
+  cell: ({ row }) => {
+    const value = (row.getValue(key) as string | null | undefined) || "";
+    const url = isUrl
+      ? value.split(/[^a-zA-Z0-9:/._~%?&=#@+-]+/).find((u) => u.startsWith("http"))
+      : undefined;
+    if (url) {
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-[150px] text-primary hover:underline block truncate"
+        >
+          {url.replace("https://", "").replace("http://", "").replace("www.", "")}
+        </a>
+      );
+    }
+    return (
+      <Link
+        href={`/crm/leads/${row.original.id}`}
+        className="w-[150px] text-muted-foreground hover:text-foreground transition-colors block truncate"
+      >
+        {value || "-"}
+      </Link>
+    );
+  },
   enableSorting: true,
   enableHiding: true,
 });
@@ -172,9 +190,9 @@ export const createColumns = (
   textColumn("companyCity", "Company city"),
   textColumn("companyEmail", "Company email"),
   textColumn("personalEmail", "Personal email"),
-  textColumn("website", "Website"),
-  textColumn("linkedinUrl", "LinkedIn"),
-  textColumn("facebook", "Facebook"),
+  textColumn("website", "Website", true),
+  textColumn("linkedinUrl", "LinkedIn", true),
+  textColumn("facebook", "Facebook", true),
   {
     id: "postcode",
     accessorFn: (row: any) => extractPostcodeArea(row.postcode),

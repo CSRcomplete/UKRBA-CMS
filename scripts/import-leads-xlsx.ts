@@ -1,6 +1,6 @@
 /**
  * Imports Kevin's merged contact list (rows.json, converted from
- * Kevin_Merged_Contacts.xlsx) as CRM leads of type "Kevin Lead".
+ * Kevin_Merged_Contacts_with_Postcodes.xlsx) as CRM leads of type "Kevin Lead".
  *
  * DRY RUN by default: prints what would happen and writes nothing.
  *   npx tsx scripts/import-leads-xlsx.ts <rows.json>                 # unassigned
@@ -44,7 +44,7 @@ async function main() {
     owners.push(m[0]);
   }
 
-  // Columns of Kevin_Merged_Contacts.xlsx, looked up by header name.
+  // Columns of Kevin_Merged_Contacts_with_Postcodes.xlsx, looked up by header name.
   const all: string[][] = JSON.parse(fs.readFileSync(file, "utf8"));
   const col = (h: string) => all[0].findIndex((x) => x.trim().toLowerCase() === h.toLowerCase());
   const rows = all.slice(1);
@@ -53,6 +53,13 @@ async function main() {
     return t && t !== "[]" ? t : null;
   };
   const pick = (r: string[], h: string) => clean(r[col(h)]);
+  // Turns "['https://a', 'https://b']" (or a plain URL) into one URL per line.
+  const urls = (r: string[], h: string) => {
+    const v = pick(r, h);
+    if (!v) return null;
+    const found = v.split(/[^a-zA-Z0-9:/._~%?&=#@+-]+/).filter((u) => u.startsWith("http"));
+    return found.length ? Array.from(new Set(found)).join(String.fromCharCode(10)) : v;
+  };
   const emailOf = (r: string[]) => {
     const e = pick(r, "Work Email") || pick(r, "Personal Email");
     return e && e.includes("@") ? e.toLowerCase() : null;
@@ -65,6 +72,7 @@ async function main() {
     email: emailOf(r),
     website: pick(r, "Website"),
     phone: pick(r, "Phone"),
+    postcode: pick(r, "Postcode"),
     personalEmail: pick(r, "Personal Email"),
     personAddress: pick(r, "Person Address"),
     seniority: pick(r, "Seniority"),
@@ -77,7 +85,7 @@ async function main() {
     companyAddress: pick(r, "Company Address"),
     companyCity: pick(r, "Company City"),
     companyEmail: pick(r, "Company Email"),
-    facebook: pick(r, "Facebook"),
+    facebook: urls(r, "Facebook"),
     annualRevenue: pick(r, "Annual Revenue"),
   }));
 
