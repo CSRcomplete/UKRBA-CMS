@@ -18,6 +18,12 @@ module.exports = {
   	},
   	extend: {
   		colors: {
+  			brand: {
+  				navy: 'hsl(var(--brand-navy) / <alpha-value>)',
+  				blue: 'hsl(var(--brand-blue) / <alpha-value>)',
+  				green: 'hsl(var(--brand-green) / <alpha-value>)',
+  				'green-light': 'hsl(var(--brand-green-light) / <alpha-value>)'
+  			},
   			tremor: {
   				brand: {
   					faint: '#eff6ff',

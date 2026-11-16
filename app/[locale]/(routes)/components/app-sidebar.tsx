@@ -146,15 +146,13 @@ export function AppSidebar({
             isExpanded ? "gap-x-4" : "justify-center",
           )}
         >
-          {/* "N" Branding Symbol with rotation animation */}
-          <div
-            className={cn(
-              "flex-shrink-0 border rounded-full px-4 py-2 transition-transform duration-500",
-              isExpanded && "rotate-[360deg]",
-            )}
-          >
-            N
-          </div>
+          {/* UKRBA logo mark */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/ukrba-mark.png"
+            alt="UKRBA"
+            className={cn("flex-shrink-0 object-contain", isExpanded ? "h-10 w-10" : "h-8 w-8")}
+          />
 
           {/* App Name - visible when expanded, hidden when collapsed */}
           <h1

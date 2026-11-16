@@ -439,13 +439,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform group-hover:scale-110">
                 <Mail className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-blue" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-blue-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
                 1. Emails
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -481,13 +481,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform group-hover:scale-110">
                 <Calendar className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-purple-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-blue" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-purple-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
                 3. Diary
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -502,13 +502,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform group-hover:scale-110">
                 <CheckSquare className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-cyan-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-blue" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-cyan-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
                 4. Tasks
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -523,13 +523,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
                 <Users className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-emerald-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
                 5. CRM (Leads & Accounts)
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -544,13 +544,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green-light/10 dark:bg-brand-green-light/30 text-brand-green-light dark:text-brand-green-light shadow-none transition-transform group-hover:scale-110">
                 <Video className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-rose-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green-light" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-rose-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green-light transition-colors">
                 6. Video Meetings
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -564,24 +564,24 @@ const DashboardPage = async () => {
             href="/news"
             className={`group relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
               unreadAnnouncementsCount > 0
-                ? "border-violet-500 ring-2 ring-violet-500/50 bg-gradient-to-br from-violet-500/20 via-background to-violet-500/10 shadow-violet-500/20 shadow-md"
+                ? "border-brand-navy ring-2 ring-brand-navy/50 bg-gradient-to-br from-brand-navy/20 via-background to-brand-navy/10 shadow-violet-500/20 shadow-md"
                 : "border-border bg-card hover:border-foreground/25"
             }`}
           >
             {unreadAnnouncementsCount > 0 && (
-              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-rose-600 px-2.5 py-1 text-xs font-bold text-white shadow-lg animate-bounce">
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-brand-green-light px-2.5 py-1 text-xs font-bold text-white shadow-lg animate-bounce">
                 <span className="h-2 w-2 rounded-full bg-white animate-ping" />
                 {unreadAnnouncementsCount} {unreadAnnouncementsCount === 1 ? "New" : "New"}
               </div>
             )}
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-navy/10 dark:bg-brand-navy/30 text-brand-navy dark:text-brand-navy shadow-none transition-transform group-hover:scale-110">
                 <Megaphone className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-violet-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-navy" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-violet-600 transition-colors flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-navy transition-colors flex items-center gap-2">
                 7. News & Announcements
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -596,13 +596,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
                 <Upload className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-teal-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-teal-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
                 8. Upload Leads
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -617,13 +617,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
                 <CreditCard className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-green-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-green-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
                 9. Accounts & Payments
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -641,13 +641,13 @@ const DashboardPage = async () => {
             className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
           >
             <div className="flex items-center justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fuchsia-50 dark:bg-fuchsia-950/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform group-hover:scale-110">
                 <Bot className="h-6 w-6" />
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-fuchsia-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-blue" />
             </div>
             <div className="mt-4 space-y-1">
-              <h3 className="text-lg font-bold text-foreground group-hover:text-fuchsia-600 transition-colors">
+              <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
                 Automations
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -665,14 +665,14 @@ const DashboardPage = async () => {
               href="/recruitment"
               className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25 flex items-center gap-5 max-w-md"
             >
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 shadow-none transition-transform group-hover:scale-110">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-brand-navy/10 dark:bg-brand-navy/30 text-brand-navy dark:text-brand-navy shadow-none transition-transform group-hover:scale-110">
                 <Briefcase className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-indigo-600 transition-colors">12. Recruitment Centre</h3>
+                <h3 className="text-lg font-bold text-foreground group-hover:text-brand-navy transition-colors">12. Recruitment Centre</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Full candidate pipeline — CVs, interviews, offers &amp; signed contracts.</p>
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-navy" />
             </Link>
           </div>
         )}
@@ -712,7 +712,7 @@ const DashboardPage = async () => {
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                             alert.type === "task" 
                               ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400"
-                              : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400"
+                              : "bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue"
                           }`}>
                             {alert.type}
                           </span>
@@ -977,7 +977,7 @@ const DashboardPage = async () => {
                             <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                             <td className="py-3 font-mono text-xs">{lead.postcode || "N/A"}</td>
                             <td className="py-3">
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                                 {lead.lead_status?.name || "New"}
                               </span>
                             </td>
@@ -1028,7 +1028,7 @@ const DashboardPage = async () => {
                             <td className="py-3">
                               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                                 task.taskStatus === "COMPLETE"
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                                  ? "bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green"
                                   : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
                               }`}>
                                 {task.taskStatus}
@@ -1151,7 +1151,7 @@ const DashboardPage = async () => {
                           <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                           <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                           <td className="py-3">
-                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                               {lead.lead_status?.name || "New"}
                             </span>
                           </td>
@@ -1245,7 +1245,7 @@ const DashboardPage = async () => {
                             <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                             <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                             <td className="py-3">
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                                 {lead.lead_status?.name || "New"}
                               </span>
                             </td>
@@ -1329,7 +1329,7 @@ const DashboardPage = async () => {
                             <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                             <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                             <td className="py-3">
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                                 {lead.lead_status?.name || "New"}
                               </span>
                             </td>
@@ -1383,7 +1383,7 @@ const DashboardPage = async () => {
                           <td className="py-3 text-muted-foreground">{lead.company || "N/A"}</td>
                           <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                           <td className="py-3">
-                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                               {lead.lead_status?.name || "New"}
                             </span>
                           </td>
@@ -1438,7 +1438,7 @@ const DashboardPage = async () => {
                             <td className="py-3 font-mono">{lead.postcode || "N/A"}</td>
                             <td className="py-3 text-muted-foreground">{lead.assigned_to_user?.name || "Unassigned"}</td>
                             <td className="py-3">
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green">
                                 {lead.lead_status?.name || "New"}
                               </span>
                             </td>
@@ -1478,13 +1478,13 @@ const DashboardPage = async () => {
                             <td className="py-3 font-medium">{c.customer_name}</td>
                             <td className="py-3 font-mono">£{c.sale_amount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</td>
                             <td className="py-3 font-mono">{c.partner_percentage}%</td>
-                            <td className="py-3 font-mono font-semibold text-purple-600 dark:text-purple-400">
+                            <td className="py-3 font-mono font-semibold text-brand-blue dark:text-brand-blue">
                               £{c.partner_amount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
                             </td>
                             <td className="py-3">
                               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                                 c.status === "approved"
-                                  ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400"
+                                  ? "bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green"
                                   : "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400"
                               }`}>
                                 {c.status === "approved" ? "Approved" : "Pending"}
@@ -1542,7 +1542,7 @@ const DashboardPage = async () => {
                             <td className="py-2.5">
                               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
                                 task.taskStatus === "COMPLETE"
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                                  ? "bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green"
                                   : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
                               }`}>
                                 {task.taskStatus}
