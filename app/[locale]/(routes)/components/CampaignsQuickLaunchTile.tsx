@@ -42,15 +42,15 @@ const OPTIONS = [
 ] as const;
 
 const ICON_CLASSES: Record<string, string> = {
-  pink: "bg-pink-50 dark:bg-pink-950/30 text-pink-600 dark:text-pink-400",
-  orange: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400",
+  pink: "bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green",
+  orange: "bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green",
   sky: "bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400",
   lime: "bg-lime-50 dark:bg-lime-950/30 text-lime-600 dark:text-lime-400",
 };
 
 const HOVER_TEXT_CLASSES: Record<string, string> = {
-  pink: "group-hover:text-pink-600",
-  orange: "group-hover:text-orange-600",
+  pink: "group-hover:text-brand-green",
+  orange: "group-hover:text-brand-green",
   sky: "group-hover:text-sky-600",
   lime: "group-hover:text-lime-600",
 };
@@ -66,13 +66,13 @@ export function CampaignsQuickLaunchTile() {
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25 text-left"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-pink-50 dark:bg-pink-950/30 text-pink-600 dark:text-pink-400 shadow-none transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
             <Megaphone className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-pink-600" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-pink-600 transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
             Campaigns
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
