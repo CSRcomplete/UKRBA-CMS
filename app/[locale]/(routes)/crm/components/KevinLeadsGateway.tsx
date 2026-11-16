@@ -10,13 +10,13 @@ export function KevinLeadsGateway() {
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/25"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform">
             <Users className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:text-brand-blue" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:text-brand-green" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
             Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
