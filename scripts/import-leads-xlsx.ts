@@ -1,14 +1,17 @@
 /**
- * Imports a prospect list (rows.json, converted from "Leads Kevin.xlsx") as CRM
- * leads, split evenly between two users (round-robin).
+ * Imports Kevin's merged contact list (rows.json, converted from
+ * Kevin_Merged_Contacts.xlsx) as CRM leads of type "Kevin Lead".
  *
  * DRY RUN by default: prints what would happen and writes nothing.
- *   npx tsx scripts/import-leads-xlsx.ts <rows.json> Pete Shirley
- *   npx tsx scripts/import-leads-xlsx.ts <rows.json> Pete Shirley --apply
+ *   npx tsx scripts/import-leads-xlsx.ts <rows.json>                 # unassigned
+ *   npx tsx scripts/import-leads-xlsx.ts <rows.json> Pete Shirley    # split round-robin
+ *   npx tsx scripts/import-leads-xlsx.ts <rows.json> --apply
  *
- * - Users are found by first name (case-insensitive, startsWith); aborts unless
- *   each name matches exactly one user.
- * - Leads whose email already exists (not deleted) are skipped, never overwritten.
+ * - New leads are created with every spreadsheet column in its own field.
+ * - Leads whose email already exists (not deleted) are skipped, EXCEPT existing
+ *   "Kevin Lead" rows: those get the new columns filled in (backfill) and their
+ *   old packed-text description cleared. Ownership and status are never touched.
+ * - Names (optional) are matched by first name; aborts unless each matches one user.
  * - Uses whatever DATABASE_URL is in .env (or the environment) — check it first.
  */
 import dotenv from "dotenv";
@@ -24,7 +27,7 @@ const CAMPAIGN = "Kevin Leads";
 const LEAD_TYPE = "Kevin Lead"; // the Kevin Leads tab lists leads of this type
 
 async function main() {
-  if (!file || false) throw new Error("Usage: <rows.json> [name1 [name2]] [--apply]");
+  if (!file) throw new Error("Usage: <rows.json> [name1 [name2]] [--apply]");
   const { prismadb } = await import("../lib/prisma");
 
   const owners: { id: string; name: string | null }[] = [];
@@ -45,7 +48,10 @@ async function main() {
   const all: string[][] = JSON.parse(fs.readFileSync(file, "utf8"));
   const col = (h: string) => all[0].findIndex((x) => x.trim().toLowerCase() === h.toLowerCase());
   const rows = all.slice(1);
-  const clean = (v?: string) => (v || "").trim() || null;
+  const clean = (v?: string) => {
+    const t = (v || "").trim();
+    return t && t !== "[]" ? t : null;
+  };
   const pick = (r: string[], h: string) => clean(r[col(h)]);
   const emailOf = (r: string[]) => {
     const e = pick(r, "Work Email") || pick(r, "Personal Email");
@@ -59,33 +65,44 @@ async function main() {
     email: emailOf(r),
     website: pick(r, "Website"),
     phone: pick(r, "Phone"),
-    description: clean(
-      [
-        pick(r, "Industries") && `Industry: ${pick(r, "Industries")}`,
-        pick(r, "Seniority") && `Seniority: ${pick(r, "Seniority")}`,
-        pick(r, "# Employees") && `Employees: ${pick(r, "# Employees")}`,
-        pick(r, "Annual Revenue") && `Annual revenue: ${pick(r, "Annual Revenue")}`,
-        pick(r, "Person Address") && `Person location: ${pick(r, "Person Address")}`,
-        pick(r, "Company Address") && `Company address: ${pick(r, "Company Address")}`,
-        pick(r, "Company Email") && pick(r, "Company Email") !== "[]" && `Company email: ${pick(r, "Company Email")}`,
-        pick(r, "Personal Email") && `Personal email: ${pick(r, "Personal Email")}`,
-        pick(r, "Personal LinkedIn") && `LinkedIn: ${pick(r, "Personal LinkedIn")}`,
-        pick(r, "Company LinkedIn") && `Company LinkedIn: ${pick(r, "Company LinkedIn")}`,
-        pick(r, "Profile Summary") && `\nProfile: ${pick(r, "Profile Summary")}`,
-        pick(r, "Company Summary") && `\nCompany: ${pick(r, "Company Summary")}`,
-      ]
-        .filter(Boolean)
-        .join("\n")
-    ),
+    personalEmail: pick(r, "Personal Email"),
+    personAddress: pick(r, "Person Address"),
+    seniority: pick(r, "Seniority"),
+    linkedinUrl: pick(r, "Personal LinkedIn"),
+    profileSummary: pick(r, "Profile Summary"),
+    companyLinkedinUrl: pick(r, "Company LinkedIn"),
+    industry: pick(r, "Industries"),
+    companySummary: pick(r, "Company Summary"),
+    employeeCount: pick(r, "# Employees"),
+    companyAddress: pick(r, "Company Address"),
+    companyCity: pick(r, "Company City"),
+    companyEmail: pick(r, "Company Email"),
+    facebook: pick(r, "Facebook"),
+    annualRevenue: pick(r, "Annual Revenue"),
   }));
+
+  const type =
+    (await prismadb.crm_Lead_Types.findUnique({ where: { name: LEAD_TYPE } })) ??
+    (APPLY ? await prismadb.crm_Lead_Types.create({ data: { v: 0, name: LEAD_TYPE } }) : null);
 
   const existing = await prismadb.crm_Leads.findMany({
     where: { deletedAt: null, email: { in: leads.map((l) => l.email!).filter(Boolean), mode: "insensitive" } },
-    select: { email: true },
+    select: { id: true, email: true, lead_type_id: true },
   });
-  const have = new Set(existing.map((e) => e.email!.toLowerCase()));
-  const fresh = leads.filter((l) => !(l.email && have.has(l.email)));
-  console.log(`${leads.length} rows, ${leads.length - fresh.length} already in CRM (skipped), ${fresh.length} to create`);
+  const byEmail = new Map(existing.map((e) => [e.email!.toLowerCase(), e]));
+
+  const toBackfill: { id: string; data: (typeof leads)[number] }[] = [];
+  const fresh: typeof leads = [];
+  let skipped = 0;
+  for (const l of leads) {
+    const ex = l.email ? byEmail.get(l.email) : undefined;
+    if (!ex) fresh.push(l);
+    else if (type && ex.lead_type_id === type.id) toBackfill.push({ id: ex.id, data: l });
+    else skipped++;
+  }
+  console.log(
+    `${leads.length} rows: ${fresh.length} to create, ${toBackfill.length} Kevin leads to backfill, ${skipped} skipped (existing non-Kevin leads)`
+  );
 
   const now = new Date();
   const data = fresh.map((l, i) => ({
@@ -99,13 +116,18 @@ async function main() {
   owners.forEach((o, i) => console.log(`  ${o.name}: ${data.filter((_, j) => j % owners.length === i).length}`));
 
   if (!APPLY) return console.log("Dry run only. Re-run with --apply to write.");
-  const type =
-    (await prismadb.crm_Lead_Types.findUnique({ where: { name: LEAD_TYPE } })) ??
-    (await prismadb.crm_Lead_Types.create({ data: { v: 0, name: LEAD_TYPE } }));
-  const res = await prismadb.crm_Leads.createMany({
-    data: data.map((d) => ({ ...d, lead_type_id: type.id })),
-  });
-  console.log(`Created ${res.count} leads.`);
+
+  for (const { id, data: d } of toBackfill) {
+    const { email: _email, lastName: _ln, firstName: _fn, ...fields } = d;
+    await prismadb.crm_Leads.update({ where: { id }, data: { ...fields, description: null } });
+  }
+  if (data.length) {
+    const res = await prismadb.crm_Leads.createMany({
+      data: data.map((d) => ({ ...d, lead_type_id: type!.id })),
+    });
+    console.log(`Created ${res.count} leads.`);
+  }
+  console.log(`Backfilled ${toBackfill.length} leads.`);
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

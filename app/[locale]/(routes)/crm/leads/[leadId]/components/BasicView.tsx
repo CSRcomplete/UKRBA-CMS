@@ -34,6 +34,7 @@ import { getAllCrmData } from "@/actions/crm/get-crm-data";
 import { getSession } from "@/lib/auth-server";
 import { requireAuthenticated, isAdmin } from "@/lib/authz";
 import { SalesStatusEditor } from "./SalesStatusEditor";
+import { ProspectDetailsCard } from "./ProspectDetailsCard";
 
 interface OppsViewProps {
   data: any;
@@ -279,6 +280,7 @@ export async function BasicView({ data }: OppsViewProps) {
           </div>
         </CardContent>
       </Card>
+      <ProspectDetailsCard data={data} />
     </div>
   );
 }

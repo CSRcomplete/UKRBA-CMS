@@ -79,7 +79,19 @@ export function LeadDataTable<TData, TValue>({
   const canBulkDelete = isAdminOrCeo || isSupervisor;
 
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+    React.useState<VisibilityState>({
+      jobTitle: false,
+      seniority: false,
+      industry: false,
+      employeeCount: false,
+      annualRevenue: false,
+      companyCity: false,
+      companyEmail: false,
+      personalEmail: false,
+      website: false,
+      linkedinUrl: false,
+      facebook: false,
+    });
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
