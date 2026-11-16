@@ -96,7 +96,10 @@ export function AppSidebar({
 
   const navItems = [
     getDashboardMenuItem({ title: dict?.dashboard || "Dashboard" }),
-    getCrmMenuItem({ localizations: dict.crm }),
+    getCrmMenuItem({
+      localizations: dict.crm,
+      showKevinLeads: ["admin", "ceo", "coo"].includes(session?.user?.role ?? ""),
+    }),
     getCampaignsMenuItem({
       localizations: {
         title: "Campaigns",
