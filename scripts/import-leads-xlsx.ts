@@ -53,6 +53,13 @@ async function main() {
     return t && t !== "[]" ? t : null;
   };
   const pick = (r: string[], h: string) => clean(r[col(h)]);
+  // Turns "['https://a', 'https://b']" (or a plain URL) into one URL per line.
+  const urls = (r: string[], h: string) => {
+    const v = pick(r, h);
+    if (!v) return null;
+    const found = v.split(/[^a-zA-Z0-9:/._~%?&=#@+-]+/).filter((u) => u.startsWith("http"));
+    return found.length ? Array.from(new Set(found)).join(String.fromCharCode(10)) : v;
+  };
   const emailOf = (r: string[]) => {
     const e = pick(r, "Work Email") || pick(r, "Personal Email");
     return e && e.includes("@") ? e.toLowerCase() : null;
@@ -78,7 +85,7 @@ async function main() {
     companyAddress: pick(r, "Company Address"),
     companyCity: pick(r, "Company City"),
     companyEmail: pick(r, "Company Email"),
-    facebook: pick(r, "Facebook"),
+    facebook: urls(r, "Facebook"),
     annualRevenue: pick(r, "Annual Revenue"),
   }));
 
