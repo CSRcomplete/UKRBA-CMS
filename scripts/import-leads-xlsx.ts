@@ -24,7 +24,7 @@ const CAMPAIGN = "Kevin Leads";
 const LEAD_TYPE = "Kevin Lead"; // the Kevin Leads tab lists leads of this type
 
 async function main() {
-  if (!file || names.length < 1) throw new Error("Usage: <rows.json> <name1> [name2] [--apply]");
+  if (!file || false) throw new Error("Usage: <rows.json> [name1 [name2]] [--apply]");
   const { prismadb } = await import("../lib/prisma");
 
   const owners: { id: string; name: string | null }[] = [];
@@ -94,7 +94,7 @@ async function main() {
     createdAt: now,
     updatedAt: now,
     campaign: CAMPAIGN,
-    assigned_to: owners[i % owners.length].id,
+    assigned_to: owners.length ? owners[i % owners.length].id : null,
   }));
   owners.forEach((o, i) => console.log(`  ${o.name}: ${data.filter((_, j) => j % owners.length === i).length}`));
 
