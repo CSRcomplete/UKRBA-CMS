@@ -49,7 +49,9 @@ const AuthLayout = async ({ children }: { children: React.ReactNode }) => {
         </div>
         <ThemeToggle />
       </div>
-      <div className="flex items-center grow h-full overflow-hidden">
+      <div className="flex flex-col items-center justify-center gap-6 grow h-full overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/images/ukrba-logo-full.png" alt="UKRBA" className="h-32 w-auto object-contain" />
         {children}
       </div>
       <Footer />

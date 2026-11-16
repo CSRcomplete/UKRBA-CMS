@@ -9,13 +9,13 @@ export function LeadsGateway() {
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 shadow-none transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue/10 dark:bg-brand-blue/30 text-brand-blue dark:text-brand-blue shadow-none transition-transform group-hover:scale-110">
             <User className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-blue" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-blue-600 transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-blue transition-colors">
             My Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
@@ -29,13 +29,13 @@ export function LeadsGateway() {
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-foreground/25"
       >
         <div className="flex items-center justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 shadow-none transition-transform group-hover:scale-110">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 dark:bg-brand-green/30 text-brand-green dark:text-brand-green shadow-none transition-transform group-hover:scale-110">
             <Users className="h-6 w-6" />
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-emerald-600" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-brand-green" />
         </div>
         <div className="mt-4 space-y-1">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-600 transition-colors">
+          <h3 className="text-lg font-bold text-foreground group-hover:text-brand-green transition-colors">
             Team Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
