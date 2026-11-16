@@ -84,6 +84,20 @@ model crm_Leads {
   email                         String?
   phone                         String?
   website                       String?
+  personalEmail                 String?
+  personAddress                 String?
+  seniority                     String?
+  linkedinUrl                   String?
+  profileSummary                String?
+  companyLinkedinUrl            String?
+  industry                      String?
+  companySummary                String?
+  employeeCount                 String?
+  companyAddress                String?
+  companyCity                   String?
+  companyEmail                  String?
+  facebook                      String?
+  annualRevenue                 String?
   description                   String?
   lead_source_id                String?               @db.Uuid
   lead_status_id                String?               @db.Uuid

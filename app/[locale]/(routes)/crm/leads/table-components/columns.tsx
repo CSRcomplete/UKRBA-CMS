@@ -15,6 +15,23 @@ import moment from "moment";
 
 type ConfigItem = { id: string; name: string };
 
+
+/** Optional text column (prospect / enrichment data); hidden by default, shown via the View menu. */
+const textColumn = (key: string, title: string): ColumnDef<Lead> => ({
+  accessorKey: key,
+  header: ({ column }) => <DataTableColumnHeader column={column} title={title} />,
+  cell: ({ row }) => (
+    <Link
+      href={`/crm/leads/${row.original.id}`}
+      className="w-[150px] text-muted-foreground hover:text-foreground transition-colors block truncate"
+    >
+      {(row.getValue(key) as string | null | undefined) || "-"}
+    </Link>
+  ),
+  enableSorting: true,
+  enableHiding: true,
+});
+
 export const createColumns = (
   leadSources: ConfigItem[],
   leadStatuses: ConfigItem[],
@@ -147,6 +164,17 @@ export const createColumns = (
     enableSorting: false,
     enableHiding: false,
   },
+  textColumn("jobTitle", "Job title"),
+  textColumn("seniority", "Seniority"),
+  textColumn("industry", "Industry"),
+  textColumn("employeeCount", "Employees"),
+  textColumn("annualRevenue", "Revenue"),
+  textColumn("companyCity", "Company city"),
+  textColumn("companyEmail", "Company email"),
+  textColumn("personalEmail", "Personal email"),
+  textColumn("website", "Website"),
+  textColumn("linkedinUrl", "LinkedIn"),
+  textColumn("facebook", "Facebook"),
   {
     id: "postcode",
     accessorFn: (row: any) => extractPostcodeArea(row.postcode),
