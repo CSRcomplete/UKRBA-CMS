@@ -6,6 +6,7 @@ import sendEmail from "@/lib/sendmail";
 import { inngest } from "@/inngest/client";
 import { writeAuditLog, diffObjects } from "@/lib/audit-log";
 import { logOwnershipChange } from "@/lib/ownership";
+import { resolveLeadDirectors } from "@/lib/lead-directors";
 
 export const updateLead = async (data: {
   id: string;
@@ -66,21 +67,19 @@ export const updateLead = async (data: {
         where: { id: assigned_to },
       });
       if (newOwner) {
-        if (newOwner.role === "user") {
-          areaDirectorId = newOwner.parentId;
-          if (areaDirectorId) {
-            const ad = await prismadb.users.findUnique({ where: { id: areaDirectorId } });
-            regionalDirectorId = ad?.parentId || null;
-          } else {
-            regionalDirectorId = null;
-          }
-        } else if (newOwner.role === "manager") {
-          areaDirectorId = newOwner.id;
-          regionalDirectorId = newOwner.parentId;
-        } else {
-          areaDirectorId = null;
-          regionalDirectorId = null;
-        }
+        const resolved = await resolveLeadDirectors(
+          { id: newOwner.id, role: newOwner.role, parentId: newOwner.parentId },
+          { areaDirectorId, regionalDirectorId },
+          async (userId) => {
+            const parent = await prismadb.users.findUnique({
+              where: { id: userId },
+              select: { parentId: true },
+            });
+            return parent?.parentId || null;
+          },
+        );
+        areaDirectorId = resolved.areaDirectorId;
+        regionalDirectorId = resolved.regionalDirectorId;
       }
     }
 
