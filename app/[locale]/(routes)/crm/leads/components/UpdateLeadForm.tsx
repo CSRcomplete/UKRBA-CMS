@@ -340,6 +340,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                         onChange={field.onChange}
                         placeholder={c("selectUser")}
                         allowGroups={false}
+                        forLeadAssignment
                         disabled={form.formState.isSubmitting}
                       />
                     </FormControl>
