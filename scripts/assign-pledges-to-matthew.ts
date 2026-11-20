@@ -40,9 +40,11 @@ async function main() {
 
   for (const lead of leads) {
     if (APPLY) {
+      // Same attribution as updateLead: an RD owner is also the lead's Regional Director.
+      const regionalDirectorId = matt.role === "regional_director" ? matt.id : null;
       await prismadb.crm_Leads.update({
         where: { id: lead.id },
-        data: { assigned_to: matt.id },
+        data: { assigned_to: matt.id, assigned_regional_director_id: regionalDirectorId },
       });
       await logOwnershipChange({
         entityType: "lead",
@@ -50,7 +52,7 @@ async function main() {
         previousOwnerId: null,
         newOwnerId: matt.id,
         areaDirectorId: null,
-        regionalDirectorId: null,
+        regionalDirectorId,
         changedById: null,
         changeReason: "Bulk assignment of unassigned pledges to Matthew",
       });

@@ -6,6 +6,7 @@ import { getContractsWithIncludes } from "@/actions/crm/get-contracts";
 import { getPostcodeOptions } from "@/actions/crm/get-postcode-options";
 
 import { getRegularLeadsForKevinViewers } from "@/actions/crm/leads/get-kevin-leads";
+import { withoutPledgeLeads } from "@/actions/crm/leads/get-pledge-leads";
 
 import LeadsView from "./LeadsView";
 import { KevinLeadsGateway } from "./KevinLeadsGateway";
@@ -22,7 +23,7 @@ const MainPageView = async () => {
 
   // admin / CEO / COO: chooser (Leads or Kevin Leads) plus the leads table without the Kevin list.
   const isKevinViewer = regularLeads !== null;
-  const leads = isKevinViewer ? regularLeads : allLeads;
+  const leads = isKevinViewer ? regularLeads : await withoutPledgeLeads(allLeads);
 
   return (
     <div className="space-y-6">
