@@ -111,7 +111,8 @@ export const updateLead = async (data: {
         assigned_to: targetAssigneeId,
         assigned_area_director_id: areaDirectorId,
         assigned_regional_director_id: regionalDirectorId,
-        accountsIDs: accountId,
+        // Only touch the account link when the caller sends one (the update form no longer does).
+        ...(accountIDs !== undefined ? { accountsIDs: accountId } : {}),
       },
     });
 

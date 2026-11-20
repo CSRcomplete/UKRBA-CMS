@@ -344,6 +344,7 @@ export function NewLeadForm({ accounts, leadSources, leadStatuses, leadTypes, on
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         placeholder={c("selectUser")}
+                        allowGroups={false}
                         disabled={form.formState.isSubmitting}
                       />
                     </FormControl>
