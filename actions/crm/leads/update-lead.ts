@@ -7,6 +7,7 @@ import { inngest } from "@/inngest/client";
 import { writeAuditLog, diffObjects } from "@/lib/audit-log";
 import { logOwnershipChange } from "@/lib/ownership";
 import { resolveLeadDirectors } from "@/lib/lead-directors";
+import { canAssignLeadTo, RD_ASSIGN_ERROR } from "@/lib/lead-assignment";
 
 export const updateLead = async (data: {
   id: string;
@@ -60,6 +61,19 @@ export const updateLead = async (data: {
     const targetAssigneeId = assigned_to || before?.assigned_to || userId;
     let areaDirectorId: string | null = before?.assigned_area_director_id || null;
     let regionalDirectorId: string | null = before?.assigned_regional_director_id || null;
+
+    if (assigned_to && assigned_to !== before?.assigned_to) {
+      // Regional Directors may only hand a lead to themselves or their own Area Directors.
+      const [actor, target] = await Promise.all([
+        prismadb.users.findUnique({ where: { id: userId }, select: { id: true, role: true } }),
+        prismadb.users.findUnique({
+          where: { id: assigned_to },
+          select: { id: true, role: true, parentId: true },
+        }),
+      ]);
+      if (!actor || !target) return { error: "Assignee not found" };
+      if (!canAssignLeadTo(actor, target)) return { error: RD_ASSIGN_ERROR };
+    }
 
     if (assigned_to && assigned_to !== before?.assigned_to) {
       // Owner changed, resolve directors for new owner

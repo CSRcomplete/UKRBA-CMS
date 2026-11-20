@@ -33,6 +33,8 @@ interface UserSearchComboboxProps {
   name?: string;
   /** Show the "Group / Bulk Assignments" options. Defaults to true; leads turn it off (one owner only). */
   allowGroups?: boolean;
+  /** Lead owner picker: apply the lead assignment rules (Regional Directors see only themselves and their own Area Directors). */
+  forLeadAssignment?: boolean;
 }
 
 const PAGE_SIZE = 50;
@@ -44,6 +46,7 @@ export function UserSearchCombobox({
   disabled,
   name,
   allowGroups = true,
+  forLeadAssignment = false,
 }: UserSearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -72,10 +75,11 @@ export function UserSearchCombobox({
         skip,
         take: PAGE_SIZE,
         excludeSystemUsers: !allowGroups,
+        forLeadAssignment,
       });
       setListData(data);
     });
-  }, [open, debouncedSearch, skip, allowGroups]);
+  }, [open, debouncedSearch, skip, allowGroups, forLeadAssignment]);
 
   // Accumulate users across pages
   useEffect(() => {
