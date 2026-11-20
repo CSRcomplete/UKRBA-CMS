@@ -71,10 +71,11 @@ export function UserSearchCombobox({
         search: debouncedSearch,
         skip,
         take: PAGE_SIZE,
+        excludeSystemUsers: !allowGroups,
       });
       setListData(data);
     });
-  }, [open, debouncedSearch, skip]);
+  }, [open, debouncedSearch, skip, allowGroups]);
 
   // Accumulate users across pages
   useEffect(() => {

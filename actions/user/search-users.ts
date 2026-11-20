@@ -9,10 +9,13 @@ export async function searchUsers({
   search = "",
   skip = 0,
   take = 50,
+  excludeSystemUsers = false,
 }: {
   search?: string;
   skip?: number;
   take?: number;
+  /** Leave out the placeholder "group" users (All Users, All Regional Directors, ...; emails end in @system.local). */
+  excludeSystemUsers?: boolean;
 } = {}) {
   const session = await getSession();
   if (!session) throw new Error("Unauthorized");
@@ -22,6 +25,9 @@ export async function searchUsers({
 
   const where = {
     userStatus: "ACTIVE" as const,
+    ...(excludeSystemUsers
+      ? { NOT: { email: { endsWith: "@system.local" } } }
+      : {}),
     ...(search
       ? { name: { contains: search, mode: "insensitive" as const } }
       : {}),
