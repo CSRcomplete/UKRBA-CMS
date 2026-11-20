@@ -3,6 +3,7 @@
 import { prismadb } from "@/lib/prisma";
 import { requireAuthenticated, AuthenticationError } from "@/lib/authz";
 import { getLeads } from "@/actions/crm/get-leads";
+import { withoutPledgeLeads } from "@/actions/crm/leads/get-pledge-leads";
 
 const KEVIN_LEAD_TYPE = "Kevin Lead";
 
@@ -24,7 +25,7 @@ export async function canViewKevinLeads(): Promise<boolean> {
 export async function getRegularLeadsForKevinViewers() {
   if (!(await canViewKevinLeads())) return null;
   const type = await prismadb.crm_Lead_Types.findUnique({ where: { name: KEVIN_LEAD_TYPE } });
-  const all = await getLeads();
+  const all = await withoutPledgeLeads(await getLeads());
   return type ? all.filter((l: any) => l.lead_type_id !== type.id) : all;
 }
 

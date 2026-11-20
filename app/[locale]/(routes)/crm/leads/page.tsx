@@ -7,6 +7,7 @@ import LeadsView from "../components/LeadsView";
 import { LeadsGateway } from "../components/LeadsGateway";
 import { KevinLeadsGateway } from "../components/KevinLeadsGateway";
 import { canViewKevinLeads } from "@/actions/crm/leads/get-kevin-leads";
+import { withoutPledgeLeads } from "@/actions/crm/leads/get-pledge-leads";
 
 import { getAllCrmData } from "@/actions/crm/get-crm-data";
 import { getLeads } from "@/actions/crm/get-leads";
@@ -36,7 +37,7 @@ const LeadsPage = async () => {
 
   const [crmData, leads, postcodeOptions] = await Promise.all([
     getAllCrmData(),
-    getLeads(),
+    getLeads().then(withoutPledgeLeads),
     getPostcodeOptions(),
   ]);
 

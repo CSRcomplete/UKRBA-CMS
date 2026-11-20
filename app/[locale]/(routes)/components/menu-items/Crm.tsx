@@ -58,6 +58,7 @@ export const getCrmMenuItem = ({ localizations, showKevinLeads = false }: Props)
         url: "/crm/leads",
       },
       ...(showKevinLeads ? [{ title: "Kevin Leads", url: "/crm/leads/kevin" }] : []),
+      { title: "Pledges", url: "/crm/leads/pledges" },
       {
         title: "Upload Leads",
         url: "/crm/leads/upload",

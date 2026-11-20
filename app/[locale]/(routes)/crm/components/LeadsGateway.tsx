@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { User, Users, ArrowRight } from "lucide-react";
+import { PledgesGatewayCard } from "./PledgesGatewayCard";
 
 export function LeadsGateway() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
       <Link
         href="/crm/leads/mine"
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/25"
@@ -43,6 +44,8 @@ export function LeadsGateway() {
           </p>
         </div>
       </Link>
+
+      <PledgesGatewayCard />
     </div>
   );
 }

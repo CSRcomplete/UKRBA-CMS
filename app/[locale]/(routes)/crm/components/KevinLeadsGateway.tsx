@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Users, Sparkles, ArrowRight } from "lucide-react";
+import { PledgesGatewayCard } from "./PledgesGatewayCard";
 
-/** Chooser shown to admin / CEO / COO: regular leads or the Kevin Leads list. */
+/** Chooser shown to admin / CEO / COO: regular leads, the Kevin Leads list, or Pledges. */
 export function KevinLeadsGateway() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
       <Link
         href="/crm/leads/all"
         className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/25"
@@ -20,7 +21,7 @@ export function KevinLeadsGateway() {
             Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
-            All regular CRM leads (excludes the Kevin list).
+            All regular CRM leads (excludes the Kevin list and pledges).
           </p>
         </div>
       </Link>
@@ -44,6 +45,8 @@ export function KevinLeadsGateway() {
           </p>
         </div>
       </Link>
+
+      <PledgesGatewayCard />
     </div>
   );
 }
