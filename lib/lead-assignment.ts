@@ -17,6 +17,18 @@ export function canAssignLeadTo(actor: LeadActor, target: LeadAssignee): boolean
   return target.role === "area_director" && target.parentId === actor.id;
 }
 
+/**
+ * Bulk assignment is for Regional Directors handing leads down to the Area Directors
+ * who report to them (not to themselves, other RDs, or anyone else).
+ */
+export function canBulkAssignToAreaDirector(actor: LeadActor, target: LeadAssignee): boolean {
+  return (
+    actor.role === "regional_director" &&
+    target.role === "area_director" &&
+    target.parentId === actor.id
+  );
+}
+
 /** Prisma `where` limiting the owner picker for this actor, or null when unrestricted. */
 export function leadAssigneeWhere(actor: LeadActor) {
   if (actor.role !== "regional_director") return null;

@@ -27,7 +27,7 @@ import {
 
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
-import { PanelTopClose, PanelTopOpen, Send } from "lucide-react";
+import { PanelTopClose, PanelTopOpen, Send, UserCheck } from "lucide-react";
 import { createColumns } from "./columns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,18 @@ import AlertModal from "@/components/modals/alert-modal";
 import { useSession } from "@/lib/auth-client";
 import { bulkDeleteLeads } from "@/actions/crm/leads/bulk-delete-leads";
 import { createTargetListFromLeads } from "@/actions/crm/leads/create-target-list-from-leads";
+import {
+  bulkAssignLeadsToAreaDirector,
+  getMyAreaDirectors,
+  type AreaDirectorOption,
+} from "@/actions/crm/leads/bulk-assign-leads";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -77,6 +89,7 @@ export function LeadDataTable<TData, TValue>({
   const isAdminOrCeo = session?.user?.role === "admin" || session?.user?.role === "ceo" || session?.user?.role === "coo";
   const isSupervisor = session?.user?.role === "regional_director" || session?.user?.role === "area_director";
   const canBulkDelete = isAdminOrCeo || isSupervisor;
+  const isRegionalDirector = session?.user?.role === "regional_director";
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
@@ -130,6 +143,43 @@ export function LeadDataTable<TData, TValue>({
   const [targetListName, setTargetListName] = React.useState("");
   const [creatingList, setCreatingList] = React.useState(false);
   const [createdListId, setCreatedListId] = React.useState<string | null>(null);
+
+  // Regional Directors: bulk assign the selected leads to one of their Area Directors.
+  const [assignOpen, setAssignOpen] = React.useState(false);
+  const [areaDirectors, setAreaDirectors] = React.useState<AreaDirectorOption[] | null>(null);
+  const [areaDirectorId, setAreaDirectorId] = React.useState("");
+  const [assignReason, setAssignReason] = React.useState("");
+  const [assigning, setAssigning] = React.useState(false);
+
+  const openAssignDialog = async () => {
+    setAssignOpen(true);
+    if (areaDirectors === null) setAreaDirectors(await getMyAreaDirectors());
+  };
+
+  const closeAssignDialog = () => {
+    setAssignOpen(false);
+    setAreaDirectorId("");
+    setAssignReason("");
+  };
+
+  const handleBulkAssign = async () => {
+    if (!areaDirectorId) {
+      toast.error("Choose an Area Director");
+      return;
+    }
+    setAssigning(true);
+    const res = await bulkAssignLeadsToAreaDirector(selectedIds, areaDirectorId, assignReason);
+    setAssigning(false);
+    if (res?.error) {
+      toast.error(res.error);
+      return;
+    }
+    const already = res.alreadyAssigned ? ` (${res.alreadyAssigned} already with them)` : "";
+    toast.success(`${res.assigned} lead(s) assigned${already}`);
+    table.toggleAllRowsSelected(false);
+    closeAssignDialog();
+    router.refresh();
+  };
 
   const handleDelete = async () => {
     try {
@@ -223,6 +273,64 @@ export function LeadDataTable<TData, TValue>({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={assignOpen} onOpenChange={(open) => (open ? setAssignOpen(true) : closeAssignDialog())}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign {selectedCount} Lead(s) to an Area Director</DialogTitle>
+            <DialogDescription>
+              The Area Director becomes the owner and manages the lead. You stay attributed as the Regional Director, so you both share in the sale.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {areaDirectors === null ? (
+              <p className="text-sm text-muted-foreground">Loading Area Directors...</p>
+            ) : areaDirectors.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No Area Directors are linked to you yet, so there is no one to assign to. Ask an admin to link them in Admin &gt; Users.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Area Director</Label>
+                  <Select value={areaDirectorId} onValueChange={setAreaDirectorId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an Area Director..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {areaDirectors.map((ad) => (
+                        <SelectItem key={ad.id} value={ad.id}>
+                          {ad.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assignReason" className="text-xs font-semibold">Reason (optional)</Label>
+                  <Input
+                    id="assignReason"
+                    placeholder="e.g. Please follow up and close"
+                    value={assignReason}
+                    onChange={(e) => setAssignReason(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeAssignDialog}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleBulkAssign}
+              disabled={assigning || !areaDirectorId}
+            >
+              {assigning ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex justify-between items-start gap-3">
         <div></div>
         <div className="flex justify-end space-x-2">
@@ -259,6 +367,17 @@ export function LeadDataTable<TData, TValue>({
                 <Send className="h-3.5 w-3.5" />
                 Add to Target List for Campaign
               </Button>
+              {isRegionalDirector && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={openAssignDialog}
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Assign to Area Director
+                </Button>
+              )}
               {canBulkDelete && (
                 <Button
                   variant="destructive"
