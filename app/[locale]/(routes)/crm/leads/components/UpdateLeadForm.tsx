@@ -26,7 +26,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import { UserSearchCombobox } from "@/components/ui/user-search-combobox";
-import { AccountSearchCombobox } from "@/components/ui/account-search-combobox";
 import { updateLead } from "@/actions/crm/leads/update-lead";
 
 //TODO: fix all the types
@@ -60,7 +59,6 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
     refered_by: z.string().optional().nullable().or(z.literal("")),
     campaign: z.string().optional().nullable().or(z.literal("")),
     assigned_to: z.string().optional().nullable().or(z.literal("")),
-    accountsIDs: z.string().optional().nullable().or(z.literal("")),
     change_reason: z.string().optional().nullable().or(z.literal("")),
   });
 
@@ -86,7 +84,6 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
       refered_by: initialData?.refered_by || "",
       campaign: initialData?.campaign || "",
       assigned_to: initialData?.assigned_to || "",
-      accountsIDs: initialData?.accountsIDs || "",
       change_reason: "",
     },
   });
@@ -100,7 +97,6 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
       lead_status_id: sanitizeUuid(data.lead_status_id),
       lead_type_id: sanitizeUuid(data.lead_type_id),
       assigned_to: sanitizeUuid(data.assigned_to),
-      accountIDs: sanitizeUuid(data.accountsIDs),
       change_reason: data.change_reason || undefined,
     });
     if (result?.error) {
@@ -343,6 +339,7 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                         value={field.value ?? ""}
                         onChange={field.onChange}
                         placeholder={c("selectUser")}
+                        allowGroups={false}
                         disabled={form.formState.isSubmitting}
                       />
                     </FormControl>
@@ -371,24 +368,6 @@ export function UpdateLeadForm({ initialData, setOpen, leadSources, leadStatuses
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="accountsIDs"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("assignAccount")}</FormLabel>
-                  <FormControl>
-                    <AccountSearchCombobox
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      placeholder={t("assignAccountPlaceholder")}
-                      disabled={form.formState.isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             {form.watch("assigned_to") !== initialData.assigned_to && (
               <FormField
                 control={form.control}

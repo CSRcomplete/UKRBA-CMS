@@ -31,6 +31,8 @@ interface UserSearchComboboxProps {
   placeholder?: string;
   disabled?: boolean;
   name?: string;
+  /** Show the "Group / Bulk Assignments" options. Defaults to true; leads turn it off (one owner only). */
+  allowGroups?: boolean;
 }
 
 const PAGE_SIZE = 50;
@@ -41,6 +43,7 @@ export function UserSearchCombobox({
   placeholder = "Select user",
   disabled,
   name,
+  allowGroups = true,
 }: UserSearchComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -56,7 +59,9 @@ export function UserSearchCombobox({
   const debouncedSearch = useDebounce(search, 300);
 
   const selectedInList = accumulatedUsers.find((u) => u.id === value);
-  const selectedGroup = GROUP_ASSIGNMENTS.find((g) => g.id === value);
+  const selectedGroup = allowGroups
+    ? GROUP_ASSIGNMENTS.find((g) => g.id === value)
+    : undefined;
 
   // Load list of users when open
   useEffect(() => {
@@ -143,25 +148,27 @@ export function UserSearchCombobox({
               ) : (
                 <>
                   <CommandEmpty>No users found.</CommandEmpty>
-                  <CommandGroup heading="Group / Bulk Assignments">
-                    {GROUP_ASSIGNMENTS.map((group) => (
-                      <CommandItem
-                        key={group.id}
-                        value={group.id}
-                        onSelect={handleSelect}
-                        className="font-medium text-purple-700 dark:text-purple-300 cursor-pointer"
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4 text-primary",
-                            value === group.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {group.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandGroup heading="Individual Users">
+                  {allowGroups && (
+                    <CommandGroup heading="Group / Bulk Assignments">
+                      {GROUP_ASSIGNMENTS.map((group) => (
+                        <CommandItem
+                          key={group.id}
+                          value={group.id}
+                          onSelect={handleSelect}
+                          className="font-medium text-purple-700 dark:text-purple-300 cursor-pointer"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 text-primary",
+                              value === group.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {group.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  <CommandGroup heading={allowGroups ? "Individual Users" : undefined}>
                     {accumulatedUsers.map((user) => (
                       <CommandItem
                         key={user.id}
