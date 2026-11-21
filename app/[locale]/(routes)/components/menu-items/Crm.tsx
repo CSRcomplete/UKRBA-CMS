@@ -22,9 +22,14 @@ type Props = {
     products: string;
   };
   showKevinLeads?: boolean;
+  showTeamActivity?: boolean;
 };
 
-export const getCrmMenuItem = ({ localizations, showKevinLeads = false }: Props): NavItem => {
+export const getCrmMenuItem = ({
+  localizations,
+  showKevinLeads = false,
+  showTeamActivity = false,
+}: Props): NavItem => {
   return {
     title: localizations.title,
     icon: Coins,
@@ -59,6 +64,7 @@ export const getCrmMenuItem = ({ localizations, showKevinLeads = false }: Props)
       },
       ...(showKevinLeads ? [{ title: "Kevin Leads", url: "/crm/leads/kevin" }] : []),
       { title: "Pledges", url: "/crm/leads/pledges" },
+      ...(showTeamActivity ? [{ title: "Team Activity", url: "/crm/team-activity" }] : []),
       {
         title: "Upload Leads",
         url: "/crm/leads/upload",
