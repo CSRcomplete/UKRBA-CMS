@@ -99,6 +99,7 @@ export function AppSidebar({
     getCrmMenuItem({
       localizations: dict.crm,
       showKevinLeads: ["admin", "ceo", "coo"].includes(session?.user?.role ?? ""),
+      showTeamActivity: ["admin", "ceo", "coo"].includes(session?.user?.role ?? ""),
     }),
     getCampaignsMenuItem({
       localizations: {
