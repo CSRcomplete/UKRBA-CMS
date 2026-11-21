@@ -1,4 +1,9 @@
-import { canAssignLeadTo, canBulkAssignToAreaDirector, leadAssigneeWhere } from "../lead-assignment";
+import {
+  canAssignLeadTo,
+  canBulkAssign,
+  canBulkAssignToAreaDirector,
+  leadAssigneeWhere,
+} from "../lead-assignment";
 
 const rd = { id: "rd1", role: "regional_director" };
 
@@ -46,6 +51,34 @@ describe("canBulkAssignToAreaDirector", () => {
     const ad = { id: "ad1", role: "area_director", parentId: "rd1" };
     expect(canBulkAssignToAreaDirector({ id: "p", role: "coo" }, ad)).toBe(false);
     expect(canBulkAssignToAreaDirector({ id: "ad1", role: "area_director" }, ad)).toBe(false);
+  });
+});
+
+describe("canBulkAssign", () => {
+  const ad = { id: "ad1", role: "area_director", parentId: "rd1" };
+  const otherRd = { id: "rd2", role: "regional_director", parentId: null };
+
+  it("keeps the RD rule: only their own ADs", () => {
+    expect(canBulkAssign(rd, ad)).toBe(true);
+    expect(canBulkAssign(rd, otherRd)).toBe(false);
+    expect(canBulkAssign(rd, { ...ad, parentId: "rd2" })).toBe(false);
+  });
+
+  it("lets admin, CEO and COO assign to any RD or AD", () => {
+    for (const role of ["admin", "ceo", "coo"]) {
+      expect(canBulkAssign({ id: "x", role }, ad)).toBe(true);
+      expect(canBulkAssign({ id: "x", role }, otherRd)).toBe(true);
+    }
+  });
+
+  it("does not let admin roles assign to salespeople or placeholder users", () => {
+    expect(canBulkAssign({ id: "x", role: "coo" }, { id: "u1", role: "user", parentId: "ad1" })).toBe(false);
+  });
+
+  it("blocks every other role", () => {
+    for (const role of ["area_director", "user", "manager", null]) {
+      expect(canBulkAssign({ id: "x", role }, ad)).toBe(false);
+    }
   });
 });
 

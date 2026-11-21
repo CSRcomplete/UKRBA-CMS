@@ -29,6 +29,20 @@ export function canBulkAssignToAreaDirector(actor: LeadActor, target: LeadAssign
   );
 }
 
+export const BULK_ASSIGN_ADMIN_ROLES = ["admin", "ceo", "coo"] as const;
+
+/**
+ * Who may bulk assign leads to whom: a Regional Director to their own Area Directors,
+ * and admin / CEO / COO to any Regional or Area Director.
+ */
+export function canBulkAssign(actor: LeadActor, target: LeadAssignee): boolean {
+  if (actor.role === "regional_director") return canBulkAssignToAreaDirector(actor, target);
+  if (actor.role && (BULK_ASSIGN_ADMIN_ROLES as readonly string[]).includes(actor.role)) {
+    return target.role === "regional_director" || target.role === "area_director";
+  }
+  return false;
+}
+
 /** Prisma `where` limiting the owner picker for this actor, or null when unrestricted. */
 export function leadAssigneeWhere(actor: LeadActor) {
   if (actor.role !== "regional_director") return null;

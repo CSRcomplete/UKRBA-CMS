@@ -9,38 +9,54 @@ import { filterAuthorizedLeadIds } from "@/lib/authz/scopes/crm";
 import { writeAuditLog } from "@/lib/audit-log";
 import { logOwnershipChange } from "@/lib/ownership";
 import { resolveLeadDirectors } from "@/lib/lead-directors";
-import { canBulkAssignToAreaDirector } from "@/lib/lead-assignment";
+import { canBulkAssign, BULK_ASSIGN_ADMIN_ROLES } from "@/lib/lead-assignment";
 
-export type AreaDirectorOption = { id: string; name: string | null };
+export type BulkAssignTarget = { id: string; name: string | null; role: string | null };
 
-/** The active Area Directors who report to the current Regional Director (empty for anyone else). */
-export async function getMyAreaDirectors(): Promise<AreaDirectorOption[]> {
+/**
+ * Who the current user may bulk assign to: a Regional Director gets their own active
+ * Area Directors; admin / CEO / COO get every active Regional and Area Director.
+ * Empty for anyone else.
+ */
+export async function getBulkAssignTargets(): Promise<BulkAssignTarget[]> {
   const session = await getSession();
   if (!session) return [];
   const me = await prismadb.users.findUnique({
     where: { id: session.user.id },
     select: { id: true, role: true },
   });
-  if (!me || me.role !== "regional_director") return [];
-  return prismadb.users.findMany({
-    where: { parentId: me.id, role: "area_director", userStatus: "ACTIVE" },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  if (!me) return [];
+
+  if (me.role === "regional_director") {
+    return prismadb.users.findMany({
+      where: { parentId: me.id, role: "area_director", userStatus: "ACTIVE" },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: "asc" },
+    });
+  }
+  if (me.role && (BULK_ASSIGN_ADMIN_ROLES as readonly string[]).includes(me.role)) {
+    return prismadb.users.findMany({
+      where: { role: { in: ["regional_director", "area_director"] }, userStatus: "ACTIVE" },
+      select: { id: true, name: true, role: true },
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+    });
+  }
+  return [];
 }
 
 /**
- * Regional Director hands the selected leads to one of their own Area Directors.
- * Same attribution as a single reassignment: the AD becomes the owner and Area Director,
- * and the RD stays attributed as the Regional Director, so both share in the sale.
+ * Hand the selected leads to one Regional or Area Director (who may be chosen depends on the
+ * caller, see canBulkAssign). Same attribution as a single reassignment: an AD becomes the owner
+ * and Area Director with their RD staying attributed as Regional Director, so both share in the
+ * sale; an RD becomes the owner and Regional Director.
  */
-export async function bulkAssignLeadsToAreaDirector(
+export async function bulkAssignLeads(
   leadIds: string[],
-  areaDirectorId: string,
+  assigneeId: string,
   reason?: string,
 ) {
   if (!leadIds || leadIds.length === 0) return { error: "No leads selected" };
-  if (!areaDirectorId) return { error: "Choose an Area Director" };
+  if (!assigneeId) return { error: "Choose who to assign the leads to" };
 
   let user;
   try {
@@ -53,13 +69,18 @@ export async function bulkAssignLeadsToAreaDirector(
   const [actor, target] = await Promise.all([
     prismadb.users.findUnique({ where: { id: user.id }, select: { id: true, role: true } }),
     prismadb.users.findUnique({
-      where: { id: areaDirectorId },
+      where: { id: assigneeId },
       select: { id: true, role: true, parentId: true, userStatus: true },
     }),
   ]);
-  if (!actor || !target) return { error: "Area Director not found" };
-  if (!canBulkAssignToAreaDirector(actor, target) || target.userStatus !== "ACTIVE") {
-    return { error: "You can only assign leads to the Area Directors who report to you." };
+  if (!actor || !target) return { error: "Assignee not found" };
+  if (!canBulkAssign(actor, target) || target.userStatus !== "ACTIVE") {
+    return {
+      error:
+        actor.role === "regional_director"
+          ? "You can only assign leads to the Area Directors who report to you."
+          : "Leads can only be assigned to an active Regional or Area Director.",
+    };
   }
 
   // Every selected lead must be one this user can already see.
@@ -100,7 +121,7 @@ export async function bulkAssignLeadsToAreaDirector(
       ),
     );
 
-    const changeReason = reason?.trim() || "Bulk assignment to Area Director";
+    const changeReason = reason?.trim() || "Bulk assignment";
     await Promise.allSettled(
       toChange.flatMap((lead) => [
         logOwnershipChange({

@@ -45,9 +45,9 @@ import { useSession } from "@/lib/auth-client";
 import { bulkDeleteLeads } from "@/actions/crm/leads/bulk-delete-leads";
 import { createTargetListFromLeads } from "@/actions/crm/leads/create-target-list-from-leads";
 import {
-  bulkAssignLeadsToAreaDirector,
-  getMyAreaDirectors,
-  type AreaDirectorOption,
+  bulkAssignLeads,
+  getBulkAssignTargets,
+  type BulkAssignTarget,
 } from "@/actions/crm/leads/bulk-assign-leads";
 import {
   Select,
@@ -90,6 +90,9 @@ export function LeadDataTable<TData, TValue>({
   const isSupervisor = session?.user?.role === "regional_director" || session?.user?.role === "area_director";
   const canBulkDelete = isAdminOrCeo || isSupervisor;
   const isRegionalDirector = session?.user?.role === "regional_director";
+  // RDs assign to their own Area Directors; admin / CEO / COO to any Regional or Area Director.
+  const canBulkAssign = isRegionalDirector || isAdminOrCeo;
+  const assignNoun = isRegionalDirector ? "Area Director" : "Director";
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
@@ -146,14 +149,14 @@ export function LeadDataTable<TData, TValue>({
 
   // Regional Directors: bulk assign the selected leads to one of their Area Directors.
   const [assignOpen, setAssignOpen] = React.useState(false);
-  const [areaDirectors, setAreaDirectors] = React.useState<AreaDirectorOption[] | null>(null);
+  const [areaDirectors, setAreaDirectors] = React.useState<BulkAssignTarget[] | null>(null);
   const [areaDirectorId, setAreaDirectorId] = React.useState("");
   const [assignReason, setAssignReason] = React.useState("");
   const [assigning, setAssigning] = React.useState(false);
 
   const openAssignDialog = async () => {
     setAssignOpen(true);
-    if (areaDirectors === null) setAreaDirectors(await getMyAreaDirectors());
+    if (areaDirectors === null) setAreaDirectors(await getBulkAssignTargets());
   };
 
   const closeAssignDialog = () => {
@@ -164,11 +167,11 @@ export function LeadDataTable<TData, TValue>({
 
   const handleBulkAssign = async () => {
     if (!areaDirectorId) {
-      toast.error("Choose an Area Director");
+      toast.error(`Choose a${isRegionalDirector ? "n Area" : ""} Director`);
       return;
     }
     setAssigning(true);
-    const res = await bulkAssignLeadsToAreaDirector(selectedIds, areaDirectorId, assignReason);
+    const res = await bulkAssignLeads(selectedIds, areaDirectorId, assignReason);
     setAssigning(false);
     if (res?.error) {
       toast.error(res.error);
@@ -276,30 +279,37 @@ export function LeadDataTable<TData, TValue>({
       <Dialog open={assignOpen} onOpenChange={(open) => (open ? setAssignOpen(true) : closeAssignDialog())}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign {selectedCount} Lead(s) to an Area Director</DialogTitle>
+            <DialogTitle>Assign {selectedCount} Lead(s) to {isRegionalDirector ? "an Area Director" : "a Director"}</DialogTitle>
             <DialogDescription>
-              The Area Director becomes the owner and manages the lead. You stay attributed as the Regional Director, so you both share in the sale.
+              {isRegionalDirector
+                ? "The Area Director becomes the owner and manages the lead. You stay attributed as the Regional Director, so you both share in the sale."
+                : "The person you choose becomes the owner. An Area Director keeps their Regional Director attributed above them, so both share in the sale."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {areaDirectors === null ? (
-              <p className="text-sm text-muted-foreground">Loading Area Directors...</p>
+              <p className="text-sm text-muted-foreground">Loading...</p>
             ) : areaDirectors.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No Area Directors are linked to you yet, so there is no one to assign to. Ask an admin to link them in Admin &gt; Users.
+                {isRegionalDirector
+                  ? "No Area Directors are linked to you yet, so there is no one to assign to. Ask an admin to link them in Admin > Users."
+                  : "There are no active Regional or Area Directors to assign to."}
               </p>
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Area Director</Label>
+                  <Label className="text-xs font-semibold">{assignNoun}</Label>
                   <Select value={areaDirectorId} onValueChange={setAreaDirectorId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select an Area Director..." />
+                      <SelectValue placeholder={`Select ${isRegionalDirector ? "an Area Director" : "a Director"}...`} />
                     </SelectTrigger>
                     <SelectContent>
                       {areaDirectors.map((ad) => (
                         <SelectItem key={ad.id} value={ad.id}>
                           {ad.name}
+                          {!isRegionalDirector && ad.role
+                            ? ` (${ad.role === "regional_director" ? "Regional Director" : "Area Director"})`
+                            : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -367,7 +377,7 @@ export function LeadDataTable<TData, TValue>({
                 <Send className="h-3.5 w-3.5" />
                 Add to Target List for Campaign
               </Button>
-              {isRegionalDirector && (
+              {canBulkAssign && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -375,7 +385,7 @@ export function LeadDataTable<TData, TValue>({
                   onClick={openAssignDialog}
                 >
                   <UserCheck className="h-3.5 w-3.5" />
-                  Assign to Area Director
+                  Assign to {assignNoun}
                 </Button>
               )}
               {canBulkDelete && (
