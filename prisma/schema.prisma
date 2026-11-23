@@ -120,6 +120,7 @@ model crm_Leads {
   documents                     DocumentsToLeads[]
   embedding                     crm_Embeddings_Leads?
   email_flows                   crm_LeadEmailFlow[]
+  assessments                   crm_Assessments[]
   deletedAt                     DateTime?
   deletedBy                     String?               @db.Uuid
   fivePoundAssessmentAt         DateTime?
@@ -138,6 +139,38 @@ model crm_Leads {
   @@index([assigned_email_partner_id])
   @@index([assigned_area_director_id])
   @@index([assigned_regional_director_id])
+}
+
+/// A 5GBP / free assessment submitted on the Wix site. Linked to the owning lead (and so to
+/// its RD/AD) by email, falling back to business name + postcode. lead_id is null when no
+/// lead could be matched (admin-only "unmatched" queue). The report link is filled in later
+/// by the Railway app once the document is generated.
+model crm_Assessments {
+  id                String    @id @default(uuid()) @db.Uuid
+  submission_id     String    @unique
+  lead_id           String?   @db.Uuid
+  assessment_type   String    @default("5GBP Free Assessment")
+  business_name     String?
+  contact_name      String?
+  email             String?
+  phone             String?
+  postcode          String?
+  website           String?
+  membership_number String?
+  referred_by       String?
+  answers           Json?     @db.JsonB
+  report_url        String?
+  report_status     String    @default("pending")
+  report_ready_at   DateTime?
+  submitted_at      DateTime  @default(now())
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  lead crm_Leads? @relation(fields: [lead_id], references: [id], onDelete: SetNull)
+
+  @@index([lead_id])
+  @@index([email])
+  @@index([submitted_at])
 }
 
 enum crm_LeadEmailFlowStatus {
@@ -755,7 +788,7 @@ model crm_Announcements {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
-  author Users @relation("announcement_author", fields: [authorId], references: [id], onDelete: Cascade)
+  author Users                   @relation("announcement_author", fields: [authorId], references: [id], onDelete: Cascade)
   reads  crm_AnnouncementReads[]
 
   @@index([authorId])
@@ -767,41 +800,41 @@ model crm_Announcements {
 }
 
 model crm_Candidates {
-  id                String    @id @default(uuid()) @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
   // Personal info
-  firstName         String
-  lastName          String
-  email             String
-  phone             String?
-  address           String?
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  address          String?
   // Role applied for
-  position          String
-  positionType      String    @default("Full-time") // Full-time / Part-time / Contract / Volunteer
+  position         String
+  positionType     String    @default("Full-time") // Full-time / Part-time / Contract / Volunteer
   // Pipeline stage
-  status            String    @default("Applied")
+  status           String    @default("Applied")
   // CV attachment
-  cvUrl             String?   @db.Text
-  cvFileName        String?
-  cvSize            Int?
+  cvUrl            String?   @db.Text
+  cvFileName       String?
+  cvSize           Int?
   // Interview
-  interviewDate     DateTime?
-  interviewNotes    String?   @db.Text
-  interviewedBy     String?
+  interviewDate    DateTime?
+  interviewNotes   String?   @db.Text
+  interviewedBy    String?
   // Contract
-  contractStatus    String    @default("None")  // None / Sent / Signed
-  contractSentAt    DateTime?
-  contractSignedAt  DateTime?
+  contractStatus   String    @default("None") // None / Sent / Signed
+  contractSentAt   DateTime?
+  contractSignedAt DateTime?
   // Source
-  source            String    @default("Manual")
+  source           String    @default("Manual")
   // Meta
-  notes             String?   @db.Text
-  createdById       String    @db.Uuid
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?
+  notes            String?   @db.Text
+  createdById      String    @db.Uuid
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 
-  createdBy         Users                    @relation("candidate_created_by", fields: [createdById], references: [id], onDelete: Cascade)
-  activities        crm_CandidateActivities[]
+  createdBy  Users                     @relation("candidate_created_by", fields: [createdById], references: [id], onDelete: Cascade)
+  activities crm_CandidateActivities[]
 
   @@index([status])
   @@index([position])
@@ -815,12 +848,12 @@ model crm_CandidateActivities {
   id          String   @id @default(uuid()) @db.Uuid
   candidateId String   @db.Uuid
   userId      String   @db.Uuid
-  type        String   @default("note")   // note / call / email / interview / contract / other
+  type        String   @default("note") // note / call / email / interview / contract / other
   content     String   @db.Text
   createdAt   DateTime @default(now())
 
-  candidate   crm_Candidates @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  user        Users          @relation("candidate_activity_user", fields: [userId], references: [id], onDelete: Cascade)
+  candidate crm_Candidates @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user      Users          @relation("candidate_activity_user", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
   @@index([userId])
@@ -1136,56 +1169,56 @@ model Users {
   banExpires    DateTime?
 
   tasksComment                 tasksComments[]
-  created_by_documents         Documents[]              @relation("created_by_user")
-  assigned_documents           Documents[]              @relation("assigned_to_user")
+  created_by_documents         Documents[]               @relation("created_by_user")
+  assigned_documents           Documents[]               @relation("assigned_to_user")
   tasks                        Tasks[]
   crm_accounts_tasks           crm_Accounts_Tasks[]
-  accounts                     crm_Accounts[]           @relation("AccountAssignedTo")
-  leads                        crm_Leads[]              @relation("LeadAssignedTo")
-  created_by_user              crm_Opportunities[]      @relation("created_by_user_relation")
-  assigned_opportunity         crm_Opportunities[]      @relation("assigned_to_user_relation")
-  assigned_contacts            crm_Contacts[]           @relation("assigned_contacts")
-  crated_contacts              crm_Contacts[]           @relation("created_contacts")
+  accounts                     crm_Accounts[]            @relation("AccountAssignedTo")
+  leads                        crm_Leads[]               @relation("LeadAssignedTo")
+  created_by_user              crm_Opportunities[]       @relation("created_by_user_relation")
+  assigned_opportunity         crm_Opportunities[]       @relation("assigned_to_user_relation")
+  assigned_contacts            crm_Contacts[]            @relation("assigned_contacts")
+  crated_contacts              crm_Contacts[]            @relation("created_contacts")
   apiKeys                      ApiKeys[]
   assigned_contracts           crm_Contracts[]
   announcementReads            crm_AnnouncementReads[]
-  boards                       Boards[]                 @relation("assigned_user")
+  boards                       Boards[]                  @relation("assigned_user")
   watching_boards              BoardWatchers[]
   watching_accounts            AccountWatchers[]
-  created_targets              crm_Targets[]            @relation("created_targets")
-  created_target_lists         crm_TargetLists[]        @relation("created_target_lists")
+  created_targets              crm_Targets[]             @relation("created_targets")
+  created_target_lists         crm_TargetLists[]         @relation("created_target_lists")
   apiTokens                    ApiToken[]
   emailAccounts                EmailAccount[]
   emails                       Email[]
-  enrichments_triggered        crm_Contact_Enrichment[] @relation("enrichment_triggered_by")
-  target_enrichments_triggered crm_Target_Enrichment[]  @relation("target_enrichment_triggered_by")
-  created_campaigns            crm_campaigns[]          @relation("created_campaigns")
-  created_campaign_templates   crm_campaign_templates[] @relation("created_campaign_templates")
+  enrichments_triggered        crm_Contact_Enrichment[]  @relation("enrichment_triggered_by")
+  target_enrichments_triggered crm_Target_Enrichment[]   @relation("target_enrichment_triggered_by")
+  created_campaigns            crm_campaigns[]           @relation("created_campaigns")
+  created_campaign_templates   crm_campaign_templates[]  @relation("created_campaign_templates")
   auditLogs                    crm_AuditLog[]
-  created_products             crm_Products[]           @relation("ProductCreatedBy")
-  activities_created           crm_Activities[]         @relation("activity_created_by")
-  activities_updated           crm_Activities[]         @relation("activity_updated_by")
-  report_configs               crm_Report_Config[]      @relation("report_configs")
-  report_schedules             crm_Report_Schedule[]    @relation("report_schedules")
+  created_products             crm_Products[]            @relation("ProductCreatedBy")
+  activities_created           crm_Activities[]          @relation("activity_created_by")
+  activities_updated           crm_Activities[]          @relation("activity_updated_by")
+  report_configs               crm_Report_Config[]       @relation("report_configs")
+  report_schedules             crm_Report_Schedule[]     @relation("report_schedules")
   sessions                     Session[]
   authAccounts                 Account[]
-  createdInvoices              Invoices[]               @relation("InvoiceCreatedBy")
-  invoicePayments              Invoice_Payments[]       @relation("InvoicePaymentCreatedBy")
-  invoiceAttachments           Invoice_Attachments[]    @relation("InvoiceAttachmentUploadedBy")
-  invoiceActivity              Invoice_Activity[]       @relation("InvoiceActivityActor")
-  ownership_changes_logged     crm_Ownership_History[]  @relation("ownership_changes_by")
-  appointments                 crm_Appointments[]       @relation("user_appointments")
-  announcements                crm_Announcements[]      @relation("announcement_author")
-  candidates_created           crm_Candidates[]         @relation("candidate_created_by")
+  createdInvoices              Invoices[]                @relation("InvoiceCreatedBy")
+  invoicePayments              Invoice_Payments[]        @relation("InvoicePaymentCreatedBy")
+  invoiceAttachments           Invoice_Attachments[]     @relation("InvoiceAttachmentUploadedBy")
+  invoiceActivity              Invoice_Activity[]        @relation("InvoiceActivityActor")
+  ownership_changes_logged     crm_Ownership_History[]   @relation("ownership_changes_by")
+  appointments                 crm_Appointments[]        @relation("user_appointments")
+  announcements                crm_Announcements[]       @relation("announcement_author")
+  candidates_created           crm_Candidates[]          @relation("candidate_created_by")
   candidate_activities         crm_CandidateActivities[] @relation("candidate_activity_user")
 
   // Organizational Tree properties
-  region_id Int?
-  area_id   Int?
-  parentId  String? @db.Uuid
-  parent    Users?  @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children  Users[] @relation("UserHierarchy")
-  postcode_routing_assignments PostcodeRoutingToAreaDirectors[] @relation("AreaDirectorToPostcodeRouting")
+  region_id                             Int?
+  area_id                               Int?
+  parentId                              String?                              @db.Uuid
+  parent                                Users?                               @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children                              Users[]                              @relation("UserHierarchy")
+  postcode_routing_assignments          PostcodeRoutingToAreaDirectors[]     @relation("AreaDirectorToPostcodeRouting")
   postcode_routing_regional_assignments PostcodeRoutingToRegionalDirectors[] @relation("RegionalDirectorToPostcodeRouting")
 
   @@index([email])
@@ -2159,13 +2192,13 @@ model Invoice_Settings {
 }
 
 model nextcrm_postcode_routing {
-  id                 String                           @id @default(uuid()) @db.Uuid
-  postcode_area      String                           @unique
+  id                 String                               @id @default(uuid()) @db.Uuid
+  postcode_area      String                               @unique
   area_name          String?
   region_country     String
   assigned_region_id Int
-  area_director_id   String?                          @db.Uuid
-  createdAt          DateTime                         @default(now())
+  area_director_id   String?                              @db.Uuid
+  createdAt          DateTime                             @default(now())
   area_directors     PostcodeRoutingToAreaDirectors[]
   regional_directors PostcodeRoutingToRegionalDirectors[]
 }
@@ -2251,8 +2284,6 @@ model crm_Ownership_History {
   @@index([entity_type, entity_id])
 }
 
-
-
 model crm_AnnouncementReads {
   id             String   @id @default(uuid()) @db.Uuid
   announcementId String   @db.Uuid
@@ -2268,26 +2299,26 @@ model crm_AnnouncementReads {
 }
 
 model crm_Payment_Allocations {
-  id               String   @id @default(uuid()) @db.Uuid
-  contact_id       String   @db.Uuid
-  member_id        String?  @db.Uuid
-  lead_id          String?  @db.Uuid
-  customer_name    String
-  sale_amount      Decimal  @default(0) @db.Decimal(14, 2)
-  sale_date        DateTime @default(now())
-  status           String   @default("pending")
-  approved_by      String?  @db.Uuid
-  approved_at      DateTime?
+  id            String    @id @default(uuid()) @db.Uuid
+  contact_id    String    @db.Uuid
+  member_id     String?   @db.Uuid
+  lead_id       String?   @db.Uuid
+  customer_name String
+  sale_amount   Decimal   @default(0) @db.Decimal(14, 2)
+  sale_date     DateTime  @default(now())
+  status        String    @default("pending")
+  approved_by   String?   @db.Uuid
+  approved_at   DateTime?
 
-  team_allocations Json     @default("[]")
+  team_allocations Json @default("[]")
 
   partner_name       String?
   partner_user_id    String?  @db.Uuid
   partner_percentage Decimal? @default(0) @db.Decimal(5, 2)
   partner_amount     Decimal? @default(0) @db.Decimal(14, 2)
 
-  total_percentage Decimal  @default(0) @db.Decimal(5, 2)
-  total_allocated  Decimal  @default(0) @db.Decimal(14, 2)
+  total_percentage Decimal @default(0) @db.Decimal(5, 2)
+  total_allocated  Decimal @default(0) @db.Decimal(14, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2296,4 +2327,3 @@ model crm_Payment_Allocations {
   @@index([contact_id])
   @@index([status])
 }
-

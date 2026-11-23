@@ -64,6 +64,7 @@ export const getCrmMenuItem = ({
       },
       ...(showKevinLeads ? [{ title: "Kevin Leads", url: "/crm/leads/kevin" }] : []),
       { title: "Pledges", url: "/crm/leads/pledges" },
+      { title: "Assessments", url: "/crm/assessments" },
       ...(showTeamActivity ? [{ title: "Team Activity", url: "/crm/team-activity" }] : []),
       {
         title: "Upload Leads",
