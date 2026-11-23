@@ -2,6 +2,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, getMessages } from "next-intl/server";
+import { VersionChecker } from "@/components/VersionChecker";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
@@ -66,6 +67,7 @@ export default async function RootLayout(props: Props) {
         <Toaster />
         <SonnerToaster />
         <AutofillBlocker />
+        <VersionChecker />
       </body>
     </html>
   );
