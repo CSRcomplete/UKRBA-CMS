@@ -2,9 +2,17 @@ const withNextIntl = require("next-intl/plugin")(
   "./i18n/request.ts"
 );
 
+// One ID per build. It is compiled into the client bundle AND the /api/version route,
+// so open browser tabs can tell when the server has been redeployed (see VersionChecker).
+const BUILD_ID = Date.now().toString(36);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  generateBuildId: async () => BUILD_ID,
+  env: {
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "100mb",
