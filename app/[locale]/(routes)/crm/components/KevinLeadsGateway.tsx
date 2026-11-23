@@ -21,7 +21,7 @@ export function KevinLeadsGateway() {
             Leads
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
-            All regular CRM leads (excludes the Kevin list and pledges).
+            All regular CRM leads (excludes the Kevin list).
           </p>
         </div>
       </Link>

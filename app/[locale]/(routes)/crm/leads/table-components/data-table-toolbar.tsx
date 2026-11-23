@@ -17,6 +17,7 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   leadSources?: ConfigItem[];
   leadStatuses?: ConfigItem[];
+  leadTypes?: ConfigItem[];
   postcodeOptions?: PostcodeOption[];
 }
 
@@ -29,6 +30,7 @@ export function DataTableToolbar<TData>({
   table,
   leadSources = [],
   leadStatuses = [],
+  leadTypes = [],
   postcodeOptions = [],
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
@@ -52,6 +54,13 @@ export function DataTableToolbar<TData>({
               value: p.postcode_area,
               label: p.area_name ? `${p.postcode_area} — ${p.area_name}` : p.postcode_area,
             }))}
+          />
+        )}
+        {table.getColumn("lead_type") && (
+          <DataTableFacetedFilter
+            column={table.getColumn("lead_type")}
+            title="Category"
+            options={leadTypes.map((t) => ({ value: t.id, label: t.name }))}
           />
         )}
         {table.getColumn("lead_status") && (

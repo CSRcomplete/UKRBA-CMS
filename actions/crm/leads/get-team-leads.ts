@@ -4,7 +4,6 @@ import { prismadb } from "@/lib/prisma";
 import { requireAuthenticated, AuthenticationError } from "@/lib/authz";
 import { getSubordinateUserIds } from "@/lib/authz/scopes/crm";
 import { getLeads } from "@/actions/crm/get-leads";
-import { withoutPledgeLeads } from "@/actions/crm/leads/get-pledge-leads";
 
 export type DirectReport = {
   id: string;
@@ -53,7 +52,7 @@ export async function getDirectReports(): Promise<DirectReport[]> {
 /** All leads visible to the current user, filtered to only their own directly-assigned ones. */
 export async function getMyLeads() {
   const user = await requireAuthenticated();
-  const all = await withoutPledgeLeads(await getLeads());
+  const all = await getLeads();
   return all.filter((l: any) => l.assigned_to === user.id);
 }
 
@@ -74,6 +73,6 @@ export async function getTeamMemberLeads(targetUserId: string) {
   if (!mySubtree.includes(targetUserId)) return null;
 
   const targetIds = [targetUserId, ...(await getSubordinateUserIds(targetUserId))];
-  const all = await withoutPledgeLeads(await getLeads());
+  const all = await getLeads();
   return all.filter((l: any) => targetIds.includes(l.assigned_to));
 }

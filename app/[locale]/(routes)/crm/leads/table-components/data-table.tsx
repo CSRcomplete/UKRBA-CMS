@@ -364,7 +364,7 @@ export function LeadDataTable<TData, TValue>({
         </div>
       ) : (
         <>
-          <DataTableToolbar table={table} leadSources={leadSources} leadStatuses={leadStatuses} postcodeOptions={postcodeOptions} />
+          <DataTableToolbar table={table} leadSources={leadSources} leadStatuses={leadStatuses} leadTypes={leadTypes} postcodeOptions={postcodeOptions} />
           {selectedCount > 0 && (
             <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2 text-sm">
               <span className="font-medium">{selectedCount} selected</span>

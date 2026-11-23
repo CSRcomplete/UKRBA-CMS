@@ -20,11 +20,3 @@ export async function getPledgeLeads() {
   const all = await getLeads();
   return all.filter((l: any) => l.lead_type_id === typeId);
 }
-
-/** The same list with Pledge leads taken out, for the regular Leads views. */
-export async function withoutPledgeLeads<T extends { lead_type_id?: string | null }>(
-  leads: T[],
-): Promise<T[]> {
-  const typeId = await getPledgeTypeId();
-  return typeId ? leads.filter((l) => l.lead_type_id !== typeId) : leads;
-}
