@@ -205,7 +205,8 @@ export const createColumns = (
     enableHiding: true,
   },
   {
-    accessorKey: "lead_type",
+    id: "lead_type",
+    accessorFn: (row: any) => row.lead_type_id ?? "",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Category" />
     ),
@@ -215,6 +216,7 @@ export const createColumns = (
       const type = leadTypes.find((t) => t.id === typeId);
       return <div className="w-[120px]">{type?.name ?? "General Enquiry"}</div>;
     },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: true,
     enableHiding: true,
   },

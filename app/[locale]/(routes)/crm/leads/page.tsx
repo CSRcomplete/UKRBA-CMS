@@ -7,7 +7,6 @@ import LeadsView from "../components/LeadsView";
 import { LeadsGateway } from "../components/LeadsGateway";
 import { KevinLeadsGateway } from "../components/KevinLeadsGateway";
 import { canViewKevinLeads } from "@/actions/crm/leads/get-kevin-leads";
-import { withoutPledgeLeads } from "@/actions/crm/leads/get-pledge-leads";
 
 import { getAllCrmData } from "@/actions/crm/get-crm-data";
 import { getLeads } from "@/actions/crm/get-leads";
@@ -27,28 +26,24 @@ const LeadsPage = async () => {
     );
   }
 
-  if (showGateway) {
-    return (
-      <Container title={t("leads.pageTitle")} description={t("leads.pageDescription")}>
-        <LeadsGateway />
-      </Container>
-    );
-  }
-
   const [crmData, leads, postcodeOptions] = await Promise.all([
     getAllCrmData(),
-    getLeads().then(withoutPledgeLeads),
+    getLeads(),
     getPostcodeOptions(),
   ]);
 
+  // Regional / Area Directors: chooser on top, their own leads table below.
   return (
     <Container
       title={t("leads.pageTitle")}
       description={t("leads.pageDescription")}
     >
-      <Suspense fallback={<CrmTableSkeleton />}>
-        <LeadsView crmData={crmData} data={leads} postcodeOptions={postcodeOptions} />
-      </Suspense>
+      <div className="space-y-6">
+        {showGateway && <LeadsGateway />}
+        <Suspense fallback={<CrmTableSkeleton />}>
+          <LeadsView crmData={crmData} data={leads} postcodeOptions={postcodeOptions} />
+        </Suspense>
+      </div>
     </Container>
   );
 };
